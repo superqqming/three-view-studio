@@ -1,0 +1,12 @@
+{
+  "name": "three-view-studio-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build-geom.mjs",
+    "test": "node build-geom.mjs && node regress.mjs"
+  },
+  "devDependencies": {
+    "three": "0.169.0"
+  }
+}

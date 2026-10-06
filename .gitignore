@@ -1,0 +1,5 @@
+.DS_Store
+.claude/
+tests/node_modules/
+tests/.gen/
+tests/fixtures/

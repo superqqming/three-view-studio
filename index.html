@@ -1,0 +1,1639 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>三視圖產生器</title>
+<meta name="description" content="匯入 3D 模型（STL / OBJ / GLB），自動產生符合圖學規範（CNS）的三視圖與等角圖，可下載 SVG、DXF 或列印成 PDF。">
+<style>
+  :root {
+    --bg: #eef0f3; --panel: #ffffff; --ink: #1d2330; --muted: #6b7383; --line: #dde1e7;
+    --accent: #1f6feb; --accent-soft: #e7f0ff; --warn: #b54708; --warn-soft: #fff4e5;
+    --stage: #d9dde3;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    color: var(--ink); background: var(--bg); font-size: 13px;
+  }
+  .app { display: grid; grid-template-columns: 340px 1fr; height: 100vh; }
+  aside { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; }
+  aside header { padding: 16px 18px 10px; border-bottom: 1px solid var(--line); }
+  aside h1 { font-size: 17px; margin: 0 0 2px; letter-spacing: .02em; }
+  aside header p { margin: 0; color: var(--muted); font-size: 12px; }
+  section.card { padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  section.card h2 { font-size: 12px; font-weight: 700; color: var(--muted); margin: 0 0 10px; letter-spacing: .08em; }
+  .drop {
+    display: block; line-height: 1.6;
+    border: 1.5px dashed #b8c0cc; border-radius: 10px; padding: 16px 10px; text-align: center;
+    color: var(--muted); cursor: pointer; transition: .15s; background: #fafbfc;
+  }
+  .drop.over, .drop:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  .drop strong { display: block; color: var(--ink); font-size: 13px; margin-bottom: 2px; }
+  .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .row + .row { margin-top: 8px; }
+  .lbl { color: var(--muted); min-width: 64px; }
+  button, select, input[type=text], input[type=date] {
+    font: inherit; color: inherit; border: 1px solid var(--line); background: #fff; border-radius: 7px;
+    padding: 5px 9px; min-height: 30px;
+  }
+  button { cursor: pointer; }
+  button:hover { border-color: #b9c2cf; background: #f6f8fa; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { filter: brightness(1.07); }
+  button.chip { padding: 4px 9px; font-size: 12px; }
+  select { flex: 1; }
+  input[type=text], input[type=date] { width: 100%; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; flex: 1; }
+  .seg label { flex: 1; text-align: center; padding: 6px 4px; cursor: pointer; border-right: 1px solid var(--line); }
+  .seg label:last-child { border-right: 0; }
+  .seg input { display: none; }
+  .seg label:has(input:checked) { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; margin-top: 10px; }
+  .checks label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  #preview { height: 230px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); position: relative; background: #f3f4f6; }
+  #preview .hint { position: absolute; left: 8px; bottom: 6px; font-size: 11px; color: var(--muted); pointer-events: none; }
+  .tb-grid { display: grid; grid-template-columns: 64px 1fr; gap: 6px 8px; align-items: center; }
+  .tb-grid span { color: var(--muted); }
+  .info { margin-top: 8px; font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .warn { margin-top: 8px; font-size: 12px; color: var(--warn); background: var(--warn-soft); border-radius: 7px; padding: 6px 8px; line-height: 1.5; }
+  .warn:empty { display: none; }
+  details { font-size: 12px; color: var(--muted); line-height: 1.7; }
+  details summary { cursor: pointer; color: var(--ink); font-weight: 600; }
+  details ul { padding-left: 18px; margin: 6px 0 0; }
+
+  main { display: flex; flex-direction: column; min-width: 0; }
+  .toolbar {
+    display: flex; align-items: center; gap: 14px; padding: 8px 14px; background: var(--panel);
+    border-bottom: 1px solid var(--line); flex-wrap: wrap;
+  }
+  .legend { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
+  .legend span { display: inline-flex; gap: 6px; align-items: center; }
+  .legend svg { width: 42px; height: 8px; }
+  .spacer { flex: 1; }
+  #status { color: var(--muted); font-size: 12px; }
+  .stage { flex: 1; overflow: auto; background: var(--stage); position: relative; }
+  .sheet-wrap { padding: 28px; display: flex; justify-content: center; align-items: flex-start; min-width: max-content; }
+  .sheet-wrap svg { background: #fff; box-shadow: 0 6px 24px rgba(20,30,50,.18); display: block; }
+  .busy {
+    position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(217,221,227,.55); font-size: 14px; color: var(--ink); z-index: 3;
+  }
+  .busy.on { display: flex; }
+  .busy div { background: #fff; padding: 10px 16px; border-radius: 9px; box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+  .popout {
+    position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 20;
+    background: var(--warn-soft); color: var(--warn); border: 1px solid #f5c58a; border-radius: 9px;
+    padding: 8px 14px; font-size: 13px; box-shadow: 0 4px 14px rgba(0,0,0,.12); max-width: calc(100vw - 32px);
+  }
+  .popout a { color: var(--accent); font-weight: 600; margin-left: 6px; }
+  @media (max-width: 860px) {
+    .app { grid-template-columns: 1fr; height: auto; }
+    aside { border-right: 0; }
+    main { height: 80vh; }
+  }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div class="popout" id="popout" hidden>
+  目前在嵌入的框框裡，下載 SVG／DXF 與列印可能被瀏覽器擋下。<a id="popoutLink" href="#" target="_blank" rel="noopener">在新分頁開啟 ↗</a>
+</div>
+<div class="app">
+  <aside>
+    <header>
+      <h1>三視圖產生器</h1>
+      <p>匯入 3D 模型 → 自動產生符合圖學規範的正投影視圖</p>
+    </header>
+
+    <section class="card">
+      <h2>1 · 匯入模型</h2>
+      <label class="drop" id="drop">
+        <strong>拖曳檔案到這裡，或點擊選擇</strong>
+        支援 STL / OBJ / GLB（單位預設 mm）
+        <input type="file" id="file" accept=".stl,.obj,.glb,.gltf" hidden>
+      </label>
+      <div class="row" style="margin-top:10px">
+        <span class="lbl">範例模型</span>
+        <button class="chip" data-demo="bracket">L 型支架</button>
+        <button class="chip" data-demo="shaft">階梯軸</button>
+        <button class="chip" data-demo="channel">U 型槽塊</button>
+      </div>
+      <div class="info" id="info">尚未載入模型</div>
+      <div class="warn" id="warn"></div>
+    </section>
+
+    <section class="card">
+      <h2>2 · 擺放方向（決定哪一面是前視）</h2>
+      <div id="preview"><span class="hint">拖曳旋轉 · 滾輪縮放　橘＝前視　藍＝俯視　綠＝側視</span></div>
+      <div class="row" style="margin-top:10px">
+        <span class="lbl">旋轉模型</span>
+        <button class="chip" data-rot="x">繞 X 90°</button>
+        <button class="chip" data-rot="y">繞 Y 90°</button>
+        <button class="chip" data-rot="z">繞 Z 90°</button>
+        <button class="chip" id="rotReset">重設</button>
+      </div>
+      <div class="row">
+        <label style="display:flex;gap:6px;align-items:center;cursor:pointer">
+          <input type="checkbox" id="zup"> 來源檔為 Z 軸朝上（CAD 匯出的 STL 常見）
+        </label>
+      </div>
+      <div class="row">
+        <span class="lbl">檔案單位</span>
+        <select id="unit">
+          <option value="1">mm</option><option value="10">cm</option>
+          <option value="1000">m</option><option value="25.4">inch</option><option value="304.8">ft</option>
+        </select>
+      </div>
+      <div class="row">
+        <span class="lbl">稜線角度</span>
+        <input type="range" id="thr" min="5" max="80" step="1" value="30" style="flex:1">
+        <span id="thrVal" style="width:34px;text-align:right">30°</span>
+      </div>
+      <div class="info">兩面夾角大於此值才畫成輪廓線；網格曲面若出現多餘的折線，請調大。</div>
+    </section>
+
+    <section class="card">
+      <h2>3 · 圖面設定</h2>
+      <div class="row">
+        <span class="lbl">投影法</span>
+        <div class="seg">
+          <label><input type="radio" name="proj" value="third" checked>第三角法</label>
+          <label><input type="radio" name="proj" value="first">第一角法</label>
+        </div>
+      </div>
+      <div class="row">
+        <span class="lbl">圖紙</span>
+        <select id="sheet">
+          <option value="A4L">A4 橫式（297×210）</option>
+          <option value="A3L">A3 橫式（420×297）</option>
+          <option value="A4P">A4 直式（210×297）</option>
+        </select>
+      </div>
+      <div class="row">
+        <span class="lbl">比例</span>
+        <select id="scale"></select>
+      </div>
+      <div class="checks">
+        <label><input type="checkbox" id="optHidden" checked>隱藏線</label>
+        <label><input type="checkbox" id="optCenter" checked>中心線</label>
+        <label><input type="checkbox" id="optDims" checked>總尺寸</label>
+        <label><input type="checkbox" id="optIso" checked>等角圖</label>
+        <label><input type="checkbox" id="optLabels">視圖名稱</label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>4 · 標題欄</h2>
+      <div class="tb-grid">
+        <span>圖名</span><input type="text" id="tbTitle" placeholder="例：L 型支架">
+        <span>單位</span><input type="text" id="tbOrg" placeholder="學校／系所">
+        <span>繪圖</span><input type="text" id="tbAuthor">
+        <span>學號</span><input type="text" id="tbSid">
+        <span>日期</span><input type="date" id="tbDate">
+        <span>圖號</span><input type="text" id="tbNo" placeholder="01">
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>5 · 匯出</h2>
+      <div class="row">
+        <button class="primary" id="expSvg">下載 SVG</button>
+        <button id="expDxf">下載 DXF</button>
+        <button id="expPrint">列印 / PDF</button>
+      </div>
+      <div class="info">SVG／列印為 1:1 圖紙尺寸（mm）。DXF 為 R12 格式，依線型分圖層（OUTLINE、HIDDEN、CENTER、DIM…）。</div>
+    </section>
+
+    <section class="card">
+      <details>
+        <summary>本工具套用的圖學規範</summary>
+        <ul>
+          <li>可見輪廓線：粗實線 0.6 mm</li>
+          <li>隱藏線：中虛線 0.35 mm，線段 3、間隔 1</li>
+          <li>中心線：細鏈線 0.25 mm（長劃 12、間隔 1、短劃 1.5），超出輪廓 3 mm；圓孔於交點處以長劃相交</li>
+          <li>線條重疊時優先順序：輪廓線 &gt; 隱藏線 &gt; 中心線</li>
+          <li>尺寸：細實線，尺寸線距輪廓 10 mm，延伸線留 1 mm 空隙、超出尺寸線 2 mm；箭頭長寬比 3:1 塗黑；數字高 3 mm，採對齊式（垂直尺寸由右側閱讀）</li>
+          <li>視圖對齊：前視與俯視等寬、前視與側視等高、俯視與側視等深</li>
+          <li>第三角法：俯視在前視上方、右側視在右方；第一角法：俯視在前視下方、左側視在右方</li>
+          <li>比例採 CNS 建議值（10:1、5:1、2:1、1:1、1:2、1:5、1:10…），尺寸一律標註實際大小</li>
+          <li>圖框距紙邊 10 mm，標題欄在右下角並附投影法符號</li>
+        </ul>
+      </details>
+    </section>
+  </aside>
+
+  <main>
+    <div class="toolbar">
+      <div class="legend">
+        <span><svg viewBox="0 0 42 8"><line x1="1" y1="4" x2="41" y2="4" stroke="#111" stroke-width="2.4"/></svg>輪廓線</span>
+        <span><svg viewBox="0 0 42 8"><line x1="1" y1="4" x2="41" y2="4" stroke="#111" stroke-width="1.4" stroke-dasharray="6 2.5"/></svg>隱藏線</span>
+        <span><svg viewBox="0 0 42 8"><line x1="1" y1="4" x2="41" y2="4" stroke="#111" stroke-width="1" stroke-dasharray="14 2.5 3 2.5"/></svg>中心線</span>
+      </div>
+      <div class="spacer"></div>
+      <span id="status"></span>
+      <button class="chip" id="zoomOut">－</button>
+      <button class="chip" id="zoomFit">符合視窗</button>
+      <button class="chip" id="zoomIn">＋</button>
+    </div>
+    <div class="stage" id="stage">
+      <div class="sheet-wrap" id="sheetWrap"></div>
+      <div class="busy" id="busy"><div>計算視圖中…</div></div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+const $ = id => document.getElementById(id);
+
+// ====================================================================
+// 圖學規範常數（單位：圖紙 mm）
+// ====================================================================
+const STD = {
+  wThick: 0.6, wMid: 0.35, wThin: 0.25, wFrame: 0.7,
+  hiddenDash: [3, 1],
+  centerDash: [12, 1, 1.5, 1],
+  centerOver: 3,
+  dimOffset: 10, extGap: 1, extOver: 2, arrowL: 3, arrowW: 1, textH: 3,
+  viewGap: 14,
+};
+const SHEETS = {
+  A4L: { w: 297, h: 210 },
+  A3L: { w: 420, h: 297 },
+  A4P: { w: 210, h: 297 },
+};
+const SCALES = [[10, 1], [5, 1], [2, 1], [1, 1], [1, 2], [1, 5], [1, 10], [1, 20], [1, 50], [1, 100]];
+const TB_W = 180, TB_H = 28;
+const ISO_K = 1 / Math.sqrt(2 / 3);   // 等角投影 → 等角圖（軸向取實長）
+
+const LAYERS = {
+  OUTLINE: { w: STD.wThick, dash: null, cap: 'round', dxf: 7, lt: 'CONTINUOUS' },
+  HIDDEN:  { w: STD.wMid, dash: STD.hiddenDash, cap: 'butt', dxf: 2, lt: 'HIDDEN' },
+  CENTER:  { w: STD.wThin, dash: STD.centerDash, cap: 'butt', dxf: 1, lt: 'CENTER' },
+  ISO:     { w: 0.5, dash: null, cap: 'round', dxf: 7, lt: 'CONTINUOUS' },
+  DIM:     { w: STD.wThin, dash: null, cap: 'butt', dxf: 4, lt: 'CONTINUOUS' },
+  FRAME:   { w: STD.wFrame, dash: null, cap: 'square', dxf: 7, lt: 'CONTINUOUS' },
+  TB:      { w: STD.wThin, dash: null, cap: 'butt', dxf: 7, lt: 'CONTINUOUS' },
+  SYMBOL:  { w: 0.35, dash: null, cap: 'round', dxf: 7, lt: 'CONTINUOUS' },
+  TEXT:    { w: 0, dash: null, cap: 'butt', dxf: 7, lt: 'CONTINUOUS' },
+};
+
+// 視圖方向：d = 指向觀察者，u = 圖面右，v = 圖面上（u × v = d）
+const BASES = {
+  front: { u: [1, 0, 0], v: [0, 1, 0], d: [0, 0, 1] },
+  top:   { u: [1, 0, 0], v: [0, 0, -1], d: [0, 1, 0] },
+  right: { u: [0, 0, -1], v: [0, 1, 0], d: [1, 0, 0] },
+  left:  { u: [0, 0, 1], v: [0, 1, 0], d: [-1, 0, 0] },
+  iso: (() => {
+    const s3 = Math.sqrt(3), s2 = Math.sqrt(2), s6 = Math.sqrt(6);
+    return { u: [1 / s2, 0, -1 / s2], v: [-1 / s6, 2 / s6, -1 / s6], d: [1 / s3, 1 / s3, 1 / s3] };
+  })(),
+};
+const VIEW_NAMES = { front: '前視圖', top: '俯視圖', right: '右側視圖', left: '左側視圖' };
+
+// ====================================================================
+// 狀態
+// ====================================================================
+const state = {
+  name: '', zUp: false, rot: new THREE.Matrix4(), unit: 1, thr: 30,
+  proj: 'third', sheet: 'A4L', scale: 'auto',
+  showHidden: true, showCenter: true, showDims: true, showIso: true, showLabels: false,
+  zoom: 0,
+};
+let topo = null;      // 合併後的網格拓撲（與擺放方向無關）
+let model = null;     // 套用方向／單位後的模型
+let viewCache = {};
+let lastDrawing = null;   // { prims, sheet }
+
+// ====================================================================
+// 1. 網格拓撲
+// ====================================================================
+function buildTopology(soup) {
+  const n0 = soup.length / 3;
+  let mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity], maxAbs = 0;
+  const finite = new Uint8Array(n0);
+  for (let i = 0; i < n0; i++) {
+    const x = soup[3 * i], y = soup[3 * i + 1], z = soup[3 * i + 2];
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) continue;   // 損壞的座標直接略過
+    finite[i] = 1;
+    for (const [k, c] of [[0, x], [1, y], [2, z]]) { if (c < mn[k]) mn[k] = c; if (c > mx[k]) mx[k] = c; if (Math.abs(c) > maxAbs) maxAbs = Math.abs(c); }
+  }
+  const diag = Math.hypot(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]) || 1;
+  // 頂點合併：容差 q 內視為同一點；同時檢查相鄰格，避免浮點誤差剛好落在格線兩側而沒合併。
+  // 遠離原點的模型（例如 SketchUp 只匯出選取物件）座標捨入誤差較大，容差也跟著座標大小放寬。
+  const q = Math.max(diag * 1e-5, maxAbs * 2e-7), K = 100003;
+  const tjTol = Math.max(diag * 2e-5, maxAbs * 1.2e-5);   // T 形接點容差（≥ 退化三角形門檻，被刪掉的尖點才能補回）
+  const cells = new Map(), P = [], remap = new Int32Array(n0).fill(-1);
+  const cellKey = (ix, iy, iz) => (ix * K + iy) * K + iz;
+  const findIn = (x, y, z, key) => {
+    const l = cells.get(key); if (!l) return -1;
+    for (const id of l) if (Math.abs(P[3 * id] - x) <= q && Math.abs(P[3 * id + 1] - y) <= q && Math.abs(P[3 * id + 2] - z) <= q) return id;
+    return -1;
+  };
+  for (let i = 0; i < n0; i++) {
+    if (!finite[i]) continue;
+    const x = soup[3 * i], y = soup[3 * i + 1], z = soup[3 * i + 2];
+    const ix = Math.floor((x - mn[0]) / q), iy = Math.floor((y - mn[1]) / q), iz = Math.floor((z - mn[2]) / q);
+    let id = findIn(x, y, z, cellKey(ix, iy, iz));
+    for (let d = 0; id < 0 && d < 27; d++) {
+      if (d === 13) continue;
+      id = findIn(x, y, z, cellKey(ix + (d % 3) - 1, iy + ((d / 3 | 0) % 3) - 1, iz + (d / 9 | 0) - 1));
+    }
+    if (id < 0) {
+      id = P.length / 3; P.push(x, y, z);
+      const k = cellKey(ix, iy, iz), l = cells.get(k);
+      if (l) l.push(id); else cells.set(k, [id]);
+    }
+    remap[i] = id;
+  }
+  const tl = [], seenTri = new Set();
+  const minH = diag * 2e-5;
+  let dupRemoved = 0;
+  for (let f = 0; f < n0 / 3; f++) {
+    const a = remap[3 * f], b = remap[3 * f + 1], c = remap[3 * f + 2];
+    if (a < 0 || b < 0 || c < 0 || a === b || b === c || a === c) continue;
+    const ux = P[3 * b] - P[3 * a], uy = P[3 * b + 1] - P[3 * a + 1], uz = P[3 * b + 2] - P[3 * a + 2];
+    const vx = P[3 * c] - P[3 * a], vy = P[3 * c + 1] - P[3 * a + 1], vz = P[3 * c + 2] - P[3 * a + 2];
+    const wx = P[3 * c] - P[3 * b], wy = P[3 * c + 1] - P[3 * b + 1], wz = P[3 * c + 2] - P[3 * b + 2];
+    const cx = uy * vz - uz * vy, cy = uz * vx - ux * vz, cz = ux * vy - uy * vx;
+    // 退化三角形：以「相對最長邊的高」判斷（與檔案單位無關）。被刪掉的尖點之後由 T 形接點修補補回
+    const Lmax2 = Math.max(ux * ux + uy * uy + uz * uz, vx * vx + vy * vy + vz * vz, wx * wx + wy * wy + wz * wz);
+    if (cx * cx + cy * cy + cz * cz < Lmax2 * minH * minH) continue;
+    // 完全重複的面（SketchUp「雙面匯出」、原地複製貼上）只保留一份
+    const key = [a, b, c].sort((p, r) => p - r).join();
+    if (seenTri.has(key)) { dupRemoved++; continue; }
+    seenTri.add(key);
+    tl.push(a, b, c);
+  }
+  const rep = repairTJunctions(P, tl, tjTol, diag);
+  const nv = P.length / 3;
+  const tris = Int32Array.from(rep.tris), nt = tris.length / 3;
+  const emap = new Map(), extra = new Map();   // extra：三個以上面共用的邊，第 3 個起的面
+  const ea = [], eb = [], f1 = [], f2 = [], s1 = [], s2 = [], cnt = [];
+  for (let f = 0; f < nt; f++) for (let k = 0; k < 3; k++) {
+    const p = tris[3 * f + k], r = tris[3 * f + (k + 1) % 3];
+    const a = Math.min(p, r), b = Math.max(p, r), dir = p < r ? 1 : -1;
+    const key = a * nv + b;
+    let e = emap.get(key);
+    if (e === undefined) {
+      e = ea.length; emap.set(key, e);
+      ea.push(a); eb.push(b); f1.push(f); s1.push(dir); f2.push(-1); s2.push(0); cnt.push(1);
+    } else {
+      if (cnt[e] === 1) { f2[e] = f; s2[e] = dir; }
+      else { const l = extra.get(e); if (l) l.push(f); else extra.set(e, [f]); }
+      cnt[e]++;
+    }
+  }
+  return {
+    P: Float64Array.from(P), nv, tris, nt, tjFixed: rep.fixed, dupRemoved, extra,
+    E: { a: Int32Array.from(ea), b: Int32Array.from(eb), f1: Int32Array.from(f1), f2: Int32Array.from(f2),
+         s1: Int8Array.from(s1), s2: Int8Array.from(s2), n: Int32Array.from(cnt) },
+  };
+}
+
+// T 形接點修補：SketchUp、Rhino 等常讓一側是長邊、另一側是兩段短邊，
+// 實體其實封閉，但邊對不上。把落在開放邊上的頂點插入該邊並重新切三角形。
+function repairTJunctions(P, tris, tol, diag) {
+  const cs = diag / 64;
+  let fixed = 0;
+  for (let pass = 0; pass < 4; pass++) {
+    const nv = P.length / 3, nt = tris.length / 3;
+    const use = new Map();
+    for (let f = 0; f < nt; f++) for (let k = 0; k < 3; k++) {
+      const p = tris[3 * f + k], r = tris[3 * f + (k + 1) % 3];
+      const key = Math.min(p, r) * nv + Math.max(p, r);
+      const u = use.get(key);
+      if (u) u[0]++; else use.set(key, [1, f, k]);
+    }
+    const open = [];
+    const grid = new Map();
+    const gkey = (x, y, z) => Math.floor(x / cs) + ',' + Math.floor(y / cs) + ',' + Math.floor(z / cs);
+    const seenV = new Set();
+    for (const u of use.values()) {
+      if (u[0] !== 1) continue;
+      open.push(u);
+      for (const v of [tris[3 * u[1] + u[2]], tris[3 * u[1] + (u[2] + 1) % 3]]) {
+        if (seenV.has(v)) continue; seenV.add(v);
+        const k = gkey(P[3 * v], P[3 * v + 1], P[3 * v + 2]);
+        const l = grid.get(k); if (l) l.push(v); else grid.set(k, [v]);
+      }
+    }
+    if (!open.length) break;
+    const splits = new Map();
+    for (const [, f, k] of open) {
+      const a = tris[3 * f + k], b = tris[3 * f + (k + 1) % 3], o = tris[3 * f + (k + 2) % 3];
+      const ax = P[3 * a], ay = P[3 * a + 1], az = P[3 * a + 2];
+      const dx = P[3 * b] - ax, dy = P[3 * b + 1] - ay, dz = P[3 * b + 2] - az;
+      const L2 = dx * dx + dy * dy + dz * dz, L = Math.sqrt(L2);
+      if (L < tol * 3) continue;
+      // 沿邊取樣，收集邊附近的格子
+      const keys = new Set(), steps = Math.ceil(L / (cs * 0.5));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps, x = ax + dx * t, y = ay + dy * t, z = az + dz * t;
+        for (let d = 0; d < 27; d++) keys.add(gkey(x + ((d % 3) - 1) * cs, y + (((d / 3 | 0) % 3) - 1) * cs, z + ((d / 9 | 0) - 1) * cs));
+      }
+      const found = [];
+      for (const key of keys) {
+        const l = grid.get(key); if (!l) continue;
+        for (const v of l) {
+          if (v === a || v === b || v === o) continue;
+          const wx = P[3 * v] - ax, wy = P[3 * v + 1] - ay, wz = P[3 * v + 2] - az;
+          const t = (wx * dx + wy * dy + wz * dz) / L2;
+          if (t * L <= tol || (1 - t) * L <= tol) continue;
+          const ex = wx - t * dx, ey = wy - t * dy, ez = wz - t * dz;
+          if (ex * ex + ey * ey + ez * ez <= tol * tol) found.push({ t, v });
+        }
+      }
+      if (!found.length) continue;
+      found.sort((p, q) => p.t - q.t);
+      let s = splits.get(f); if (!s) splits.set(f, s = [null, null, null]);
+      s[k] = found.map(x => x.v);
+    }
+    if (!splits.size) break;
+    const out = [];
+    for (let f = 0; f < nt; f++) {
+      const s = splits.get(f), c = [tris[3 * f], tris[3 * f + 1], tris[3 * f + 2]];
+      if (!s) { out.push(c[0], c[1], c[2]); continue; }
+      const edges = [0, 1, 2].filter(k => s[k]);
+      edges.forEach(k => { fixed += s[k].length; });
+      if (edges.length === 1) {
+        // 只有一條邊要插點：由對角頂點做扇形
+        const k = edges[0], chain = [c[k], ...s[k], c[(k + 1) % 3]], o = c[(k + 2) % 3];
+        for (let i = 0; i + 1 < chain.length; i++) out.push(chain[i], chain[i + 1], o);
+      } else {
+        // 多條邊要插點：加入重心點做扇形（三角形加邊上點仍是凸多邊形）
+        const poly = [];
+        for (let k = 0; k < 3; k++) { poly.push(c[k]); if (s[k]) poly.push(...s[k]); }
+        const cid = P.length / 3;
+        P.push((P[3 * c[0]] + P[3 * c[1]] + P[3 * c[2]]) / 3, (P[3 * c[0] + 1] + P[3 * c[1] + 1] + P[3 * c[2] + 1]) / 3, (P[3 * c[0] + 2] + P[3 * c[1] + 2] + P[3 * c[2] + 2]) / 3);
+        for (let i = 0; i < poly.length; i++) out.push(poly[i], poly[(i + 1) % poly.length], cid);
+      }
+    }
+    tris = out;
+  }
+  return { tris, fixed };
+}
+
+// ====================================================================
+// 2. 套用方向與單位
+// ====================================================================
+function transformModel(T) {
+  const m = new THREE.Matrix4();
+  if (state.zUp) m.makeRotationX(-Math.PI / 2);
+  m.premultiply(state.rot);
+  const e = m.elements.map(v => Math.abs(v - Math.round(v)) < 1e-9 ? Math.round(v) : v);
+  const s = state.unit, nv = T.nv, P = T.P;
+  const V = new Float64Array(nv * 3);
+  const mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < nv; i++) {
+    const x = P[3 * i], y = P[3 * i + 1], z = P[3 * i + 2];
+    const c = [(e[0] * x + e[4] * y + e[8] * z) * s, (e[1] * x + e[5] * y + e[9] * z) * s, (e[2] * x + e[6] * y + e[10] * z) * s];
+    for (let k = 0; k < 3; k++) { V[3 * i + k] = c[k]; if (c[k] < mn[k]) mn[k] = c[k]; if (c[k] > mx[k]) mx[k] = c[k]; }
+  }
+  for (let i = 0; i < nv; i++) for (let k = 0; k < 3; k++) V[3 * i + k] -= mn[k];
+  const size = [mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]];
+  const diag = Math.hypot(...size) || 1;
+  const nt = T.nt, tris = T.tris, FN = new Float64Array(nt * 3);
+  for (let f = 0; f < nt; f++) {
+    const a = tris[3 * f], b = tris[3 * f + 1], c = tris[3 * f + 2];
+    const ux = V[3 * b] - V[3 * a], uy = V[3 * b + 1] - V[3 * a + 1], uz = V[3 * b + 2] - V[3 * a + 2];
+    const vx = V[3 * c] - V[3 * a], vy = V[3 * c + 1] - V[3 * a + 1], vz = V[3 * c + 2] - V[3 * a + 2];
+    let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    const l = Math.hypot(nx, ny, nz) || 1;
+    FN[3 * f] = nx / l; FN[3 * f + 1] = ny / l; FN[3 * f + 2] = nz / l;
+  }
+  return { ...T, V, FN, size, diag };
+}
+
+// ====================================================================
+// 3. 稜線分類、T 形接點修正、圓形特徵（中心線用）
+// ====================================================================
+function classifyModel(M, thrDeg) {
+  const E = M.E, ne = E.n.length, FN = M.FN, V = M.V;
+  const c = Math.cos(thrDeg * Math.PI / 180);
+  const sharp = new Uint8Array(ne);
+  let flipped = 0, nonManifold = 0;
+  for (let e = 0; e < ne; e++) {
+    if (E.n[e] === 1) { sharp[e] = 1; continue; }
+    if (E.n[e] > 2) {
+      // 三個以上面共用：若全部共平面（重疊的面、相貼的零件），不是稜線；否則（如等徑十字孔交線）是稜線
+      nonManifold++;
+      const fs = [E.f1[e], E.f2[e], ...(M.extra.get(e) || [])];
+      const cop = Math.cos(Math.PI / 180);
+      let allCoplanar = true;
+      for (let i = 0; i < fs.length && allCoplanar; i++) for (let j = i + 1; j < fs.length; j++) {
+        const p = fs[i], r = fs[j];
+        if (Math.abs(FN[3 * p] * FN[3 * r] + FN[3 * p + 1] * FN[3 * r + 1] + FN[3 * p + 2] * FN[3 * r + 2]) < cop) { allCoplanar = false; break; }
+      }
+      sharp[e] = allCoplanar ? 0 : 1;
+      continue;
+    }
+    const fa = E.f1[e], fb = E.f2[e];
+    let d = FN[3 * fa] * FN[3 * fb] + FN[3 * fa + 1] * FN[3 * fb + 1] + FN[3 * fa + 2] * FN[3 * fb + 2];
+    if (E.s1[e] === E.s2[e]) { d = -d; flipped++; }   // 法向量方向不一致時自動修正
+    sharp[e] = d < c ? 1 : 0;
+  }
+  // T 形接點：兩條開放邊重疊且所屬面共平面 → 不是真正的稜線
+  const tol = M.diag * 1e-4, groups = new Map();
+  for (let e = 0; e < ne; e++) {
+    if (E.n[e] !== 1) continue;
+    const a = E.a[e], b = E.b[e];
+    let dx = V[3 * b] - V[3 * a], dy = V[3 * b + 1] - V[3 * a + 1], dz = V[3 * b + 2] - V[3 * a + 2];
+    const L = Math.hypot(dx, dy, dz); if (L < tol) continue;
+    dx /= L; dy /= L; dz /= L;
+    if (dx < -1e-9 || (Math.abs(dx) <= 1e-9 && (dy < -1e-9 || (Math.abs(dy) <= 1e-9 && dz < 0)))) { dx = -dx; dy = -dy; dz = -dz; }
+    const pa = [V[3 * a], V[3 * a + 1], V[3 * a + 2]], pb = [V[3 * b], V[3 * b + 1], V[3 * b + 2]];
+    const ta = pa[0] * dx + pa[1] * dy + pa[2] * dz, tb = pb[0] * dx + pb[1] * dy + pb[2] * dz;
+    const qx = pa[0] - ta * dx, qy = pa[1] - ta * dy, qz = pa[2] - ta * dz;
+    const key = [Math.round(dx * 500), Math.round(dy * 500), Math.round(dz * 500),
+                 Math.round(qx / tol), Math.round(qy / tol), Math.round(qz / tol)].join();
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push({ e, t0: Math.min(ta, tb), t1: Math.max(ta, tb) });
+  }
+  for (const list of groups.values()) {
+    if (list.length < 2) continue;
+    for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
+      const A = list[i], B = list[j];
+      if (Math.min(A.t1, B.t1) - Math.max(A.t0, B.t0) <= tol) continue;
+      const fa = E.f1[A.e], fb = E.f1[B.e];
+      const d = Math.abs(FN[3 * fa] * FN[3 * fb] + FN[3 * fa + 1] * FN[3 * fb + 1] + FN[3 * fa + 2] * FN[3 * fb + 2]);
+      if (d > c) { sharp[A.e] = 0; sharp[B.e] = 0; }
+    }
+  }
+  let open = 0;
+  for (let e = 0; e < ne; e++) if (E.n[e] === 1 && sharp[e]) open++;
+  M.sharp = sharp;
+  M.stats = { flipped, nonManifold, open };
+  M.axes = findAxes(M);
+}
+
+function findAxes(M) {
+  const E = M.E, V = M.V, sharp = M.sharp, ne = E.n.length;
+  const adj = new Map();
+  const add = (p, q) => { let l = adj.get(p); if (!l) adj.set(p, l = []); l.push(q); };
+  for (let e = 0; e < ne; e++) if (sharp[e]) { add(E.a[e], E.b[e]); add(E.b[e], E.a[e]); }
+  const seen = new Set(), circles = [];
+  for (const [start, nb] of adj) {
+    if (seen.has(start) || nb.length !== 2) continue;
+    const path = [start]; seen.add(start);
+    let prev = start, cur = nb[0], closed = false;
+    while (true) {
+      if (cur === start) { closed = true; break; }
+      const l = adj.get(cur);
+      if (seen.has(cur) || l.length !== 2) break;
+      seen.add(cur); path.push(cur);
+      const nx = l[0] === prev ? l[1] : l[0];
+      prev = cur; cur = nx;
+    }
+    if (!closed || path.length < 10) continue;
+    const pts = path.map(i => [V[3 * i], V[3 * i + 1], V[3 * i + 2]]);
+    const cpt = [0, 0, 0];
+    pts.forEach(p => { cpt[0] += p[0]; cpt[1] += p[1]; cpt[2] += p[2]; });
+    cpt[0] /= pts.length; cpt[1] /= pts.length; cpt[2] /= pts.length;
+    const n = [0, 0, 0];
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i], q = pts[(i + 1) % pts.length];
+      n[0] += (p[1] - q[1]) * (p[2] + q[2]); n[1] += (p[2] - q[2]) * (p[0] + q[0]); n[2] += (p[0] - q[0]) * (p[1] + q[1]);
+    }
+    const nl = Math.hypot(...n); if (nl < 1e-12) continue;
+    n[0] /= nl; n[1] /= nl; n[2] /= nl;
+    const rs = pts.map(p => Math.hypot(p[0] - cpt[0], p[1] - cpt[1], p[2] - cpt[2]));
+    const r = rs.reduce((s, v) => s + v, 0) / rs.length;
+    if (r < M.diag * 1e-3) continue;
+    const planar = pts.every(p => Math.abs((p[0] - cpt[0]) * n[0] + (p[1] - cpt[1]) * n[1] + (p[2] - cpt[2]) * n[2]) < 0.02 * r);
+    const round = rs.every(v => Math.abs(v - r) < 0.03 * r);
+    if (planar && round) circles.push({ c: cpt, n, r });
+  }
+  // 同軸的圓 → 同一條中心軸
+  const axes = [];
+  for (const ci of circles) {
+    let g = axes.find(g => {
+      if (Math.abs(g.n[0] * ci.n[0] + g.n[1] * ci.n[1] + g.n[2] * ci.n[2]) < 0.999) return false;
+      const w = [ci.c[0] - g.c0[0], ci.c[1] - g.c0[1], ci.c[2] - g.c0[2]];
+      const t = w[0] * g.n[0] + w[1] * g.n[1] + w[2] * g.n[2];
+      const perp = Math.hypot(w[0] - t * g.n[0], w[1] - t * g.n[1], w[2] - t * g.n[2]);
+      return perp < Math.max(M.diag * 1e-3, 0.02 * ci.r);
+    });
+    if (!g) { g = { c0: ci.c, n: ci.n, tMin: 0, tMax: 0, rMax: ci.r }; axes.push(g); continue; }
+    const t = (ci.c[0] - g.c0[0]) * g.n[0] + (ci.c[1] - g.c0[1]) * g.n[1] + (ci.c[2] - g.c0[2]) * g.n[2];
+    g.tMin = Math.min(g.tMin, t); g.tMax = Math.max(g.tMax, t); g.rMax = Math.max(g.rMax, ci.r);
+  }
+  return axes;
+}
+
+// ====================================================================
+// 4. 單一視圖：候選稜線（銳邊＋輪廓邊）→ 精確隱藏線消除
+// ====================================================================
+function computeView(M, B) {
+  const { u, v, d } = B, nv = M.nv, V = M.V, T = M.tris, nt = M.nt, E = M.E, ne = E.n.length, diag = M.diag;
+  const X = new Float64Array(nv), Y = new Float64Array(nv), Z = new Float64Array(nv);
+  let bx0 = Infinity, bx1 = -Infinity, by0 = Infinity, by1 = -Infinity;
+  for (let i = 0; i < nv; i++) {
+    const x = V[3 * i], y = V[3 * i + 1], z = V[3 * i + 2];
+    const px = u[0] * x + u[1] * y + u[2] * z, py = v[0] * x + v[1] * y + v[2] * z;
+    X[i] = px; Y[i] = py; Z[i] = d[0] * x + d[1] * y + d[2] * z;
+    if (px < bx0) bx0 = px; if (px > bx1) bx1 = px; if (py < by0) by0 = py; if (py > by1) by1 = py;
+  }
+  const opp = (f, a, b) => {
+    const i = T[3 * f], j = T[3 * f + 1], k = T[3 * f + 2];
+    return (i !== a && i !== b) ? i : (j !== a && j !== b) ? j : k;
+  };
+  const minL2 = (diag * 1e-6) ** 2;
+  const cand = [];
+  for (let e = 0; e < ne; e++) {
+    const a = E.a[e], b = E.b[e];
+    const dx = X[b] - X[a], dy = Y[b] - Y[a], L2 = dx * dx + dy * dy;
+    if (L2 < minL2) continue;
+    if (M.sharp[e]) { cand.push(e); continue; }
+    if (E.n[e] !== 2) continue;
+    // 輪廓邊：兩相鄰面在投影中位於同一側（與法向量方向無關）
+    const c1 = opp(E.f1[e], a, b), c2 = opp(E.f2[e], a, b);
+    const ze = Math.sqrt(L2) * diag * 1e-7;
+    const s1 = dx * (Y[c1] - Y[a]) - dy * (X[c1] - X[a]);
+    const s2 = dx * (Y[c2] - Y[a]) - dy * (X[c2] - X[a]);
+    const z1 = Math.abs(s1) < ze ? 0 : Math.sign(s1), z2 = Math.abs(s2) < ze ? 0 : Math.sign(s2);
+    if (z1 * z2 > 0 || ((z1 === 0) !== (z2 === 0))) cand.push(e);
+  }
+
+  // 三角形格網加速
+  const G = Math.max(4, Math.min(256, Math.ceil(Math.sqrt(nt / 3))));
+  const cw = ((bx1 - bx0) || 1) / G, ch = ((by1 - by0) || 1) / G;
+  const cells = new Array(G * G);
+  const PL = new Float64Array(nt * 3), OR = new Int8Array(nt);
+  const cellX = x => Math.min(G - 1, Math.max(0, Math.floor((x - bx0) / cw)));
+  const cellY = y => Math.min(G - 1, Math.max(0, Math.floor((y - by0) / ch)));
+  const minArea = diag * diag * 1e-12;
+  for (let f = 0; f < nt; f++) {
+    const i = T[3 * f], j = T[3 * f + 1], k = T[3 * f + 2];
+    const x0 = X[i], y0 = Y[i], x1 = X[j], y1 = Y[j], x2 = X[k], y2 = Y[k];
+    const area2 = (x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0);
+    if (Math.abs(area2) < minArea) continue;   // 側立的面不會遮擋
+    OR[f] = area2 > 0 ? 1 : -1;
+    const z0 = Z[i], z1 = Z[j], z2 = Z[k];
+    const A = ((z1 - z0) * (y2 - y0) - (z2 - z0) * (y1 - y0)) / area2;
+    const Bc = ((x1 - x0) * (z2 - z0) - (x2 - x0) * (z1 - z0)) / area2;
+    PL[3 * f] = A; PL[3 * f + 1] = Bc; PL[3 * f + 2] = z0 - A * x0 - Bc * y0;
+    const gx0 = cellX(Math.min(x0, x1, x2)), gx1 = cellX(Math.max(x0, x1, x2));
+    const gy0 = cellY(Math.min(y0, y1, y2)), gy1 = cellY(Math.max(y0, y1, y2));
+    for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) {
+      const id = gy * G + gx; (cells[id] || (cells[id] = [])).push(f);
+    }
+  }
+
+  // 三角形每一側的鄰面（只取兩面共用的邊），供遮蔽判斷決定該側是否外擴
+  const NBR = new Int32Array(nt * 3).fill(-1);
+  for (let q = 0; q < ne; q++) {
+    if (E.n[q] !== 2) continue;
+    const p1 = E.a[q], p2 = E.b[q];
+    for (const [f, g] of [[E.f1[q], E.f2[q]], [E.f2[q], E.f1[q]]]) for (let k = 0; k < 3; k++) {
+      const s = T[3 * f + k], r = T[3 * f + (k + 1) % 3];
+      if ((s === p1 && r === p2) || (s === p2 && r === p1)) NBR[3 * f + k] = g;
+    }
+  }
+  const FN = M.FN;
+  const stamp = new Int32Array(nt); let st = 0;
+  const epsZ = diag * 2e-5, epsIn = diag * 1e-6, minLen = diag * 1e-5;
+  const vis = [], hid = [];
+  let iv = [];
+  for (const e of cand) {
+    const a = E.a[e], b = E.b[e];
+    const ax = X[a], ay = Y[a], az = Z[a], dx = X[b] - ax, dy = Y[b] - ay, dz = Z[b] - az;
+    const sx0 = Math.min(ax, ax + dx), sx1 = Math.max(ax, ax + dx), sy0 = Math.min(ay, ay + dy), sy1 = Math.max(ay, ay + dy);
+    const zmin = Math.min(az, az + dz);
+    st++; iv = [];
+    const gx0 = cellX(sx0), gx1 = cellX(sx1), gy0 = cellY(sy0), gy1 = cellY(sy1);
+    // 鄰面 g 是否也能遮擋這條邊：是的話兩面之間的接縫要外擴（含邊界），
+    // 落在遮蔽面內部對角線上的邊才不會從兩個三角形之間漏出來
+    const occOK = g => {
+      if (g < 0 || !OR[g]) return false;
+      const gi = T[3 * g], gj = T[3 * g + 1], gk = T[3 * g + 2];
+      if ((gi === a || gj === a || gk === a) && (gi === b || gj === b || gk === b)) return false;
+      if (Math.max(Z[gi], Z[gj], Z[gk]) <= zmin + epsZ) return false;
+      const nx = FN[3 * g], ny = FN[3 * g + 1], nz = FN[3 * g + 2];
+      const da = (V[3 * a] - V[3 * gi]) * nx + (V[3 * a + 1] - V[3 * gi + 1]) * ny + (V[3 * a + 2] - V[3 * gi + 2]) * nz;
+      const db = (V[3 * b] - V[3 * gi]) * nx + (V[3 * b + 1] - V[3 * gi + 1]) * ny + (V[3 * b + 2] - V[3 * gi + 2]) * nz;
+      return !(Math.abs(da) <= epsZ && Math.abs(db) <= epsZ);
+    };
+    scan: for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) {
+      const cell = cells[gy * G + gx]; if (!cell) continue;
+      for (let ci = 0; ci < cell.length; ci++) {
+        const f = cell[ci];
+        if (stamp[f] === st) continue; stamp[f] = st;
+        const ti = T[3 * f], tj = T[3 * f + 1], tk = T[3 * f + 2];
+        const hasA = ti === a || tj === a || tk === a, hasB = ti === b || tj === b || tk === b;
+        if (hasA && hasB) continue;
+        if (Math.max(Z[ti], Z[tj], Z[tk]) <= zmin + epsZ) continue;
+        const px0 = X[ti], py0 = Y[ti], px1 = X[tj], py1 = Y[tj], px2 = X[tk], py2 = Y[tk];
+        if (Math.max(px0, px1, px2) < sx0 || Math.min(px0, px1, px2) > sx1 ||
+            Math.max(py0, py1, py2) < sy0 || Math.min(py0, py1, py2) > sy1) continue;
+        // Cyrus–Beck：線段在三角形內的參數區間。與「也能遮擋的鄰面」相接的那一側外擴 epsIn，
+        // 其他側內縮 epsIn（避免近乎側立的細長三角形外擴後變成巨大的遮蔽物）
+        const o = OR[f];
+        const sg0 = occOK(NBR[3 * f]) ? 1 : -1, sg1 = occOK(NBR[3 * f + 1]) ? 1 : -1, sg2 = occOK(NBR[3 * f + 2]) ? 1 : -1;
+        let t0 = 0, t1 = 1, ok = true;
+        const clip = (Px, Py, Qx, Qy, sg) => {
+          const nx = -o * (Qy - Py), ny = o * (Qx - Px);
+          const num = nx * (ax - Px) + ny * (ay - Py) + sg * epsIn * Math.hypot(nx, ny);
+          const den = nx * dx + ny * dy;
+          if (Math.abs(den) < 1e-300) { if (num < 0) ok = false; return; }
+          const th = -num / den;
+          if (den > 0) { if (th > t0) t0 = th; } else { if (th < t1) t1 = th; }
+        };
+        clip(px0, py0, px1, py1, sg0); if (!ok) continue;
+        clip(px1, py1, px2, py2, sg1); if (!ok) continue;
+        clip(px2, py2, px0, py0, sg2); if (!ok || t0 >= t1) continue;
+        // 再限制在三角形投影外框 ± epsIn 內
+        const bxa = Math.min(px0, px1, px2) - epsIn, bxb = Math.max(px0, px1, px2) + epsIn;
+        const bya = Math.min(py0, py1, py2) - epsIn, byb = Math.max(py0, py1, py2) + epsIn;
+        if (dx !== 0) { const ta = (bxa - ax) / dx, tb = (bxb - ax) / dx; t0 = Math.max(t0, Math.min(ta, tb)); t1 = Math.min(t1, Math.max(ta, tb)); }
+        if (dy !== 0) { const ta = (bya - ay) / dy, tb = (byb - ay) / dy; t0 = Math.max(t0, Math.min(ta, tb)); t1 = Math.min(t1, Math.max(ta, tb)); }
+        if (t0 >= t1) continue;
+        const A = PL[3 * f], Bc = PL[3 * f + 1], C = PL[3 * f + 2];
+        const g0 = A * (ax + dx * t0) + Bc * (ay + dy * t0) + C - (az + dz * t0) - epsZ;
+        const g1 = A * (ax + dx * t1) + Bc * (ay + dy * t1) + C - (az + dz * t1) - epsZ;
+        if (g0 <= 0 && g1 <= 0) continue;
+        if (g0 > 0 && g1 > 0) {
+          iv.push([t0, t1]);
+          if (t0 <= 0 && t1 >= 1) break scan;   // 整條邊已被遮住，不必再找
+        } else {
+          const tc = t0 + (t1 - t0) * g0 / (g0 - g1);
+          iv.push(g0 > 0 ? [t0, tc] : [tc, t1]);
+        }
+      }
+    }
+    const L = Math.hypot(dx, dy), minT = minLen / L;
+    const occ = unionIntervals(iv, 0);
+    let cur = 0;
+    const emit = (arr, s, t) => { if (t - s > minT) arr.push([ax + dx * s, ay + dy * s, ax + dx * t, ay + dy * t]); };
+    for (const [s, t] of occ) { emit(vis, cur, s); emit(hid, s, t); cur = t; }
+    emit(vis, cur, 1);
+  }
+  return { vis, hid, bx0, by0, bw: bx1 - bx0, bh: by1 - by0 };
+}
+
+function unionIntervals(list, gap) {
+  if (!list.length) return [];
+  const s = list.slice().sort((p, q) => p[0] - q[0]);
+  const out = [[s[0][0], s[0][1]]];
+  for (let i = 1; i < s.length; i++) {
+    const last = out[out.length - 1];
+    if (s[i][0] <= last[1] + gap) { if (s[i][1] > last[1]) last[1] = s[i][1]; }
+    else out.push([s[i][0], s[i][1]]);
+  }
+  return out;
+}
+function subtractIntervals(A, B, minLen) {
+  const out = [];
+  for (const [a0, a1] of A) {
+    let pieces = [[a0, a1]];
+    for (const [b0, b1] of B) {
+      const next = [];
+      for (const [p0, p1] of pieces) {
+        if (b1 <= p0 || b0 >= p1) { next.push([p0, p1]); continue; }
+        if (b0 > p0) next.push([p0, b0]);
+        if (b1 < p1) next.push([b1, p1]);
+      }
+      pieces = next;
+    }
+    pieces.forEach(p => { if (p[1] - p[0] > minLen) out.push(p); });
+  }
+  return out;
+}
+
+// ====================================================================
+// 5. 共線合併（輪廓線優先於隱藏線）＋串接成折線
+// ====================================================================
+function mergeLines(vis, hid, tol) {
+  const ANG = 2e-3, NB = Math.round(Math.PI / ANG);
+  const bins = new Map(), groups = [];
+  const addSeg = (s, type) => {
+    const dx = s[2] - s[0], dy = s[3] - s[1], L = Math.hypot(dx, dy);
+    if (L < tol * 0.25) return;
+    const ux = dx / L, uy = dy / L;
+    let th = Math.atan2(dy, dx); if (th < 0) th += Math.PI; if (th >= Math.PI) th -= Math.PI;
+    const b = Math.round(th / ANG) % NB;
+    let found = null;
+    for (const db of [0, -1, 1]) {
+      const list = bins.get((b + db + NB) % NB); if (!list) continue;
+      for (const g of list) {
+        if (Math.abs(g.dx * uy - g.dy * ux) > ANG * 2) continue;
+        const d1 = Math.abs(-g.dy * (s[0] - g.ox) + g.dx * (s[1] - g.oy));
+        const d2 = Math.abs(-g.dy * (s[2] - g.ox) + g.dx * (s[3] - g.oy));
+        if (d1 < tol && d2 < tol) { found = g; break; }
+      }
+      if (found) break;
+    }
+    if (!found) {
+      found = { dx: ux, dy: uy, ox: s[0], oy: s[1], iv: [[], []] };
+      if (!bins.has(b)) bins.set(b, []);
+      bins.get(b).push(found); groups.push(found);
+    }
+    const t0 = (s[0] - found.ox) * found.dx + (s[1] - found.oy) * found.dy;
+    const t1 = (s[2] - found.ox) * found.dx + (s[3] - found.oy) * found.dy;
+    found.iv[type].push([Math.min(t0, t1), Math.max(t0, t1)]);
+  };
+  vis.forEach(s => addSeg(s, 0));
+  hid.forEach(s => addSeg(s, 1));
+  const out = { vis: [], hid: [] };
+  const P = (g, t) => [g.ox + g.dx * t, g.oy + g.dy * t];
+  for (const g of groups) {
+    const Vv = unionIntervals(g.iv[0], tol * 0.5);
+    const Hh = subtractIntervals(unionIntervals(g.iv[1], tol * 0.5), Vv, tol * 2);
+    Vv.forEach(([a, b]) => out.vis.push([...P(g, a), ...P(g, b)]));
+    Hh.forEach(([a, b]) => out.hid.push([...P(g, a), ...P(g, b)]));
+  }
+  return out;
+}
+
+function chainSegments(segs, tol) {
+  const nodes = new Map();
+  const key = (x, y) => Math.round(x / tol) + '_' + Math.round(y / tol);
+  const node = (x, y) => { const k = key(x, y); let n = nodes.get(k); if (!n) nodes.set(k, n = { x, y, e: [] }); return n; };
+  const E = segs.map((s, i) => { const a = node(s[0], s[1]), b = node(s[2], s[3]); a.e.push(i); b.e.push(i); return { a, b, used: false }; });
+  const polys = [];
+  const walk = (start, from, pts) => {
+    let n = start, prevE = from;
+    while (n.e.length === 2) {
+      const ne = n.e[0] === prevE ? n.e[1] : n.e[0];
+      if (E[ne].used) break;
+      E[ne].used = true;
+      n = E[ne].a === n ? E[ne].b : E[ne].a;
+      pts.push([n.x, n.y]); prevE = ne;
+    }
+  };
+  E.forEach((s, i) => {
+    if (s.used) return;
+    s.used = true;
+    const fwd = [[s.a.x, s.a.y], [s.b.x, s.b.y]];
+    walk(s.b, i, fwd);
+    const back = [];
+    walk(s.a, i, back);
+    polys.push(back.reverse().concat(fwd));
+  });
+  return polys;
+}
+
+function processView(name) {
+  const B = BASES[name];
+  const raw = computeView(model, B);
+  const tol = model.diag * 2e-4;
+  const merged = mergeLines(raw.vis, raw.hid, tol);
+  const view = {
+    name, bx0: raw.bx0, by0: raw.by0, bw: raw.bw, bh: raw.bh,
+    vis: chainSegments(merged.vis, tol), hid: chainSegments(merged.hid, tol),
+    centers: { axes: [], crosses: [] },
+  };
+  // 中心線
+  const proj = p => [B.u[0] * p[0] + B.u[1] * p[1] + B.u[2] * p[2], B.v[0] * p[0] + B.v[1] * p[1] + B.v[2] * p[2]];
+  for (const g of model.axes) {
+    const a = Math.abs(g.n[0] * B.d[0] + g.n[1] * B.d[1] + g.n[2] * B.d[2]);
+    if (a > 0.995) {
+      const c = proj(g.c0);
+      const dup = view.centers.crosses.find(q => Math.hypot(q.x - c[0], q.y - c[1]) < tol * 5);
+      if (dup) dup.r = Math.max(dup.r, g.rMax); else view.centers.crosses.push({ x: c[0], y: c[1], r: g.rMax });
+    } else if (a < 0.02 && g.tMax - g.tMin > tol * 5) {
+      const p1 = proj(g.c0.map((c, k) => c + g.n[k] * g.tMin));
+      const p2 = proj(g.c0.map((c, k) => c + g.n[k] * g.tMax));
+      view.centers.axes.push([...p1, ...p2]);
+    }
+  }
+  return view;
+}
+
+function getView(name) {
+  if (!viewCache[name]) viewCache[name] = processView(name);
+  return viewCache[name];
+}
+
+// ====================================================================
+// 6. 圖面：版面配置與繪圖元件（prims → SVG / DXF）
+// ====================================================================
+function computeLayout(W, H, D, s, area, o) {
+  const fw = W * s, fh = H * s, dd = D * s;
+  const g = o.labels ? 20 : STD.viewGap;
+  const dm = o.dims ? 15 : 0, lb = o.labels ? 8 : 0;
+  let gw, gh, F, Tv, S, iso;
+  if (o.proj === 'third') {
+    gw = dm + fw + g + dd; gh = dd + g + fh + dm + lb;
+    const x0 = area.x + (area.w - gw) / 2, y0 = area.y + (area.h - gh) / 2;
+    F = { left: x0 + dm, bottom: y0 + dd + g + fh };
+    Tv = { left: F.left, bottom: y0 + dd };
+    S = { left: F.left + fw + g, bottom: F.bottom };
+    iso = { x: S.left, y: area.y, w: area.x + area.w - S.left, h: Tv.bottom - area.y };
+  } else {
+    gw = dm + fw + g + dd; gh = fh + g + dd + dm + lb;
+    const x0 = area.x + (area.w - gw) / 2, y0 = area.y + (area.h - gh) / 2;
+    F = { left: x0 + dm, bottom: y0 + fh };
+    S = { left: F.left + fw + g, bottom: F.bottom };
+    Tv = { left: F.left, bottom: F.bottom + g + dd };
+    const ix = Math.max(S.left, F.left + fw + (o.dims ? dm + 2 : 0));
+    iso = { x: ix, y: F.bottom + g / 2, w: area.x + area.w - ix, h: area.y + area.h - F.bottom - g / 2 };
+  }
+  return { gw, gh, F, T: Tv, S, iso, dm };
+}
+
+function draw() {
+  const sheet = SHEETS[state.sheet];
+  const prims = [];
+  const frame = { x: 10, y: 10, w: sheet.w - 20, h: sheet.h - 20 };
+  let scaleLabel = '—';
+  if (model) {
+    const sideName = state.proj === 'third' ? 'right' : 'left';
+    const vF = getView('front'), vT = getView('top'), vS = getView(sideName);
+    const W = vF.bw, H = vF.bh, D = vT.bh;
+    const area = { x: frame.x + 4, y: frame.y + 4, w: frame.w - 8, h: frame.h - TB_H - 8 };
+    const o = { proj: state.proj, dims: state.showDims, labels: state.showLabels };
+    let sc = null;
+    if (state.scale === 'auto') {
+      for (const [n, d] of SCALES) {
+        const L = computeLayout(W, H, D, n / d, area, o);
+        if (L.gw <= area.w && L.gh <= area.h) { sc = [n, d]; break; }
+      }
+      if (!sc) sc = SCALES[SCALES.length - 1];
+    } else sc = state.scale.split(':').map(Number);
+    const s = sc[0] / sc[1];
+    scaleLabel = sc[0] + ':' + sc[1];
+    const L = computeLayout(W, H, D, s, area, o);
+
+    const pF = drawView(prims, vF, L.F, s, 'OUTLINE', true);
+    const pT = drawView(prims, vT, L.T, s, 'OUTLINE', true);
+    const pS = drawView(prims, vS, L.S, s, 'OUTLINE', true);
+
+    if (state.showDims) {
+      // 高度：前視圖左側
+      const top = L.F.bottom - H * s, bot = L.F.bottom;
+      const pt1 = extremePt(pF, 'y', top, 'x', false, [L.F.left, top]);
+      const pt2 = extremePt(pF, 'y', bot, 'x', false, [L.F.left, bot]);
+      dimV(prims, pt2, pt1, L.F.left - STD.dimOffset, H);
+      // 寬度：最下方那個視圖（第三角＝前視、第一角＝俯視）的下方
+      const wv = state.proj === 'third' ? { p: pF, pl: L.F } : { p: pT, pl: L.T };
+      const l = wv.pl.left, r = wv.pl.left + W * s, b = wv.pl.bottom;
+      dimH(prims, extremePt(wv.p, 'x', l, 'y', true, [l, b]), extremePt(wv.p, 'x', r, 'y', true, [r, b]), b + STD.dimOffset, W);
+      // 深度：第三角＝右側視圖下方；第一角＝俯視圖右側
+      if (state.proj === 'third') {
+        const l2 = L.S.left, r2 = L.S.left + D * s, b2 = L.S.bottom;
+        dimH(prims, extremePt(pS, 'x', l2, 'y', true, [l2, b2]), extremePt(pS, 'x', r2, 'y', true, [r2, b2]), b2 + STD.dimOffset, D);
+      } else {
+        const rr = L.T.left + W * s, t2 = L.T.bottom - D * s, b2 = L.T.bottom;
+        dimV(prims, extremePt(pT, 'y', b2, 'x', true, [rr, b2]), extremePt(pT, 'y', t2, 'x', true, [rr, t2]), rr + STD.dimOffset, D);
+      }
+    }
+    if (state.showLabels) {
+      const lab = (pl, w, name, hasDim) => prims.push({ k: 'text', layer: 'TEXT', x: pl.left + w / 2, y: pl.bottom + (hasDim ? L.dm + 6 : 7), h: 3.5, str: VIEW_NAMES[name], anchor: 'middle' });
+      const third = state.proj === 'third';
+      lab(L.F, W * s, 'front', third && state.showDims);
+      lab(L.T, W * s, 'top', !third && state.showDims);
+      lab(L.S, D * s, sideName, third && state.showDims);
+    }
+    if (state.showIso) drawIso(prims, L.iso, s);
+  }
+  drawFrame(prims, frame, scaleLabel);
+  lastDrawing = { prims, sheet };
+  renderSheet();
+}
+
+function drawView(prims, view, pl, s, layer, withExtras) {
+  const map = (x, y) => [pl.left + (x - view.bx0) * s, pl.bottom - (y - view.by0) * s];
+  const pts = [];
+  for (const poly of view.vis) { const p = poly.map(q => map(q[0], q[1])); prims.push({ k: 'pl', layer, pts: p }); pts.push(p[0], p[p.length - 1]); }
+  for (const poly of view.hid) {
+    const p = poly.map(q => map(q[0], q[1])); pts.push(p[0], p[p.length - 1]);
+    if (withExtras && state.showHidden) prims.push({ k: 'pl', layer: 'HIDDEN', pts: p });
+  }
+  if (withExtras && state.showCenter) {
+    const over = STD.centerOver;
+    for (const a of view.centers.axes) {
+      let p1 = map(a[0], a[1]), p2 = map(a[2], a[3]);
+      const L = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]), ux = (p2[0] - p1[0]) / L, uy = (p2[1] - p1[1]) / L;
+      centerLine(prims, [p1[0] - ux * over, p1[1] - uy * over], [p2[0] + ux * over, p2[1] + uy * over]);
+    }
+    for (const c of view.centers.crosses) {
+      const [cx, cy] = map(c.x, c.y), r = c.r * s + over;
+      centerLine(prims, [cx - r, cy], [cx + r, cy]);
+      centerLine(prims, [cx, cy - r], [cx, cy + r]);
+    }
+  }
+  return pts;
+}
+
+// 中心線：讓長劃落在線段中點（圓孔中心十字以長劃相交）；過短時改用細實線
+function centerLine(prims, a, b) {
+  const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  if (L < 10) { prims.push({ k: 'pl', layer: 'CENTER', pts: [a, b], solid: true }); return; }
+  const P = STD.centerDash.reduce((s, v) => s + v, 0), mid = STD.centerDash[0] / 2;
+  const off = (((mid - L / 2) % P) + P) % P;
+  prims.push({ k: 'pl', layer: 'CENTER', pts: [a, b], dashOffset: off });
+}
+
+function extremePt(pts, axis, target, pick, pickMax, fallback) {
+  const tol = 0.3, ai = axis === 'x' ? 0 : 1, pi = pick === 'x' ? 0 : 1;
+  let best = null;
+  for (const p of pts) {
+    if (Math.abs(p[ai] - target) > tol) continue;
+    if (!best || (pickMax ? p[pi] > best[pi] : p[pi] < best[pi])) best = p;
+  }
+  return best || fallback;
+}
+
+const fmtNum = v => String(Math.round(v * 10) / 10);
+
+function arrow(prims, tip, ux, uy) {
+  const L = STD.arrowL, w = STD.arrowW / 2;
+  prims.push({ k: 'tri', layer: 'DIM', pts: [tip, [tip[0] - ux * L - uy * w, tip[1] - uy * L + ux * w], [tip[0] - ux * L + uy * w, tip[1] - uy * L - ux * w]] });
+}
+
+// 水平尺寸：p1、p2 為物體上的點，yd 為尺寸線位置
+function dimH(prims, p1, p2, yd, value) {
+  const dir = Math.sign(yd - (p1[1] + p2[1]) / 2) || 1;
+  for (const p of [p1, p2]) prims.push({ k: 'pl', layer: 'DIM', pts: [[p[0], p[1] + dir * STD.extGap], [p[0], yd + dir * STD.extOver]] });
+  const x1 = Math.min(p1[0], p2[0]), x2 = Math.max(p1[0], p2[0]);
+  if (x2 - x1 > 2 * STD.arrowL + 2) {
+    prims.push({ k: 'pl', layer: 'DIM', pts: [[x1, yd], [x2, yd]] });
+    arrow(prims, [x1, yd], -1, 0); arrow(prims, [x2, yd], 1, 0);
+  } else {
+    prims.push({ k: 'pl', layer: 'DIM', pts: [[x1 - 8, yd], [x2 + 8, yd]] });
+    arrow(prims, [x1, yd], 1, 0); arrow(prims, [x2, yd], -1, 0);
+  }
+  prims.push({ k: 'text', layer: 'TEXT', x: (x1 + x2) / 2, y: yd - 1, h: STD.textH, str: fmtNum(value), anchor: 'middle' });
+}
+// 垂直尺寸：數字轉 90°，由右側閱讀，位於尺寸線左方
+function dimV(prims, p1, p2, xd, value) {
+  const dir = Math.sign(xd - (p1[0] + p2[0]) / 2) || 1;
+  for (const p of [p1, p2]) prims.push({ k: 'pl', layer: 'DIM', pts: [[p[0] + dir * STD.extGap, p[1]], [xd + dir * STD.extOver, p[1]]] });
+  const y1 = Math.min(p1[1], p2[1]), y2 = Math.max(p1[1], p2[1]);
+  if (y2 - y1 > 2 * STD.arrowL + 2) {
+    prims.push({ k: 'pl', layer: 'DIM', pts: [[xd, y1], [xd, y2]] });
+    arrow(prims, [xd, y1], 0, -1); arrow(prims, [xd, y2], 0, 1);
+  } else {
+    prims.push({ k: 'pl', layer: 'DIM', pts: [[xd, y1 - 8], [xd, y2 + 8]] });
+    arrow(prims, [xd, y1], 0, 1); arrow(prims, [xd, y2], 0, -1);
+  }
+  prims.push({ k: 'text', layer: 'TEXT', x: xd - 1, y: (y1 + y2) / 2, h: STD.textH, str: fmtNum(value), anchor: 'middle', rot: 90 });
+}
+
+function drawIso(prims, R, sMain) {
+  if (R.w < 30 || R.h < 30) return;
+  const v = getView('iso');
+  const bw = v.bw * ISO_K, bh = v.bh * ISO_K;
+  const sIso = Math.min(sMain, (R.w - 8) / bw, (R.h - 14) / bh);
+  if (sIso <= 0) return;
+  const k = sIso * ISO_K;
+  const left = R.x + (R.w - v.bw * k) / 2, bottom = R.y + (R.h - 8 + v.bh * k) / 2;
+  drawView(prims, v, { left, bottom }, k, 'ISO', false);
+  const same = Math.abs(sIso - sMain) < 1e-9;
+  prims.push({ k: 'text', layer: 'TEXT', x: left + v.bw * k / 2, y: bottom + 7, h: 3, str: same ? '等角圖' : '等角圖（不依比例）', anchor: 'middle' });
+}
+
+function projSymbol(prims, x, cy, first) {
+  const H = 9, h = 4.5, len = 9, gap = 4, R = 4.5, r = 2.25;
+  const xl = x, xr = x + len;
+  const bigX = first ? xr : xl, smallX = first ? xl : xr;
+  prims.push({ k: 'pl', layer: 'SYMBOL', closed: true, pts: [[bigX, cy - H / 2], [smallX, cy - h / 2], [smallX, cy + h / 2], [bigX, cy + H / 2]] });
+  const cx = xr + gap + R;
+  prims.push({ k: 'circle', layer: 'SYMBOL', c: [cx, cy], r: R });
+  prims.push({ k: 'circle', layer: 'SYMBOL', c: [cx, cy], r });
+  prims.push({ k: 'pl', layer: 'CENTER', pts: [[xl - 1.5, cy], [cx + R + 1.5, cy]], solid: true, thin: true });
+  prims.push({ k: 'pl', layer: 'CENTER', pts: [[cx, cy - R - 1.5], [cx, cy + R + 1.5]], solid: true, thin: true });
+}
+
+function drawFrame(prims, fr, scaleLabel) {
+  const rect = (x, y, w, h, layer) => prims.push({ k: 'pl', layer, closed: true, pts: [[x, y], [x + w, y], [x + w, y + h], [x, y + h]] });
+  const line = (x1, y1, x2, y2) => prims.push({ k: 'pl', layer: 'TB', pts: [[x1, y1], [x2, y2]] });
+  const text = (x, y, str, h = 2.5, anchor = 'start', bold = false) => { if (str) prims.push({ k: 'text', layer: 'TEXT', x, y, h, str, anchor, bold }); };
+  rect(fr.x, fr.y, fr.w, fr.h, 'FRAME');
+  const x0 = fr.x + fr.w - TB_W, y0 = fr.y + fr.h - TB_H;
+  rect(x0, y0, TB_W, TB_H, 'FRAME');
+  const tb = readTB();
+  // 左欄：投影法、比例、單位
+  line(x0 + 56, y0, x0 + 56, y0 + TB_H);
+  line(x0, y0 + 18, x0 + 56, y0 + 18);
+  line(x0 + 28, y0 + 18, x0 + 28, y0 + TB_H);
+  projSymbol(prims, x0 + 6, y0 + 8, state.proj === 'first');
+  text(x0 + 28, y0 + 16.2, state.proj === 'third' ? '第三角法' : '第一角法', 2.5, 'middle');
+  text(x0 + 2, y0 + 21.5, '比例', 2);
+  text(x0 + 14, y0 + 26, scaleLabel, 3.5, 'middle', true);
+  text(x0 + 30, y0 + 21.5, '單位', 2);
+  text(x0 + 42, y0 + 26, 'mm', 3.5, 'middle', true);
+  // 中欄：圖名、單位
+  line(x0 + 56, y0 + 17, x0 + 126, y0 + 17);
+  text(x0 + 58, y0 + 4, '圖名', 2);
+  text(x0 + 91, y0 + 13, tb.title, 5, 'middle', true);
+  text(x0 + 91, y0 + 24, tb.org, 3.5, 'middle');
+  // 右欄：繪圖、學號、日期、圖號
+  line(x0 + 126, y0, x0 + 126, y0 + TB_H);
+  line(x0 + 138, y0, x0 + 138, y0 + TB_H);
+  const rows = [['繪圖', tb.author], ['學號', tb.sid], ['日期', tb.date], ['圖號', tb.no]];
+  rows.forEach(([k, v], i) => {
+    if (i) line(x0 + 126, y0 + i * 7, x0 + TB_W, y0 + i * 7);
+    text(x0 + 132, y0 + i * 7 + 4.9, k, 2.5, 'middle');
+    text(x0 + 140, y0 + i * 7 + 5, v, 2.8);
+  });
+}
+
+// ====================================================================
+// 7. 輸出：SVG / DXF
+// ====================================================================
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const f3 = v => (Math.round(v * 1000) / 1000).toString();
+
+function toSVG({ prims, sheet }) {
+  const out = [];
+  out.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${sheet.w}mm" height="${sheet.h}mm" viewBox="0 0 ${sheet.w} ${sheet.h}">`);
+  out.push(`<rect width="${sheet.w}" height="${sheet.h}" fill="#fff"/>`);
+  const order = ['CENTER', 'HIDDEN', 'ISO', 'OUTLINE', 'DIM', 'SYMBOL', 'TB', 'FRAME'];
+  for (const name of order) {
+    const L = LAYERS[name];
+    const items = prims.filter(p => p.layer === name && p.k !== 'text');
+    if (!items.length) continue;
+    const dash = L.dash ? ` stroke-dasharray="${L.dash.join(' ')}"` : '';
+    out.push(`<g id="${name}" fill="none" stroke="#000" stroke-width="${L.w}" stroke-linecap="${L.cap}" stroke-linejoin="round"${dash}>`);
+    for (const p of items) {
+      if (p.k === 'pl') {
+        const extra = p.solid ? ` stroke-dasharray="none"${p.thin ? ' stroke-width="0.18"' : ''}` : (p.dashOffset != null ? ` stroke-dashoffset="${f3(p.dashOffset)}"` : '');
+        const pts = p.pts.map(q => f3(q[0]) + ',' + f3(q[1])).join(' ');
+        out.push(`<${p.closed ? 'polygon' : 'polyline'} points="${pts}"${extra}/>`);
+      } else if (p.k === 'circle') {
+        out.push(`<circle cx="${f3(p.c[0])}" cy="${f3(p.c[1])}" r="${f3(p.r)}"/>`);
+      } else if (p.k === 'tri') {
+        out.push(`<polygon points="${p.pts.map(q => f3(q[0]) + ',' + f3(q[1])).join(' ')}" fill="#000" stroke="none"/>`);
+      }
+    }
+    out.push('</g>');
+  }
+  out.push(`<g id="TEXT" fill="#000" font-family="'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif">`);
+  for (const t of prims.filter(p => p.k === 'text')) {
+    const rot = t.rot ? ` transform="rotate(${-t.rot} ${f3(t.x)} ${f3(t.y)})"` : '';
+    out.push(`<text x="${f3(t.x)}" y="${f3(t.y)}" font-size="${t.h}" text-anchor="${t.anchor || 'start'}"${t.bold ? ' font-weight="700"' : ''}${rot}>${esc(t.str)}</text>`);
+  }
+  out.push('</g></svg>');
+  return out.join('\n');
+}
+
+function toDXF({ prims, sheet }) {
+  const o = [];
+  const w = (c, v) => { o.push(String(c)); o.push(String(v)); };
+  const Y = y => f3(sheet.h - y);   // DXF 為 Y 軸朝上
+  const enc = s => String(s).replace(/[^\x20-\x7e]/g, ch => '\\U+' + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0'));
+  w(0, 'SECTION'); w(2, 'HEADER');
+  w(9, '$ACADVER'); w(1, 'AC1009');
+  w(9, '$INSUNITS'); w(70, 4);
+  w(9, '$LTSCALE'); w(40, 1);
+  w(9, '$EXTMIN'); w(10, 0); w(20, 0);
+  w(9, '$EXTMAX'); w(10, sheet.w); w(20, sheet.h);
+  w(0, 'ENDSEC');
+  w(0, 'SECTION'); w(2, 'TABLES');
+  const ltypes = [['CONTINUOUS', 'Solid line', []], ['HIDDEN', '__ __ __', [STD.hiddenDash[0], -STD.hiddenDash[1]]],
+                  ['CENTER', '____ _ ____', [STD.centerDash[0], -STD.centerDash[1], STD.centerDash[2], -STD.centerDash[3]]]];
+  w(0, 'TABLE'); w(2, 'LTYPE'); w(70, ltypes.length);
+  for (const [name, desc, pat] of ltypes) {
+    w(0, 'LTYPE'); w(2, name); w(70, 0); w(3, desc); w(72, 65); w(73, pat.length);
+    w(40, f3(pat.reduce((s, v) => s + Math.abs(v), 0))); pat.forEach(v => w(49, v));
+  }
+  w(0, 'ENDTAB');
+  const lnames = Object.keys(LAYERS);
+  w(0, 'TABLE'); w(2, 'LAYER'); w(70, lnames.length);
+  for (const n of lnames) { w(0, 'LAYER'); w(2, n); w(70, 0); w(62, LAYERS[n].dxf); w(6, LAYERS[n].lt); }
+  w(0, 'ENDTAB');
+  w(0, 'TABLE'); w(2, 'STYLE'); w(70, 1);
+  w(0, 'STYLE'); w(2, 'STANDARD'); w(70, 0); w(40, 0); w(41, 1); w(50, 0); w(71, 0); w(42, 2.5); w(3, 'txt'); w(4, '');
+  w(0, 'ENDTAB');
+  w(0, 'ENDSEC');
+  w(0, 'SECTION'); w(2, 'ENTITIES');
+  for (const p of prims) {
+    const layer = p.layer;
+    const lt = p.solid ? 'CONTINUOUS' : null;
+    if (p.k === 'pl') {
+      if (p.pts.length === 2 && !p.closed) {
+        w(0, 'LINE'); w(8, layer); if (lt) w(6, lt);
+        w(10, f3(p.pts[0][0])); w(20, Y(p.pts[0][1])); w(30, 0);
+        w(11, f3(p.pts[1][0])); w(21, Y(p.pts[1][1])); w(31, 0);
+      } else {
+        w(0, 'POLYLINE'); w(8, layer); if (lt) w(6, lt); w(66, 1); w(10, 0); w(20, 0); w(30, 0); w(70, (p.closed ? 1 : 0) | 128);
+        for (const q of p.pts) { w(0, 'VERTEX'); w(8, layer); w(10, f3(q[0])); w(20, Y(q[1])); w(30, 0); }
+        w(0, 'SEQEND'); w(8, layer);
+      }
+    } else if (p.k === 'circle') {
+      w(0, 'CIRCLE'); w(8, layer); w(10, f3(p.c[0])); w(20, Y(p.c[1])); w(30, 0); w(40, f3(p.r));
+    } else if (p.k === 'tri') {
+      w(0, 'SOLID'); w(8, layer);
+      const q = [p.pts[0], p.pts[1], p.pts[2], p.pts[2]];
+      q.forEach((pt, i) => { w(10 + i, f3(pt[0])); w(20 + i, Y(pt[1])); w(30 + i, 0); });
+    } else if (p.k === 'text') {
+      w(0, 'TEXT'); w(8, layer); w(10, f3(p.x)); w(20, Y(p.y)); w(30, 0); w(40, p.h); w(1, enc(p.str));
+      if (p.rot) w(50, p.rot);
+      if (p.anchor === 'middle' || p.anchor === 'end') { w(72, p.anchor === 'middle' ? 1 : 2); w(11, f3(p.x)); w(21, Y(p.y)); w(31, 0); }
+    }
+  }
+  w(0, 'ENDSEC'); w(0, 'EOF');
+  return o.join('\r\n');
+}
+
+function download(name, text, type) {
+  const blob = new Blob([text], { type });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+const baseName = () => (readTB().title || state.name || '三視圖').replace(/[\\/:*?"<>|]/g, '_');
+
+function printSheet() {
+  if (!lastDrawing) return;
+  const { sheet } = lastDrawing;
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+  document.body.appendChild(iframe);
+  const doc = iframe.contentDocument;
+  doc.open();
+  doc.write(`<!doctype html><html><head><meta charset="utf-8"><style>@page{size:${sheet.w}mm ${sheet.h}mm;margin:0}html,body{margin:0}svg{display:block}</style></head><body>${toSVG(lastDrawing)}</body></html>`);
+  doc.close();
+  setTimeout(() => { iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(() => iframe.remove(), 1000); }, 200);
+}
+
+// ====================================================================
+// 8. 畫面：圖紙顯示與縮放
+// ====================================================================
+function renderSheet() {
+  const wrap = $('sheetWrap');
+  wrap.innerHTML = toSVG(lastDrawing);
+  if (!model) {
+    const svg = wrap.querySelector('svg');
+    const { sheet } = lastDrawing;
+    svg.insertAdjacentHTML('beforeend', `<text x="${sheet.w / 2}" y="${(sheet.h - TB_H) / 2}" font-size="6" fill="#9aa3b2" text-anchor="middle" font-family="sans-serif">匯入 3D 模型或點選左側範例</text>`);
+  }
+  applyZoom();
+}
+function fitZoom() {
+  const st = $('stage'), { sheet } = lastDrawing;
+  const pxPerMm = 96 / 25.4;
+  state.zoom = Math.min((st.clientWidth - 56) / (sheet.w * pxPerMm), (st.clientHeight - 56) / (sheet.h * pxPerMm));
+}
+function applyZoom() {
+  const svg = $('sheetWrap').querySelector('svg'); if (!svg) return;
+  if (!state.zoom) fitZoom();
+  const { sheet } = lastDrawing, pxPerMm = 96 / 25.4;
+  svg.style.width = (sheet.w * pxPerMm * state.zoom) + 'px';
+  svg.style.height = (sheet.h * pxPerMm * state.zoom) + 'px';
+}
+
+// ====================================================================
+// 9. 3D 預覽
+// ====================================================================
+const PV = {};
+function initPreview() {
+  const el = $('preview');
+  PV.renderer = new THREE.WebGLRenderer({ antialias: true });
+  PV.renderer.setPixelRatio(window.devicePixelRatio);
+  el.prepend(PV.renderer.domElement);
+  PV.scene = new THREE.Scene();
+  PV.scene.background = new THREE.Color(0xf3f4f6);
+  PV.camera = new THREE.PerspectiveCamera(30, 1, 0.1, 1e7);
+  PV.scene.add(PV.camera);
+  PV.scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa5b5, 1.8));
+  const dl = new THREE.DirectionalLight(0xffffff, 1.6); dl.position.set(0.6, 1, 0.8); PV.camera.add(dl);
+  PV.controls = new OrbitControls(PV.camera, PV.renderer.domElement);
+  PV.controls.addEventListener('change', renderPreview);
+  PV.root = new THREE.Group(); PV.scene.add(PV.root);
+  new ResizeObserver(() => {
+    const w = el.clientWidth, h = el.clientHeight;
+    PV.renderer.setSize(w, h); PV.camera.aspect = w / h; PV.camera.updateProjectionMatrix(); renderPreview();
+  }).observe(el);
+}
+function renderPreview() { PV.renderer && PV.renderer.render(PV.scene, PV.camera); }
+function labelSprite(text, color) {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d');
+  g.fillStyle = color; g.beginPath(); g.arc(64, 64, 56, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#fff'; g.font = 'bold 64px "PingFang TC","Microsoft JhengHei",sans-serif';
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 64, 68);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
+  sp.renderOrder = 10;
+  return sp;
+}
+function updatePreview(resetCam) {
+  PV.root.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { o.material.map?.dispose(); o.material.dispose(); } });
+  PV.root.clear();
+  if (!model) { renderPreview(); return; }
+  const [sx, sy, sz] = model.size, diag = model.diag;
+  const pos = new Float32Array(model.V), off = new THREE.Vector3(-sx / 2, -sy / 2, -sz / 2);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setIndex(new THREE.BufferAttribute(new Uint32Array(model.tris), 1));
+  const mesh = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0xc8d2df, flatShading: true, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1, metalness: 0, roughness: 0.85 }));
+  mesh.position.copy(off); PV.root.add(mesh);
+  const E = model.E, lp = [], op = [];
+  for (let e = 0; e < E.n.length; e++) if (model.sharp[e]) {
+    const a = E.a[e], b = E.b[e];
+    (E.n[e] === 1 ? op : lp).push(model.V[3 * a], model.V[3 * a + 1], model.V[3 * a + 2], model.V[3 * b], model.V[3 * b + 1], model.V[3 * b + 2]);
+  }
+  for (const [arr, color] of [[lp, 0x1d2330], [op, 0xe03131]]) {
+    if (!arr.length) continue;
+    const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3));
+    const lines = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color }));
+    lines.position.copy(off); PV.root.add(lines);
+  }
+  // 觀看方向指示
+  const R = diag * 0.62, len = diag * 0.22;
+  const side = state.proj === 'third' ? [1, '右'] : [-1, '左'];
+  const ind = [
+    [new THREE.Vector3(0, 0, 1), 0xe8590c, '前'],
+    [new THREE.Vector3(0, 1, 0), 0x1971c2, '俯'],
+    [new THREE.Vector3(side[0], 0, 0), 0x2f9e44, side[1]],
+  ];
+  for (const [dir, col, txt] of ind) {
+    const origin = dir.clone().multiplyScalar(R + len);
+    PV.root.add(new THREE.ArrowHelper(dir.clone().negate(), origin, len, col, len * 0.35, len * 0.22));
+    const sp = labelSprite(txt, '#' + col.toString(16).padStart(6, '0'));
+    sp.position.copy(dir.clone().multiplyScalar(R + len * 1.45)); sp.scale.setScalar(diag * 0.11);
+    PV.root.add(sp);
+  }
+  const grid = new THREE.GridHelper(diag * 1.6, 16, 0xc3c9d2, 0xdde1e7); grid.position.y = -sy / 2 - diag * 0.002; PV.root.add(grid);
+  if (resetCam) {
+    PV.camera.position.set(diag * 1.25, diag * 0.95, diag * 1.75);
+    PV.controls.target.set(0, 0, 0); PV.controls.update();
+  }
+  renderPreview();
+}
+
+// ====================================================================
+// 10. 載入與範例模型
+// ====================================================================
+function objectToSoup(obj) {
+  // 逐點讀取（會處理量化／正規化的座標與 GPU Instancing），以 Float64 保留遠離原點模型的精度
+  obj.updateMatrixWorld(true);
+  const out = [], p = new THREE.Vector3();
+  obj.traverse(ch => {
+    const pos = ch.isMesh && ch.geometry?.attributes?.position;
+    if (!pos) return;
+    const idx = ch.geometry.index, n = idx ? idx.count : pos.count;
+    const mats = [];
+    if (ch.isInstancedMesh) {
+      for (let i = 0; i < ch.count; i++) { const im = new THREE.Matrix4(); ch.getMatrixAt(i, im); mats.push(new THREE.Matrix4().multiplyMatrices(ch.matrixWorld, im)); }
+    } else mats.push(ch.matrixWorld);
+    for (const mw of mats) for (let i = 0; i < n - n % 3; i++) {
+      p.fromBufferAttribute(pos, idx ? idx.getX(i) : i).applyMatrix4(mw);
+      out.push(p.x, p.y, p.z);
+    }
+  });
+  return Float64Array.from(out);
+}
+function geomToSoup(g) { return objectToSoup(new THREE.Mesh(g)); }
+
+// OBJ：自行解析。three.js 的 OBJLoader 以扇形切多邊形，遇到 SketchUp 等匯出的凹多邊形會切錯。
+const UNIT_WORDS = [
+  [/^(millimet(er|re)s?|mm)$/, 1], [/^(centimet(er|re)s?|cm)$/, 10], [/^(kilomet(er|re)s?|km)$/, 1e6],
+  [/^(met(er|re)s?|m)$/, 1000], [/^(inch(es)?|in)$/, 25.4], [/^(feet|foot|ft)$/, 304.8], [/^(yards?|yd)$/, 914.4], [/^miles?$/, 1609344],
+];
+// 從註解判讀單位：「# File units = millimeters」（SketchUp）、「# This file uses centimeters as units」（Maya）
+function unitFromComment(line) {
+  const m = line.match(/units?\s*[=:]\s*([a-z]+)/i) || line.match(/uses\s+([a-z]+)\s+as\s+units?/i);
+  if (!m) return null;
+  const w = m[1].toLowerCase();
+  for (const [re, v] of UNIT_WORDS) if (re.test(w)) return v;
+  return null;
+}
+function parseOBJ(text) {
+  const V = [], out = [];
+  let unit = null;
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line[0] === '#') {
+      if (unit === null) unit = unitFromComment(line);
+      continue;
+    }
+    const p = line.split(/\s+/);
+    if (p[0] === 'v') V.push(+p[1], +p[2], +p[3]);
+    else if (p[0] === 'f') {
+      const n = V.length / 3, idx = [];
+      for (let i = 1; i < p.length; i++) {
+        const k = parseInt(p[i], 10);
+        if (!Number.isNaN(k)) idx.push(k < 0 ? n + k : k - 1);
+      }
+      triangulatePolygon(V, idx, out);
+    }
+  }
+  return { soup: Float64Array.from(out), unit };
+}
+
+// 多邊形三角化：投影到最接近的座標平面後以 earcut 切割（可處理凹多邊形），並維持原本的面方向
+function triangulatePolygon(V, idx, out) {
+  const id = idx.filter((v, i) => v !== idx[(i + 1) % idx.length]);
+  const n = id.length;
+  if (n < 3) return;
+  const pt = i => [V[3 * i], V[3 * i + 1], V[3 * i + 2]];
+  const push = (a, b, c) => { for (const i of [a, b, c]) out.push(V[3 * i], V[3 * i + 1], V[3 * i + 2]); };
+  if (n === 3) { push(id[0], id[1], id[2]); return; }
+  let nx = 0, ny = 0, nz = 0;
+  for (let i = 0; i < n; i++) {
+    const p = pt(id[i]), q = pt(id[(i + 1) % n]);
+    nx += (p[1] - q[1]) * (p[2] + q[2]); ny += (p[2] - q[2]) * (p[0] + q[0]); nz += (p[0] - q[0]) * (p[1] + q[1]);
+  }
+  const ax = Math.abs(nx), ay = Math.abs(ny), az = Math.abs(nz);
+  const proj = az >= ax && az >= ay ? p => new THREE.Vector2(p[0], p[1])
+             : ax >= ay ? p => new THREE.Vector2(p[1], p[2]) : p => new THREE.Vector2(p[2], p[0]);
+  let faces = [];
+  try { faces = THREE.ShapeUtils.triangulateShape(id.map(i => proj(pt(i))), []); } catch { faces = []; }
+  if (!faces.length) { for (let i = 1; i < n - 1; i++) push(id[0], id[i], id[i + 1]); return; }
+  for (const [a, b, c] of faces) {
+    const A = pt(id[a]), B = pt(id[b]), C = pt(id[c]);
+    const ux = B[0] - A[0], uy = B[1] - A[1], uz = B[2] - A[2], vx = C[0] - A[0], vy = C[1] - A[1], vz = C[2] - A[2];
+    const dot = (uy * vz - uz * vy) * nx + (uz * vx - ux * vz) * ny + (ux * vy - uy * vx) * nz;
+    if (dot < 0) push(id[a], id[c], id[b]); else push(id[a], id[b], id[c]);
+  }
+}
+
+function demoGeometry(kind) {
+  if (kind === 'bracket') {
+    const s = new THREE.Shape();
+    s.moveTo(0, 0); s.lineTo(60, 0); s.lineTo(60, 12); s.lineTo(16, 12); s.lineTo(16, 45); s.lineTo(0, 45); s.closePath();
+    const h1 = new THREE.Path(); h1.absarc(8, 33, 4, 0, Math.PI * 2, true); s.holes.push(h1);
+    const h2 = new THREE.Path(); h2.absarc(44, 6, 3.5, 0, Math.PI * 2, true); s.holes.push(h2);
+    return { g: new THREE.ExtrudeGeometry(s, { depth: 36, bevelEnabled: false, curveSegments: 18 }), name: 'L 型支架' };
+  }
+  if (kind === 'shaft') {
+    const pts = [[0, 0], [15, 0], [15, 20], [10, 20], [10, 50], [6, 50], [6, 58], [4, 60], [0, 60]].map(p => new THREE.Vector2(p[0], p[1]));
+    const g = new THREE.LatheGeometry(pts, 48); g.rotateZ(-Math.PI / 2);
+    return { g, name: '階梯軸' };
+  }
+  const s = new THREE.Shape();
+  s.moveTo(0, 0); s.lineTo(56, 0); s.lineTo(56, 30); s.lineTo(40, 30); s.lineTo(40, 14); s.lineTo(16, 14); s.lineTo(16, 30); s.lineTo(0, 30); s.closePath();
+  const g = new THREE.ExtrudeGeometry(s, { depth: 40, bevelEnabled: false }); g.rotateY(Math.PI / 2);
+  return { g, name: 'U 型槽塊' };
+}
+
+async function loadFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  const name = file.name.replace(/\.[^.]+$/, '');
+  try {
+    if (ext === 'stl') {
+      setSoup(geomToSoup(new STLLoader().parse(await file.arrayBuffer())), name, true, 1, 'STL 未記錄單位，預設 mm');
+    } else if (ext === 'obj') {
+      const { soup, unit } = parseOBJ(await file.text());
+      setSoup(soup, name, false, unit ?? 1, unit ? '依 OBJ 檔頭判定' : 'OBJ 未記錄單位，預設 mm');
+    } else if (ext === 'glb' || ext === 'gltf') {
+      const data = ext === 'glb' ? await file.arrayBuffer() : await file.text();
+      const gltf = await new Promise((res, rej) => new GLTFLoader().parse(data, '', res, rej)).catch(err => {
+        throw ext === 'gltf' ? new Error('無法讀取 .gltf（通常還需要另外的 .bin 檔），請改匯出成單一檔案的 .glb') : err;
+      });
+      setSoup(objectToSoup(gltf.scene), name, false, 1000, 'glTF 規範單位為公尺');
+    } else throw new Error('不支援的格式：.' + ext);
+  } catch (err) {
+    console.error(err);
+    $('warn').textContent = '載入失敗：' + (err.message || err);
+  }
+}
+
+function setSoup(soup, name, zUp, unit, unitNote) {
+  if (!soup.length) { $('warn').textContent = '檔案中找不到三角網格。'; return; }
+  $('busy').classList.add('on');
+  setTimeout(() => {
+    try {
+      topo = buildTopology(soup);
+      state.name = name; state.zUp = zUp; state.rot.identity();
+      state.unit = unit; state.unitNote = unitNote;
+      const sel = $('unit');
+      if (![...sel.options].some(o => o.value === String(unit))) {
+        sel.add(new Option({ 914.4: 'yd', 1000000: 'km', 1609344: 'mile' }[unit] || `${unit} mm`, String(unit)));
+      }
+      sel.value = String(unit);
+      $('zup').checked = zUp;
+      if (!$('tbTitle').value || $('tbTitle').dataset.auto === '1') { $('tbTitle').value = name; $('tbTitle').dataset.auto = '1'; }
+      rebuildModel(true);
+    } catch (err) {
+      console.error(err); $('warn').textContent = '處理失敗：' + err.message; $('busy').classList.remove('on');
+    }
+  }, 20);
+}
+
+function rebuildModel(resetCam) {
+  if (!topo) return;
+  model = transformModel(topo);
+  classifyModel(model, state.thr);
+  viewCache = {};
+  updatePreview(resetCam);
+  updateInfo();
+  scheduleDraw();
+}
+
+function updateInfo() {
+  if (!model) return;
+  const [x, y, z] = model.size;
+  const unitName = $('unit').selectedOptions[0]?.textContent || 'mm';
+  const notes = [`檔案單位：${unitName}${state.unitNote ? `（${state.unitNote}）` : ''}`];
+  if (model.tjFixed) notes.push(`已自動接合 ${model.tjFixed} 處面與面接縫不對齊的點`);
+  if (model.dupRemoved) notes.push(`已移除 ${model.dupRemoved} 個重複／重疊的面`);
+  $('info').innerHTML = `<b>${esc(state.name)}</b>　${model.nt.toLocaleString()} 個三角面<br>外形尺寸：寬 ${fmtNum(x)} × 高 ${fmtNum(y)} × 深 ${fmtNum(z)} mm　偵測到 ${model.axes.length} 條圓形中心軸<br>${notes.join('；')}`;
+  const w = [];
+  if (model.stats.open) w.push(`有 ${model.stats.open} 條邊只連到一個面（3D 預覽中的紅線）：模型可能有破洞，或某些面沒有和其他面接合。三視圖仍可產生，但紅線附近可能多出或缺少線條。`);
+  if (model.nt > 300000) w.push('三角面很多，計算會比較久；可先在 CAD 降低匯出精度。');
+  $('warn').textContent = w.join(' ');
+}
+
+let drawTimer = 0;
+function scheduleDraw() {
+  $('busy').classList.add('on');
+  clearTimeout(drawTimer);
+  drawTimer = setTimeout(() => {
+    const t0 = performance.now();
+    try { draw(); }
+    catch (err) { console.error(err); $('warn').textContent = '產生視圖失敗：' + err.message; }
+    $('busy').classList.remove('on');
+    $('status').textContent = model ? `計算 ${Math.round(performance.now() - t0)} ms` : '';
+  }, 30);
+}
+
+// ====================================================================
+// 11. 介面綁定
+// ====================================================================
+const TB_FIELDS = { title: 'tbTitle', org: 'tbOrg', author: 'tbAuthor', sid: 'tbSid', date: 'tbDate', no: 'tbNo' };
+function readTB() {
+  const o = {}; for (const [k, id] of Object.entries(TB_FIELDS)) o[k] = $(id).value.trim(); return o;
+}
+function initUI() {
+  const sel = $('scale');
+  sel.innerHTML = '<option value="auto">自動（最大可容納比例）</option>' + SCALES.map(([n, d]) => `<option value="${n}:${d}">${n}:${d}</option>`).join('');
+  try {
+    const saved = JSON.parse(localStorage.getItem('tsv-tb') || '{}');
+    for (const [k, id] of Object.entries(TB_FIELDS)) if (saved[k] && k !== 'title') $(id).value = saved[k];
+  } catch {}
+  if (!$('tbDate').value) $('tbDate').value = new Date().toISOString().slice(0, 10);
+
+  const drop = $('drop');
+  $('file').addEventListener('change', e => { const f = e.target.files[0]; if (f) loadFile(f); e.target.value = ''; });
+  ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
+  document.querySelectorAll('[data-demo]').forEach(b => b.addEventListener('click', () => {
+    const { g, name } = demoGeometry(b.dataset.demo);
+    $('tbTitle').dataset.auto = '1'; $('tbTitle').value = '';
+    setSoup(geomToSoup(g), name, false, 1, '');
+  }));
+  document.querySelectorAll('[data-rot]').forEach(b => b.addEventListener('click', () => {
+    const m = new THREE.Matrix4();
+    ({ x: () => m.makeRotationX(Math.PI / 2), y: () => m.makeRotationY(Math.PI / 2), z: () => m.makeRotationZ(Math.PI / 2) })[b.dataset.rot]();
+    state.rot.premultiply(m); rebuildModel(false);
+  }));
+  $('rotReset').addEventListener('click', () => { state.rot.identity(); rebuildModel(false); });
+  $('zup').addEventListener('change', e => { state.zUp = e.target.checked; rebuildModel(false); });
+  $('unit').addEventListener('change', e => { state.unit = +e.target.value; state.unitNote = '手動設定'; rebuildModel(false); });
+  $('thr').addEventListener('input', e => { $('thrVal').textContent = e.target.value + '°'; });
+  $('thr').addEventListener('change', e => { state.thr = +e.target.value; rebuildModel(false); });
+  document.querySelectorAll('input[name=proj]').forEach(r => r.addEventListener('change', e => {
+    state.proj = e.target.value; if (model) updatePreview(false); scheduleDraw();
+  }));
+  $('sheet').addEventListener('change', e => { state.sheet = e.target.value; state.zoom = 0; scheduleDraw(); });
+  $('scale').addEventListener('change', e => { state.scale = e.target.value; scheduleDraw(); });
+  const opts = { optHidden: 'showHidden', optCenter: 'showCenter', optDims: 'showDims', optIso: 'showIso', optLabels: 'showLabels' };
+  for (const [id, key] of Object.entries(opts)) $(id).addEventListener('change', e => { state[key] = e.target.checked; scheduleDraw(); });
+  let tbTimer = 0;
+  Object.values(TB_FIELDS).forEach(id => $(id).addEventListener('input', () => {
+    if (id === 'tbTitle') $('tbTitle').dataset.auto = '0';
+    clearTimeout(tbTimer);
+    tbTimer = setTimeout(() => {
+      try { localStorage.setItem('tsv-tb', JSON.stringify(readTB())); } catch {}
+      draw();
+    }, 250);
+  }));
+  $('expSvg').addEventListener('click', () => download(baseName() + '.svg', toSVG(lastDrawing), 'image/svg+xml'));
+  $('expDxf').addEventListener('click', () => download(baseName() + '.dxf', toDXF(lastDrawing), 'application/dxf'));
+  $('expPrint').addEventListener('click', printSheet);
+  $('zoomIn').addEventListener('click', () => { state.zoom *= 1.25; applyZoom(); });
+  $('zoomOut').addEventListener('click', () => { state.zoom /= 1.25; applyZoom(); });
+  $('zoomFit').addEventListener('click', () => { fitZoom(); applyZoom(); });
+  $('stage').addEventListener('wheel', e => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault(); state.zoom *= e.deltaY < 0 ? 1.1 : 1 / 1.1; applyZoom();
+  }, { passive: false });
+  window.addEventListener('resize', () => { fitZoom(); applyZoom(); });
+}
+
+// 除錯用：在主控台以 TSV.dxf() / TSV.svg() 取得目前圖面
+window.TSV = { svg: () => toSVG(lastDrawing), dxf: () => toDXF(lastDrawing) };
+
+// 被嵌入（例如 Google 協作平台的嵌入框）時，提示改用新分頁：嵌入框會擋下載
+(() => {
+  let embedded;
+  try { embedded = window.top !== window.self; } catch { embedded = true; }   // 跨來源存取被擋 = 確實被嵌著
+  if (!embedded) return;
+  $('popoutLink').href = location.href;
+  $('popout').hidden = false;
+})();
+
+initUI();
+initPreview();
+draw();
+</script>
+</body>
+</html>
