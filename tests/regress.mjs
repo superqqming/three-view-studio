@@ -238,5 +238,48 @@ console.log('\n[4] 匯入情境');
   ok(JSON.stringify(got) === JSON.stringify([1, 10, 1000, 25.4, null, 914.4]), `單位註解 ${JSON.stringify(got)}`);
 }
 
+// ---------- 5. 尺寸 ----------
+console.log('\n[5] 尺寸（並聯尺寸＋孔）');
+function dimsOf(M, proj = 'third') {
+  G.setModel(M);
+  const side = proj === 'third' ? 'right' : 'left';
+  const views = { front: G.processView('front'), top: G.processView('top'), side: G.processView(side) };
+  const plan = G.planDims(views, proj, false);
+  const out = {};
+  for (const [key, list] of Object.entries(plan.slots)) out[key] = list.map(d => (d.overall ? '總' : '') + Math.round(d.value * 100) / 100).join(',');
+  const holes = Object.values(views).flatMap(v => v.holes.map(h => `${v.name}:Ø${Math.round(2 * h.r * 100) / 100}${h.depth ? '深' + Math.round(h.depth * 100) / 100 : ''}`));
+  return { slots: out, holes, notes: plan.notes };
+}
+const DIM_SNAP = {
+  bracket: { slots: { 'front:bottom': '8,16,44,總60', 'front:left': '6,12,33,總45', 'side:bottom': '總36' }, holes: ['front:Ø8', 'front:Ø7'] },
+  shaft: { slots: { 'front:bottom': '20,50,58,總60', 'front:left': '總30', 'side:bottom': '總30' }, holes: [] },
+  channel: { slots: { 'front:bottom': '總40', 'front:left': '總30', 'side:right': '14', 'side:bottom': '16,40,總56' }, holes: [] },
+};
+for (const [k, exp] of Object.entries(DIM_SNAP)) {
+  const got = dimsOf(prepare(soupOf(G.demoGeometry(k).g)));
+  const sortObj = o => JSON.stringify(Object.keys(o).sort().map(x => [x, o[x]]));
+  ok(sortObj(got.slots) === sortObj(exp.slots) && JSON.stringify(got.holes.sort()) === JSON.stringify(exp.holes.slice().sort()),
+    `${k} 尺寸 ${JSON.stringify(got.slots)} 孔 ${JSON.stringify(got.holes)}`);
+}
+if (fs.existsSync(fixture('cube1.obj'))) {
+  const { soup } = G.parseOBJ(fs.readFileSync(fixture('cube1.obj'), 'utf8'));
+  const got = dimsOf(prepare(soup));
+  const all = Object.values(got.slots).join('|');
+  ok(got.holes.length === 2 && got.holes.every(h => h.includes('Ø50')) && ['100', '150', '200', '總300'].every(v => all.includes(v)),
+    `cube1 尺寸 ${JSON.stringify(got.slots)} 孔 ${JSON.stringify(got.holes)}`);
+  const first = dimsOf(prepare(soup), 'first');
+  ok(Object.keys(first.slots).includes('top:right') && Object.keys(first.slots).includes('top:bottom'), `cube1 第一角法尺寸位置 ${Object.keys(first.slots).join(' ')}`);
+}
+{ // 盲孔：深度要標出來；凸柱不是孔
+  const s = new THREE.Shape(); s.moveTo(0, 0); s.lineTo(60, 0); s.lineTo(60, 40); s.lineTo(0, 40); s.closePath();
+  const h = new THREE.Path(); h.absarc(20, 20, 5, 0, Math.PI * 2, true); s.holes.push(h);
+  const top = soupOf(new THREE.ExtrudeGeometry(s, { depth: 8, bevelEnabled: false }).rotateX(-Math.PI / 2).translate(0, 12, 40));  // 上層 8 厚，帶孔
+  const bot = soupOf(new THREE.BoxGeometry(60, 12, 40).translate(30, 6, 20));   // 下層 12 厚實心（疊在一起成為 8 深的盲孔）
+  const cyl = soupOf(new THREE.CylinderGeometry(6, 6, 10, 32).translate(45, 25, 20));   // 凸柱（獨立實體）
+  const M = prepare(Float64Array.from([...top, ...bot, ...cyl]));
+  const axes = M.axes.map(g => `${g.isHole ? '孔' : '柱'}r${Math.round(g.rMax * 10) / 10}${g.depth ? '深' + Math.round(g.depth * 10) / 10 : ''}`).sort();
+  ok(axes.includes('孔r5深8') && axes.includes('柱r6'), `盲孔與凸柱判斷 ${JSON.stringify(axes)}`);
+}
+
 console.log(fails ? `\n✗ ${fails} 項失敗` : '\n✓ 全部通過');
 process.exit(fails ? 1 : 0);

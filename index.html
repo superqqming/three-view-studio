@@ -81,6 +81,9 @@
     background: rgba(217,221,227,.55); font-size: 14px; color: var(--ink); z-index: 3;
   }
   .busy.on { display: flex; }
+  .dimhit { cursor: pointer; }
+  rect.dimhit:hover { fill: rgba(31,111,235,.14); }
+  polyline.dimhit:hover { stroke: rgba(31,111,235,.22); }
   .busy div { background: #fff; padding: 10px 16px; border-radius: 9px; box-shadow: 0 4px 16px rgba(0,0,0,.12); }
   .popout {
     position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 20;
@@ -183,9 +186,16 @@
       <div class="checks">
         <label><input type="checkbox" id="optHidden" checked>隱藏線</label>
         <label><input type="checkbox" id="optCenter" checked>中心線</label>
-        <label><input type="checkbox" id="optDims" checked>總尺寸</label>
         <label><input type="checkbox" id="optIso" checked>等角圖</label>
+        <label><input type="checkbox" id="optDims" checked>總尺寸</label>
+        <label><input type="checkbox" id="optDetail" checked>細部尺寸</label>
+        <label><input type="checkbox" id="optHoles" checked>孔徑與孔位</label>
         <label><input type="checkbox" id="optLabels">視圖名稱</label>
+      </div>
+      <div class="info">細部尺寸採並聯（基準）尺寸：X 由左、Y 由下、Z 由前面量起。點圖面上的尺寸可隱藏，再點一下復原。</div>
+      <div class="row" style="margin-top:6px">
+        <span class="info" id="dimNote" style="margin:0;flex:1"></span>
+        <button class="chip" id="dimsReset" hidden>顯示全部尺寸</button>
       </div>
     </section>
 
@@ -265,7 +275,8 @@ const STD = {
   hiddenDash: [3, 1],
   centerDash: [12, 1, 1.5, 1],
   centerOver: 3,
-  dimOffset: 10, extGap: 1, extOver: 2, arrowL: 3, arrowW: 1, textH: 3,
+  dimOffset: 10, rowGap: 8, extGap: 1, extOver: 2, arrowL: 3, arrowW: 1, textH: 3,
+  leaderLen: 6, maxRowsPerAxis: 7,
   viewGap: 14,
 };
 const SHEETS = {
@@ -308,7 +319,8 @@ const VIEW_NAMES = { front: '前視圖', top: '俯視圖', right: '右側視圖'
 const state = {
   name: '', zUp: false, rot: new THREE.Matrix4(), unit: 1, thr: 30,
   proj: 'third', sheet: 'A4L', scale: 'auto',
-  showHidden: true, showCenter: true, showDims: true, showIso: true, showLabels: false,
+  showHidden: true, showCenter: true, showDims: true, showDetail: true, showHoles: true, showIso: true, showLabels: false,
+  hiddenDims: new Set(),   // 使用者點選隱藏的尺寸 id
   zoom: 0,
 };
 let topo = null;      // 合併後的網格拓撲（與擺放方向無關）
@@ -522,7 +534,7 @@ function transformModel(T) {
 function classifyModel(M, thrDeg) {
   const E = M.E, ne = E.n.length, FN = M.FN, V = M.V;
   const c = Math.cos(thrDeg * Math.PI / 180);
-  const sharp = new Uint8Array(ne);
+  const sharp = new Uint8Array(ne), edgeCos = new Float32Array(ne).fill(-1);   // edgeCos：兩面法向量夾角的餘弦（找圓用）
   let flipped = 0, nonManifold = 0;
   for (let e = 0; e < ne; e++) {
     if (E.n[e] === 1) { sharp[e] = 1; continue; }
@@ -542,6 +554,7 @@ function classifyModel(M, thrDeg) {
     const fa = E.f1[e], fb = E.f2[e];
     let d = FN[3 * fa] * FN[3 * fb] + FN[3 * fa + 1] * FN[3 * fb + 1] + FN[3 * fa + 2] * FN[3 * fb + 2];
     if (E.s1[e] === E.s2[e]) { d = -d; flipped++; }   // 法向量方向不一致時自動修正
+    edgeCos[e] = d;
     sharp[e] = d < c ? 1 : 0;
   }
   // T 形接點：兩條開放邊重疊且所屬面共平面 → 不是真正的稜線
@@ -573,7 +586,7 @@ function classifyModel(M, thrDeg) {
   }
   let open = 0;
   for (let e = 0; e < ne; e++) if (E.n[e] === 1 && sharp[e]) open++;
-  M.sharp = sharp;
+  M.sharp = sharp; M.edgeCos = edgeCos;
   M.stats = { flipped, nonManifold, open };
   M.axes = findAxes(M);
 }
@@ -581,20 +594,25 @@ function classifyModel(M, thrDeg) {
 function findAxes(M) {
   const E = M.E, V = M.V, sharp = M.sharp, ne = E.n.length;
   const adj = new Map();
-  const add = (p, q) => { let l = adj.get(p); if (!l) adj.set(p, l = []); l.push(q); };
-  for (let e = 0; e < ne; e++) if (sharp[e]) { add(E.a[e], E.b[e]); add(E.b[e], E.a[e]); }
+  const add = (p, q, e) => { let l = adj.get(p); if (!l) adj.set(p, l = []); l.push([q, e]); };
+  // 找圓只用夾角 > 40° 的稜線：孔口（90°）、倒角（45°）留著，粗網格孔壁的接縫（≤ 40°）不算，圓周才不會被切斷
+  const c40 = Math.cos(40 * Math.PI / 180);
+  for (let e = 0; e < ne; e++) if (sharp[e] && (E.n[e] !== 2 || M.edgeCos[e] < c40)) { add(E.a[e], E.b[e], e); add(E.b[e], E.a[e], e); }
   const seen = new Set(), circles = [];
+  M.circleOf = new Int32Array(ne).fill(-1);   // 每條邊屬於哪個偵測到的圓（-1 = 不是）
   for (const [start, nb] of adj) {
     if (seen.has(start) || nb.length !== 2) continue;
-    const path = [start]; seen.add(start);
-    let prev = start, cur = nb[0], closed = false;
+    const path = [start], edges = []; seen.add(start);
+    let prev = start, cur = nb[0][0], closed = false;
+    edges.push(nb[0][1]);
     while (true) {
       if (cur === start) { closed = true; break; }
       const l = adj.get(cur);
       if (seen.has(cur) || l.length !== 2) break;
       seen.add(cur); path.push(cur);
-      const nx = l[0] === prev ? l[1] : l[0];
-      prev = cur; cur = nx;
+      const nx = l[0][0] === prev ? l[1] : l[0];
+      edges.push(nx[1]);
+      prev = cur; cur = nx[0];
     }
     if (!closed || path.length < 10) continue;
     const pts = path.map(i => [V[3 * i], V[3 * i + 1], V[3 * i + 2]]);
@@ -613,8 +631,11 @@ function findAxes(M) {
     if (r < M.diag * 1e-3) continue;
     const planar = pts.every(p => Math.abs((p[0] - cpt[0]) * n[0] + (p[1] - cpt[1]) * n[1] + (p[2] - cpt[2]) * n[2]) < 0.02 * r);
     const round = rs.every(v => Math.abs(v - r) < 0.03 * r);
-    if (planar && round) circles.push({ c: cpt, n, r });
+    if (!planar || !round) continue;
+    edges.forEach(e => { M.circleOf[e] = circles.length; });
+    circles.push({ c: cpt, n, r });
   }
+  M.circles = circles;
   // 同軸的圓 → 同一條中心軸
   const axes = [];
   for (const ci of circles) {
@@ -625,11 +646,56 @@ function findAxes(M) {
       const perp = Math.hypot(w[0] - t * g.n[0], w[1] - t * g.n[1], w[2] - t * g.n[2]);
       return perp < Math.max(M.diag * 1e-3, 0.02 * ci.r);
     });
-    if (!g) { g = { c0: ci.c, n: ci.n, tMin: 0, tMax: 0, rMax: ci.r }; axes.push(g); continue; }
+    if (!g) { g = { c0: ci.c, n: ci.n, tMin: 0, tMax: 0, rMax: ci.r, radii: [ci.r] }; axes.push(g); continue; }
     const t = (ci.c[0] - g.c0[0]) * g.n[0] + (ci.c[1] - g.c0[1]) * g.n[1] + (ci.c[2] - g.c0[2]) * g.n[2];
     g.tMin = Math.min(g.tMin, t); g.tMax = Math.max(g.tMax, t); g.rMax = Math.max(g.rMax, ci.r);
+    if (!g.radii.some(r => Math.abs(r - ci.r) < 0.01 * ci.r)) g.radii.push(ci.r);
   }
+  axes.forEach(g => classifyHole(M, g));
   return axes;
+}
+
+// 點是否在實體內：往固定的不規則方向打射線，數穿過幾個三角形（奇數 = 在內）
+function insideSolid(M, p) {
+  const d = [0.5773, 0.5774, 0.5775], V = M.V, T = M.tris;
+  let hits = 0;
+  for (let f = 0; f < M.nt; f++) {
+    const i = 3 * T[3 * f], j = 3 * T[3 * f + 1], k = 3 * T[3 * f + 2];
+    const e1 = [V[j] - V[i], V[j + 1] - V[i + 1], V[j + 2] - V[i + 2]], e2 = [V[k] - V[i], V[k + 1] - V[i + 1], V[k + 2] - V[i + 2]];
+    const pv = [d[1] * e2[2] - d[2] * e2[1], d[2] * e2[0] - d[0] * e2[2], d[0] * e2[1] - d[1] * e2[0]];
+    const det = e1[0] * pv[0] + e1[1] * pv[1] + e1[2] * pv[2];
+    if (Math.abs(det) < 1e-18) continue;
+    const tv = [p[0] - V[i], p[1] - V[i + 1], p[2] - V[i + 2]];
+    const u = (tv[0] * pv[0] + tv[1] * pv[1] + tv[2] * pv[2]) / det;
+    if (u < 0 || u > 1) continue;
+    const qv = [tv[1] * e1[2] - tv[2] * e1[1], tv[2] * e1[0] - tv[0] * e1[2], tv[0] * e1[1] - tv[1] * e1[0]];
+    const v = (d[0] * qv[0] + d[1] * qv[1] + d[2] * qv[2]) / det;
+    if (v < 0 || u + v > 1) continue;
+    if ((e2[0] * qv[0] + e2[1] * qv[1] + e2[2] * qv[2]) / det > 0) hits++;
+  }
+  return hits % 2 === 1;
+}
+
+// 孔或凸柱：在圓柱面外側一圈取樣，多數點在實體內 = 孔。盲孔：軸線某一端再往外一點仍在實體內
+function classifyHole(M, g) {
+  g.isHole = false; g.depth = 0;
+  const L = g.tMax - g.tMin;
+  if (L < M.diag * 1e-3) return;
+  const n = g.n, a = Math.abs(n[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
+  const e1 = [n[1] * a[2] - n[2] * a[1], n[2] * a[0] - n[0] * a[2], n[0] * a[1] - n[1] * a[0]];
+  const l1 = Math.hypot(...e1); e1.forEach((x, k) => { e1[k] = x / l1; });
+  const e2 = [n[1] * e1[2] - n[2] * e1[1], n[2] * e1[0] - n[0] * e1[2], n[0] * e1[1] - n[1] * e1[0]];
+  const at = (t, rr, th) => [0, 1, 2].map(k => g.c0[k] + n[k] * t + rr * (Math.cos(th) * e1[k] + Math.sin(th) * e2[k]));
+  const rr = g.rMax * 1.06 + M.diag * 1e-3;
+  let inside = 0, total = 0;
+  for (const f of [0.25, 0.5, 0.75]) for (let i = 0; i < 8; i++) {
+    total++; if (insideSolid(M, at(g.tMin + L * f, rr, (i + 0.5) * Math.PI / 4))) inside++;
+  }
+  g.isHole = inside / total > 0.5;
+  if (!g.isHole || g.radii.length !== 1) return;
+  const eps = M.diag * 5e-3;
+  const endA = insideSolid(M, at(g.tMin - eps, 0, 0)), endB = insideSolid(M, at(g.tMax + eps, 0, 0));
+  if (endA !== endB) g.depth = L;   // 一端通到外面、一端是孔底
 }
 
 // ====================================================================
@@ -704,7 +770,7 @@ function computeView(M, B) {
   const FN = M.FN;
   const stamp = new Int32Array(nt); let st = 0;
   const epsZ = diag * 2e-5, epsIn = diag * 1e-6, minLen = diag * 1e-5;
-  const vis = [], hid = [];
+  const vis = [], hid = [], visSharp = [];
   let iv = [];
   for (const e of cand) {
     const a = E.a[e], b = E.b[e];
@@ -775,11 +841,19 @@ function computeView(M, B) {
     const L = Math.hypot(dx, dy), minT = minLen / L;
     const occ = unionIntervals(iv, 0);
     let cur = 0;
-    const emit = (arr, s, t) => { if (t - s > minT) arr.push([ax + dx * s, ay + dy * s, ax + dx * t, ay + dy * t]); };
+    const emit = (arr, s, t) => {
+      if (t - s <= minT) return;
+      arr.push([ax + dx * s, ay + dy * s, ax + dx * t, ay + dy * t]);
+      // 真正的稜線（曲面輪廓不算），供尺寸找特徵；正對畫面的圓周是多邊形近似，也不算
+      if (arr === vis && M.sharp[e]) {
+        const ci = M.circleOf ? M.circleOf[e] : -1, cn = ci >= 0 ? M.circles[ci].n : null;
+        if (!cn || Math.abs(cn[0] * d[0] + cn[1] * d[1] + cn[2] * d[2]) < 0.5) visSharp.push(arr[arr.length - 1]);
+      }
+    };
     for (const [s, t] of occ) { emit(vis, cur, s); emit(hid, s, t); cur = t; }
     emit(vis, cur, 1);
   }
-  return { vis, hid, bx0, by0, bw: bx1 - bx0, bh: by1 - by0 };
+  return { vis, hid, visSharp, bx0, by0, bw: bx1 - bx0, bh: by1 - by0 };
 }
 
 function unionIntervals(list, gap) {
@@ -892,7 +966,9 @@ function processView(name) {
   const view = {
     name, bx0: raw.bx0, by0: raw.by0, bw: raw.bw, bh: raw.bh,
     vis: chainSegments(merged.vis, tol), hid: chainSegments(merged.hid, tol),
+    visSharp: raw.visSharp,
     centers: { axes: [], crosses: [] },
+    holes: [],   // 在這個視圖看起來是圓的孔：{x, y, r, radii, depth}
   };
   // 中心線
   const proj = p => [B.u[0] * p[0] + B.u[1] * p[1] + B.u[2] * p[2], B.v[0] * p[0] + B.v[1] * p[1] + B.v[2] * p[2]];
@@ -902,6 +978,9 @@ function processView(name) {
       const c = proj(g.c0);
       const dup = view.centers.crosses.find(q => Math.hypot(q.x - c[0], q.y - c[1]) < tol * 5);
       if (dup) dup.r = Math.max(dup.r, g.rMax); else view.centers.crosses.push({ x: c[0], y: c[1], r: g.rMax });
+      if (g.isHole && !view.holes.some(q => Math.hypot(q.x - c[0], q.y - c[1]) < tol * 5)) {
+        view.holes.push({ x: c[0], y: c[1], r: g.rMax, radii: g.radii.slice().sort((p, q) => q - p), depth: g.depth });
+      }
     } else if (a < 0.02 && g.tMax - g.tMin > tol * 5) {
       const p1 = proj(g.c0.map((c, k) => c + g.n[k] * g.tMin));
       const p2 = proj(g.c0.map((c, k) => c + g.n[k] * g.tMax));
@@ -919,88 +998,303 @@ function getView(name) {
 // ====================================================================
 // 6. 圖面：版面配置與繪圖元件（prims → SVG / DXF）
 // ====================================================================
-function computeLayout(W, H, D, s, area, o) {
-  const fw = W * s, fh = H * s, dd = D * s;
-  const g = o.labels ? 20 : STD.viewGap;
-  const dm = o.dims ? 15 : 0, lb = o.labels ? 8 : 0;
-  let gw, gh, F, Tv, S, iso;
-  if (o.proj === 'third') {
-    gw = dm + fw + g + dd; gh = dd + g + fh + dm + lb;
-    const x0 = area.x + (area.w - gw) / 2, y0 = area.y + (area.h - gh) / 2;
-    F = { left: x0 + dm, bottom: y0 + dd + g + fh };
-    Tv = { left: F.left, bottom: y0 + dd };
-    S = { left: F.left + fw + g, bottom: F.bottom };
-    iso = { x: S.left, y: area.y, w: area.x + area.w - S.left, h: Tv.bottom - area.y };
-  } else {
-    gw = dm + fw + g + dd; gh = fh + g + dd + dm + lb;
-    const x0 = area.x + (area.w - gw) / 2, y0 = area.y + (area.h - gh) / 2;
-    F = { left: x0 + dm, bottom: y0 + fh };
-    S = { left: F.left + fw + g, bottom: F.bottom };
-    Tv = { left: F.left, bottom: F.bottom + g + dd };
-    const ix = Math.max(S.left, F.left + fw + (o.dims ? dm + 2 : 0));
-    iso = { x: ix, y: F.bottom + g / 2, w: area.x + area.w - ix, h: area.y + area.h - F.bottom - g / 2 };
-  }
-  return { gw, gh, F, T: Tv, S, iso, dm };
+// ====================================================================
+// 尺寸規劃（並聯／基準尺寸）
+// 每個特徵（可見稜線、孔中心）的模型座標只標一次，放在延伸線不穿過圖形的視圖與邊；
+// X 由左、Y 由下、Z 由前面量起；同一邊的尺寸近的在內、總尺寸在最外圈
+// ====================================================================
+const VIEW_AXES = { front: { x: ['X', 1], y: ['Y', 1] }, top: { x: ['X', 1], y: ['Z', -1] }, right: { x: ['Z', -1], y: ['Y', 1] }, left: { x: ['Z', 1], y: ['Y', 1] } };
+const DATUM_MIN = { X: true, Y: true, Z: false };
+const AXIS_IDX = { X: 0, Y: 1, Z: 2 };
+const SIDES = ['left', 'right', 'top', 'bottom'];
+
+function datumScreen(view, sax) {
+  const [axis, sg] = VIEW_AXES[view.name][sax];
+  const b0 = sax === 'x' ? view.bx0 : view.by0, b1 = b0 + (sax === 'x' ? view.bw : view.bh);
+  return (sg > 0) === DATUM_MIN[axis] ? b0 : b1;
 }
 
-function draw() {
+function planDims(views, proj, excludeHidden) {
+  const diag = model.diag, tolC = diag * 5e-4, tolA = diag * 1e-4, minFeat = diag * 0.01;
+  const third = proj === 'third';
+  const primary = { X: third ? 'front' : 'top', Y: 'front', Z: third ? 'side' : 'top' };
+  const overallSlot = { X: [primary.X, 'bottom'], Y: ['front', 'left'], Z: third ? ['side', 'bottom'] : ['top', 'right'] };
+  const inner = third ? { front: ['top', 'right'], top: ['bottom'], side: ['left'] } : { front: ['bottom', 'right'], top: ['top'], side: ['left'] };
+  const notes = [];
+  // 1. 各視圖的特徵：可見且水平／垂直的稜線、圓孔中心
+  const feats = { X: [], Y: [], Z: [] };
+  for (const role of ['front', 'top', 'side']) {
+    const v = views[role], A = VIEW_AXES[v.name];
+    const add = (sax, c, lo, hi, center) => {
+      const axis = A[sax][0];
+      let f = feats[axis].find(q => q.role === role && q.sax === sax && Math.abs(q.c - c) < tolC);
+      if (!f) feats[axis].push(f = { role, sax, c, ext: [], center: false, m: A[sax][1] * c });
+      f.ext.push({ lo, hi, center });
+      if (center) f.center = true;
+    };
+    if (state.showDetail) for (const sg of v.visSharp) {
+      const dx = sg[2] - sg[0], dy = sg[3] - sg[1];
+      if (Math.abs(dx) <= tolA && Math.abs(dy) >= minFeat) add('x', (sg[0] + sg[2]) / 2, Math.min(sg[1], sg[3]), Math.max(sg[1], sg[3]), false);
+      else if (Math.abs(dy) <= tolA && Math.abs(dx) >= minFeat) add('y', (sg[1] + sg[3]) / 2, Math.min(sg[0], sg[2]), Math.max(sg[0], sg[2]), false);
+    }
+    if (state.showHoles) for (const h of v.holes) {
+      add('x', h.x, h.y - h.r, h.y + h.r, true);
+      add('y', h.y, h.x - h.r, h.x + h.r, true);
+    }
+  }
+  // 延伸線（從特徵往某一邊拉到視圖外框）會穿過幾條可見線
+  const crossings = (v, sax, c, from, to) => {
+    const lo = Math.min(from, to) + tolC, hi = Math.max(from, to) - tolC;
+    if (hi <= lo) return 0;
+    let n = 0;
+    for (const poly of v.vis) for (let i = 1; i < poly.length; i++) {
+      const [x1, y1] = poly[i - 1], [x2, y2] = poly[i];
+      const [p1, q1, p2, q2] = sax === 'x' ? [x1, y1, x2, y2] : [y1, x1, y2, x2];
+      if (p1 === p2 || (p1 - c) * (p2 - c) > 0) continue;
+      const q = q1 + (q2 - q1) * (c - p1) / (p2 - p1);
+      if (q > lo && q < hi) n++;
+    }
+    return n;
+  };
+  // 2. 每個模型座標挑一個（視圖, 邊）
+  const dims = [];
+  for (const axis of ['X', 'Y', 'Z']) {
+    const mx = model.size[AXIS_IDX[axis]];
+    const list = feats[axis].slice().sort((p, q) => p.m - q.m);
+    const groups = [];
+    for (const f of list) { const g = groups[groups.length - 1]; if (g && Math.abs(f.m - g[0].m) < tolC) g.push(f); else groups.push([f]); }
+    const inner_ = groups.filter(g => g[0].m > tolC && g[0].m < mx - tolC);   // 去掉基準邊與另一端（總尺寸）
+    if (inner_.length > STD.maxRowsPerAxis) {
+      notes.push(`${axis} 方向有 ${inner_.length} 個特徵（例如陣列孔），未自動標註細部尺寸`);
+    } else for (const g of inner_) {
+      const hasCenter = g.some(f => f.center);
+      let best = null;
+      for (const f of g) {
+        const v = views[f.role];
+        for (const side of f.sax === 'x' ? ['bottom', 'top'] : ['left', 'right']) {
+          const low = side === 'bottom' || side === 'left';
+          const from = low ? Math.min(...f.ext.map(e => e.lo)) : Math.max(...f.ext.map(e => e.hi));
+          const edge = f.sax === 'x' ? (low ? v.by0 : v.by0 + v.bh) : (low ? v.bx0 : v.bx0 + v.bw);
+          const score = crossings(v, f.sax, f.c, from, edge) * 3 + (f.role === primary[axis] ? 0 : 1) +
+            (inner[f.role].includes(side) ? 0.6 : 0) + (hasCenter && !f.center ? 2 : 0);
+          if (!best || score < best.score) best = { score, f, side, from, low };
+        }
+      }
+      const f = best.f, v = views[f.role], datum = datumScreen(v, f.sax);
+      const fromExt = f.ext.find(e => (best.low ? e.lo : e.hi) === best.from);
+      dims.push({ id: `f:${axis}:${g[0].m.toFixed(2)}`, axis, role: f.role, side: best.side, sax: f.sax, c: f.c, datum,
+        from: best.from, fromCenter: !!(fromExt && fromExt.center), value: Math.abs(f.c - datum) });
+    }
+    if (state.showDims) {
+      const [role, side] = overallSlot[axis];
+      const v = views[role], sax = side === 'bottom' || side === 'top' ? 'x' : 'y';
+      const datum = datumScreen(v, sax), b0 = sax === 'x' ? v.bx0 : v.by0, b1 = b0 + (sax === 'x' ? v.bw : v.bh);
+      dims.push({ id: `ov:${axis}`, axis, role, side, sax, c: datum === b0 ? b1 : b0, datum, overall: true, value: mx });
+    }
+  }
+  // 3. 依（視圖, 邊）分組：近的在內、總尺寸在最外
+  const slots = {}, margins = { front: {}, top: {}, side: {} };
+  for (const d of dims) {
+    if (excludeHidden && state.hiddenDims.has(d.id)) continue;
+    (slots[`${d.role}:${d.side}`] ||= []).push(d);
+  }
+  for (const [key, list] of Object.entries(slots)) {
+    list.sort((p, q) => (p.overall ? 1 : 0) - (q.overall ? 1 : 0) || p.value - q.value);
+    list.forEach((d, i) => { d.row = i; });
+    const [role, side] = key.split(':');
+    margins[role][side] = STD.dimOffset + (list.length - 1) * STD.rowGap + (side === 'top' || side === 'left' ? 5 : 3);
+  }
+  return { slots, margins, notes };
+}
+
+// m[role][side]：各視圖四邊需要留給尺寸的寬度（圖紙 mm）
+function computeLayout(W, H, D, s, area, o, m) {
+  const fw = W * s, fh = H * s, dd = D * s;
+  const g = o.labels ? 20 : STD.viewGap, lb = o.labels ? 8 : 0;
+  const M = r => Object.fromEntries(SIDES.map(k => [k, (m[r] && m[r][k]) || 0]));
+  const f = M('front'), t = M('top'), sd = M('side');
+  let gw, gh, F, Tv, S, iso;
+  if (o.proj === 'third') {
+    const left = Math.max(f.left, t.left), gapX = Math.max(g, f.right + sd.left + 4), right = sd.right;
+    const top = t.top, gapY = Math.max(g, t.bottom + f.top + 4, sd.top + 4), bottom = Math.max(f.bottom, sd.bottom) + lb;
+    gw = Math.max(left + fw + gapX + dd + right, left + fw + t.right); gh = top + dd + gapY + fh + bottom;
+    const x0 = area.x + (area.w - gw) / 2, y0 = area.y + (area.h - gh) / 2;
+    F = { left: x0 + left, bottom: y0 + top + dd + gapY + fh };
+    Tv = { left: F.left, bottom: y0 + top + dd };
+    S = { left: F.left + fw + gapX, bottom: F.bottom };
+    const ix = Math.max(S.left, F.left + fw + t.right + 4);
+    iso = { x: ix, y: area.y, w: area.x + area.w - ix, h: F.bottom - fh - Math.max(f.top, sd.top) - 4 - area.y };
+  } else {
+    const left = Math.max(f.left, t.left), gapX = Math.max(g, f.right + sd.left + 4), right = sd.right;
+    const top = Math.max(f.top, sd.top), gapY = Math.max(g, f.bottom + t.top + 4, sd.bottom + 4), bottom = t.bottom + lb;
+    gw = Math.max(left + fw + gapX + dd + right, left + fw + t.right); gh = top + fh + gapY + dd + bottom;
+    const x0 = area.x + (area.w - gw) / 2, y0 = area.y + (area.h - gh) / 2;
+    F = { left: x0 + left, bottom: y0 + top + fh };
+    S = { left: F.left + fw + gapX, bottom: F.bottom };
+    Tv = { left: F.left, bottom: F.bottom + gapY + dd };
+    const ix = Math.max(S.left, F.left + fw + t.right + 4), iy = F.bottom + Math.max(sd.bottom, f.bottom) + 4;
+    iso = { x: ix, y: iy, w: area.x + area.w - ix, h: area.y + area.h - iy };
+  }
+  return { gw, gh, F, T: Tv, S, iso, m: { front: f, top: t, side: sd } };
+}
+
+let lastScale = null;   // 畫面上用的比例，匯出時沿用
+
+// mode：'screen'（含淡化的隱藏尺寸、可點選）或 'export'（隱藏的尺寸移除，其餘重新排列）
+function buildDrawing(mode) {
   const sheet = SHEETS[state.sheet];
   const prims = [];
   const frame = { x: 10, y: 10, w: sheet.w - 20, h: sheet.h - 20 };
-  let scaleLabel = '—';
+  let scaleLabel = '—', notes = [];
   if (model) {
     const sideName = state.proj === 'third' ? 'right' : 'left';
     const vF = getView('front'), vT = getView('top'), vS = getView(sideName);
+    const views = { front: vF, top: vT, side: vS };
     const W = vF.bw, H = vF.bh, D = vT.bh;
     const area = { x: frame.x + 4, y: frame.y + 4, w: frame.w - 8, h: frame.h - TB_H - 8 };
-    const o = { proj: state.proj, dims: state.showDims, labels: state.showLabels };
+    const o = { proj: state.proj, labels: state.showLabels };
+    const plan = planDims(views, state.proj, mode === 'export');
+    notes = plan.notes;
     let sc = null;
-    if (state.scale === 'auto') {
+    if (mode === 'export' && lastScale) sc = lastScale;
+    else if (state.scale === 'auto') {
       for (const [n, d] of SCALES) {
-        const L = computeLayout(W, H, D, n / d, area, o);
+        const L = computeLayout(W, H, D, n / d, area, o, plan.margins);
         if (L.gw <= area.w && L.gh <= area.h) { sc = [n, d]; break; }
       }
       if (!sc) sc = SCALES[SCALES.length - 1];
     } else sc = state.scale.split(':').map(Number);
+    if (mode === 'screen') lastScale = sc;
     const s = sc[0] / sc[1];
     scaleLabel = sc[0] + ':' + sc[1];
-    const L = computeLayout(W, H, D, s, area, o);
-
-    const pF = drawView(prims, vF, L.F, s, 'OUTLINE', true);
-    const pT = drawView(prims, vT, L.T, s, 'OUTLINE', true);
-    const pS = drawView(prims, vS, L.S, s, 'OUTLINE', true);
-
-    if (state.showDims) {
-      // 高度：前視圖左側
-      const top = L.F.bottom - H * s, bot = L.F.bottom;
-      const pt1 = extremePt(pF, 'y', top, 'x', false, [L.F.left, top]);
-      const pt2 = extremePt(pF, 'y', bot, 'x', false, [L.F.left, bot]);
-      dimV(prims, pt2, pt1, L.F.left - STD.dimOffset, H);
-      // 寬度：最下方那個視圖（第三角＝前視、第一角＝俯視）的下方
-      const wv = state.proj === 'third' ? { p: pF, pl: L.F } : { p: pT, pl: L.T };
-      const l = wv.pl.left, r = wv.pl.left + W * s, b = wv.pl.bottom;
-      dimH(prims, extremePt(wv.p, 'x', l, 'y', true, [l, b]), extremePt(wv.p, 'x', r, 'y', true, [r, b]), b + STD.dimOffset, W);
-      // 深度：第三角＝右側視圖下方；第一角＝俯視圖右側
-      if (state.proj === 'third') {
-        const l2 = L.S.left, r2 = L.S.left + D * s, b2 = L.S.bottom;
-        dimH(prims, extremePt(pS, 'x', l2, 'y', true, [l2, b2]), extremePt(pS, 'x', r2, 'y', true, [r2, b2]), b2 + STD.dimOffset, D);
-      } else {
-        const rr = L.T.left + W * s, t2 = L.T.bottom - D * s, b2 = L.T.bottom;
-        dimV(prims, extremePt(pT, 'y', b2, 'x', true, [rr, b2]), extremePt(pT, 'y', t2, 'x', true, [rr, t2]), rr + STD.dimOffset, D);
-      }
+    const L = computeLayout(W, H, D, s, area, o, plan.margins);
+    const place = { front: L.F, top: L.T, side: L.S };
+    const pts = {};
+    for (const role of ['front', 'top', 'side']) pts[role] = drawView(prims, views[role], place[role], s, 'OUTLINE', true);
+    for (const [key, list] of Object.entries(plan.slots)) {
+      const [role, side] = key.split(':');
+      drawDimSlot(prims, views[role], place[role], s, side, list, pts[role], mode);
+    }
+    if (state.showHoles) {
+      const boxes = ['front', 'top', 'side'].map(r => ({ x0: place[r].left, y0: place[r].bottom - views[r].bh * s, x1: place[r].left + views[r].bw * s, y1: place[r].bottom }));
+      for (const role of ['front', 'top', 'side']) drawHoleLeaders(prims, views[role], place[role], s, boxes, area, mode);
     }
     if (state.showLabels) {
-      const lab = (pl, w, name, hasDim) => prims.push({ k: 'text', layer: 'TEXT', x: pl.left + w / 2, y: pl.bottom + (hasDim ? L.dm + 6 : 7), h: 3.5, str: VIEW_NAMES[name], anchor: 'middle' });
-      const third = state.proj === 'third';
-      lab(L.F, W * s, 'front', third && state.showDims);
-      lab(L.T, W * s, 'top', !third && state.showDims);
-      lab(L.S, D * s, sideName, third && state.showDims);
+      for (const role of ['front', 'top', 'side']) {
+        const v = views[role], pl = place[role], mb = L.m[role].bottom;
+        prims.push({ k: 'text', layer: 'TEXT', x: pl.left + v.bw * s / 2, y: pl.bottom + (mb ? mb + 6 : 7), h: 3.5, str: VIEW_NAMES[v.name], anchor: 'middle' });
+      }
     }
     if (state.showIso) drawIso(prims, L.iso, s);
   }
   drawFrame(prims, frame, scaleLabel);
-  lastDrawing = { prims, sheet };
+  return { prims, sheet, notes };
+}
+
+function draw() {
+  lastDrawing = buildDrawing('screen');
+  const n = state.hiddenDims.size;
+  $('dimNote').textContent = [...lastDrawing.notes, n ? `已隱藏 ${n} 個尺寸（淡色顯示、不會匯出）` : ''].filter(Boolean).join('；');
+  $('dimsReset').hidden = !n;
   renderSheet();
+}
+const exportDrawing = () => buildDrawing('export');
+
+// 一組並聯尺寸（同一視圖同一邊）
+function drawDimSlot(prims, view, pl, s, side, list, viewPts, mode) {
+  const map = (x, y) => [pl.left + (x - view.bx0) * s, pl.bottom - (y - view.by0) * s];
+  const top = pl.bottom - view.bh * s, right = pl.left + view.bw * s;
+  const horiz = side === 'bottom' || side === 'top';   // 水平尺寸線（量螢幕 x）
+  const out = side === 'bottom' || side === 'right' ? 1 : -1;   // 往外的方向（圖紙座標）
+  const base = side === 'bottom' ? pl.bottom : side === 'top' ? top : side === 'left' ? pl.left : right;
+  const rowPos = row => base + out * (STD.dimOffset + row * STD.rowGap);
+  // 物體上某條基準／端點線最靠近這一邊的點
+  const extreme = (c, fallback) => {
+    const [px, py] = map(horiz ? c : view.bx0, horiz ? view.by0 : c);
+    const target = horiz ? px : py;
+    return extremePt(viewPts, horiz ? 'x' : 'y', target, horiz ? 'y' : 'x', out > 0, fallback);
+  };
+  const edgePt = c => horiz ? [map(c, 0)[0], base] : [base, map(0, c)[1]];
+  const visible = list.filter(d => mode === 'screen' || !state.hiddenDims.has(d.id));
+  if (!visible.length) return;
+  // 基準延伸線只畫一次，拉到最外一列（未隱藏的）
+  const datum = list[0].datum, outer = Math.max(...visible.filter(d => !state.hiddenDims.has(d.id)).map(d => d.row), -1);
+  const dp = extreme(datum, edgePt(datum));
+  if (outer >= 0) {
+    const end = rowPos(outer) + out * STD.extOver;
+    prims.push({ k: 'pl', layer: 'DIM', pts: horiz ? [[dp[0], dp[1] + out * STD.extGap], [dp[0], end]] : [[dp[0] + out * STD.extGap, dp[1]], [end, dp[1]]] });
+  }
+  for (const d of visible) {
+    let fp;
+    if (d.overall) fp = extreme(d.c, edgePt(d.c));
+    else {
+      fp = horiz ? map(d.c, d.from) : map(d.from, d.c);
+      if (d.fromCenter) { if (horiz) fp[1] += out * STD.centerOver; else fp[0] += out * STD.centerOver; }
+    }
+    const opt = { id: d.id, ghost: state.hiddenDims.has(d.id), noExt1: true };
+    if (horiz) dimH(prims, dp, fp, rowPos(d.row), d.value, opt); else dimV(prims, dp, fp, rowPos(d.row), d.value, opt);
+  }
+}
+
+// 孔：在圓視圖以引線標註 Ø（相同的孔合併成「n×Ø」）
+function drawHoleLeaders(prims, view, pl, s, boxes, area, mode) {
+  if (!view.holes.length) return;
+  const map = (x, y) => [pl.left + (x - view.bx0) * s, pl.bottom - (y - view.by0) * s];
+  const groups = new Map();
+  for (const h of view.holes) {
+    const key = h.radii.map(r => r.toFixed(3)).join('/') + '|' + h.depth.toFixed(3);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(h);
+  }
+  // 已佔用的區域：文字、視圖外框
+  const occ = boxes.slice();
+  for (const p of prims) if (p.k === 'text') occ.push(textBox(p));
+  const segs = [];
+  for (const poly of view.vis) for (let i = 1; i < poly.length; i++) segs.push([...map(...poly[i - 1]), ...map(...poly[i])]);
+  for (const [, hs] of groups) {
+    const h = hs[0], [cx, cy] = map(h.x, h.y);
+    h.radii.forEach((r, ri) => {
+      const label = (hs.length > 1 ? `${hs.length}×` : '') + `Ø${fmtNum(2 * r)}` + (h.depth && ri === 0 ? ` 深${fmtNum(h.depth)}` : '');
+      const id = `h:${view.name}:${fmtNum(h.x)}:${fmtNum(h.y)}:${fmtNum(r)}`;
+      if (mode === 'export' && state.hiddenDims.has(id)) return;
+      const R = r * s, th = textWidth(label, STD.textH);
+      let best = null;
+      for (const deg of [45, 135, -45, -135, 60, 120, -60, -120, 30, 150]) {
+        const a = deg * Math.PI / 180, ux = Math.cos(a), uy = -Math.sin(a);
+        const tip = [cx + ux * R, cy + uy * R], elbow = [cx + ux * (R + STD.leaderLen + 2 * ri), cy + uy * (R + STD.leaderLen + 2 * ri)];
+        const sx = ux >= 0 ? 1 : -1, shoulder = [elbow[0] + sx * (th + 2), elbow[1]];
+        const tb = { x0: Math.min(elbow[0], shoulder[0]), x1: Math.max(elbow[0], shoulder[0]), y0: elbow[1] - STD.textH - 1, y1: elbow[1] + 0.5 };
+        let score = 0;
+        for (const sg of segs) {
+          if (segHit([tip[0] + ux * 0.3, tip[1] + uy * 0.3, ...elbow], sg)) score += 3;
+          if (segHit([...elbow, ...shoulder], sg)) score += 3;
+        }
+        for (const b of occ) if (boxHit(tb, b)) score += 2;
+        if (tb.x0 < area.x || tb.x1 > area.x + area.w || tb.y0 < area.y || tb.y1 > area.y + area.h) score += 10;
+        if (!best || score < best.score) best = { score, tip, elbow, shoulder, ux, uy, sx, tb };
+      }
+      const ghost = state.hiddenDims.has(id);
+      prims.push({ k: 'pl', layer: 'DIM', pts: [best.tip, best.elbow, best.shoulder], dim: id, ghost, hit: true });
+      arrow(prims, best.tip, -best.ux, -best.uy, { id, ghost });
+      const t = { k: 'text', layer: 'TEXT', x: best.elbow[0] + best.sx * 1, y: best.elbow[1] - 0.8, h: STD.textH, str: label, anchor: best.sx > 0 ? 'start' : 'end', dim: id, ghost };
+      prims.push(t); occ.push(textBox(t));
+    });
+  }
+}
+
+const textWidth = (str, h) => [...str].reduce((w, ch) => w + (ch.charCodeAt(0) > 0x2e80 ? 1.0 : 0.62) * h, 0);
+function textBox(t) {
+  const w = textWidth(t.str, t.h), h = t.h;
+  const a = t.anchor === 'middle' ? -w / 2 : t.anchor === 'end' ? -w : 0;
+  if (t.rot) return { x0: t.x - h, x1: t.x + 0.3, y0: t.y - a - w, y1: t.y - a };
+  return { x0: t.x + a, x1: t.x + a + w, y0: t.y - h, y1: t.y + 0.3 };
+}
+const boxHit = (a, b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
+function segHit(p, q) {
+  const d = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  const A = [p[0], p[1]], B = [p[2], p[3]], C = [q[0], q[1]], D = [q[2], q[3]];
+  const d1 = d(A, B, C), d2 = d(A, B, D), d3 = d(C, D, A), d4 = d(C, D, B);
+  return d1 * d2 < 0 && d3 * d4 < 0;
 }
 
 function drawView(prims, view, pl, s, layer, withExtras) {
@@ -1048,38 +1342,46 @@ function extremePt(pts, axis, target, pick, pickMax, fallback) {
 
 const fmtNum = v => String(Math.round(v * 10) / 10);
 
-function arrow(prims, tip, ux, uy) {
+function arrow(prims, tip, ux, uy, opt = {}) {
   const L = STD.arrowL, w = STD.arrowW / 2;
-  prims.push({ k: 'tri', layer: 'DIM', pts: [tip, [tip[0] - ux * L - uy * w, tip[1] - uy * L + ux * w], [tip[0] - ux * L + uy * w, tip[1] - uy * L - ux * w]] });
+  prims.push({ k: 'tri', layer: 'DIM', pts: [tip, [tip[0] - ux * L - uy * w, tip[1] - uy * L + ux * w], [tip[0] - ux * L + uy * w, tip[1] - uy * L - ux * w]], dim: opt.id, ghost: opt.ghost });
 }
 
-// 水平尺寸：p1、p2 為物體上的點，yd 為尺寸線位置
-function dimH(prims, p1, p2, yd, value) {
-  const dir = Math.sign(yd - (p1[1] + p2[1]) / 2) || 1;
-  for (const p of [p1, p2]) prims.push({ k: 'pl', layer: 'DIM', pts: [[p[0], p[1] + dir * STD.extGap], [p[0], yd + dir * STD.extOver]] });
-  const x1 = Math.min(p1[0], p2[0]), x2 = Math.max(p1[0], p2[0]);
-  if (x2 - x1 > 2 * STD.arrowL + 2) {
-    prims.push({ k: 'pl', layer: 'DIM', pts: [[x1, yd], [x2, yd]] });
-    arrow(prims, [x1, yd], -1, 0); arrow(prims, [x2, yd], 1, 0);
+// 水平尺寸：p1、p2 為物體上的點（p1 為基準），yd 為尺寸線位置。opt：{id, ghost, noExt1}
+function dimH(prims, p1, p2, yd, value, opt = {}) {
+  const dir = Math.sign(yd - (p1[1] + p2[1]) / 2) || 1, tag = { dim: opt.id, ghost: opt.ghost };
+  for (const p of opt.noExt1 ? [p2] : [p1, p2]) prims.push({ k: 'pl', layer: 'DIM', pts: [[p[0], p[1] + dir * STD.extGap], [p[0], yd + dir * STD.extOver]], ...tag });
+  const x1 = Math.min(p1[0], p2[0]), x2 = Math.max(p1[0], p2[0]), str = fmtNum(value);
+  const tw = textWidth(str, STD.textH);
+  if (x2 - x1 > Math.max(2 * STD.arrowL + 2, tw + 2)) {
+    prims.push({ k: 'pl', layer: 'DIM', pts: [[x1, yd], [x2, yd]], ...tag, hit: true });
+    arrow(prims, [x1, yd], -1, 0, opt); arrow(prims, [x2, yd], 1, 0, opt);
+    prims.push({ k: 'text', layer: 'TEXT', x: (x1 + x2) / 2, y: yd - 1, h: STD.textH, str, anchor: 'middle', ...tag });
   } else {
-    prims.push({ k: 'pl', layer: 'DIM', pts: [[x1 - 8, yd], [x2 + 8, yd]] });
-    arrow(prims, [x1, yd], 1, 0); arrow(prims, [x2, yd], -1, 0);
+    // 太短：箭頭朝內放在外側，數字放到特徵那一端的外面
+    const far = p2[0] >= p1[0] ? 1 : -1;
+    prims.push({ k: 'pl', layer: 'DIM', pts: [[x1 - 5, yd], [x2 + 5, yd]], ...tag, hit: true });
+    arrow(prims, [x1, yd], 1, 0, opt); arrow(prims, [x2, yd], -1, 0, opt);
+    prims.push({ k: 'text', layer: 'TEXT', x: p2[0] + far * 5.5, y: yd - 1, h: STD.textH, str, anchor: far > 0 ? 'start' : 'end', ...tag });
   }
-  prims.push({ k: 'text', layer: 'TEXT', x: (x1 + x2) / 2, y: yd - 1, h: STD.textH, str: fmtNum(value), anchor: 'middle' });
 }
 // 垂直尺寸：數字轉 90°，由右側閱讀，位於尺寸線左方
-function dimV(prims, p1, p2, xd, value) {
-  const dir = Math.sign(xd - (p1[0] + p2[0]) / 2) || 1;
-  for (const p of [p1, p2]) prims.push({ k: 'pl', layer: 'DIM', pts: [[p[0] + dir * STD.extGap, p[1]], [xd + dir * STD.extOver, p[1]]] });
-  const y1 = Math.min(p1[1], p2[1]), y2 = Math.max(p1[1], p2[1]);
-  if (y2 - y1 > 2 * STD.arrowL + 2) {
-    prims.push({ k: 'pl', layer: 'DIM', pts: [[xd, y1], [xd, y2]] });
-    arrow(prims, [xd, y1], 0, -1); arrow(prims, [xd, y2], 0, 1);
+function dimV(prims, p1, p2, xd, value, opt = {}) {
+  const dir = Math.sign(xd - (p1[0] + p2[0]) / 2) || 1, tag = { dim: opt.id, ghost: opt.ghost };
+  for (const p of opt.noExt1 ? [p2] : [p1, p2]) prims.push({ k: 'pl', layer: 'DIM', pts: [[p[0] + dir * STD.extGap, p[1]], [xd + dir * STD.extOver, p[1]]], ...tag });
+  const y1 = Math.min(p1[1], p2[1]), y2 = Math.max(p1[1], p2[1]), str = fmtNum(value);
+  const tw = textWidth(str, STD.textH);
+  if (y2 - y1 > Math.max(2 * STD.arrowL + 2, tw + 2)) {
+    prims.push({ k: 'pl', layer: 'DIM', pts: [[xd, y1], [xd, y2]], ...tag, hit: true });
+    arrow(prims, [xd, y1], 0, -1, opt); arrow(prims, [xd, y2], 0, 1, opt);
+    prims.push({ k: 'text', layer: 'TEXT', x: xd - 1, y: (y1 + y2) / 2, h: STD.textH, str, anchor: 'middle', rot: 90, ...tag });
   } else {
-    prims.push({ k: 'pl', layer: 'DIM', pts: [[xd, y1 - 8], [xd, y2 + 8]] });
-    arrow(prims, [xd, y1], 0, 1); arrow(prims, [xd, y2], 0, -1);
+    const far = p2[1] >= p1[1] ? 1 : -1;   // 圖紙座標往下為正
+    prims.push({ k: 'pl', layer: 'DIM', pts: [[xd, y1 - 5], [xd, y2 + 5]], ...tag, hit: true });
+    arrow(prims, [xd, y1], 0, 1, opt); arrow(prims, [xd, y2], 0, -1, opt);
+    // 文字往上讀：在上方用 start、在下方用 end，才不會蓋回尺寸線
+    prims.push({ k: 'text', layer: 'TEXT', x: xd - 1, y: p2[1] + far * 5.5, h: STD.textH, str, anchor: far < 0 ? 'start' : 'end', rot: 90, ...tag });
   }
-  prims.push({ k: 'text', layer: 'TEXT', x: xd - 1, y: (y1 + y2) / 2, h: STD.textH, str: fmtNum(value), anchor: 'middle', rot: 90 });
 }
 
 function drawIso(prims, R, sMain) {
@@ -1147,36 +1449,60 @@ function drawFrame(prims, fr, scaleLabel) {
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const f3 = v => (Math.round(v * 1000) / 1000).toString();
 
-function toSVG({ prims, sheet }) {
+// screen=true：畫面用。已隱藏的尺寸以淡色畫出，並為每個尺寸加上可點選的透明範圍
+function toSVG({ prims, sheet }, screen = false) {
   const out = [];
   out.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${sheet.w}mm" height="${sheet.h}mm" viewBox="0 0 ${sheet.w} ${sheet.h}">`);
   out.push(`<rect width="${sheet.w}" height="${sheet.h}" fill="#fff"/>`);
+  const shown = prims.filter(p => !p.ghost), ghosts = prims.filter(p => p.ghost);
   const order = ['CENTER', 'HIDDEN', 'ISO', 'OUTLINE', 'DIM', 'SYMBOL', 'TB', 'FRAME'];
-  for (const name of order) {
-    const L = LAYERS[name];
-    const items = prims.filter(p => p.layer === name && p.k !== 'text');
-    if (!items.length) continue;
-    const dash = L.dash ? ` stroke-dasharray="${L.dash.join(' ')}"` : '';
-    out.push(`<g id="${name}" fill="none" stroke="#000" stroke-width="${L.w}" stroke-linecap="${L.cap}" stroke-linejoin="round"${dash}>`);
-    for (const p of items) {
-      if (p.k === 'pl') {
-        const extra = p.solid ? ` stroke-dasharray="none"${p.thin ? ' stroke-width="0.18"' : ''}` : (p.dashOffset != null ? ` stroke-dashoffset="${f3(p.dashOffset)}"` : '');
-        const pts = p.pts.map(q => f3(q[0]) + ',' + f3(q[1])).join(' ');
-        out.push(`<${p.closed ? 'polygon' : 'polyline'} points="${pts}"${extra}/>`);
-      } else if (p.k === 'circle') {
-        out.push(`<circle cx="${f3(p.c[0])}" cy="${f3(p.c[1])}" r="${f3(p.r)}"/>`);
-      } else if (p.k === 'tri') {
-        out.push(`<polygon points="${p.pts.map(q => f3(q[0]) + ',' + f3(q[1])).join(' ')}" fill="#000" stroke="none"/>`);
+  const layers = (list, prefix) => {
+    for (const name of order) {
+      const L = LAYERS[name];
+      const items = list.filter(p => p.layer === name && p.k !== 'text');
+      if (!items.length) continue;
+      const dash = L.dash ? ` stroke-dasharray="${L.dash.join(' ')}"` : '';
+      out.push(`<g id="${prefix}${name}" fill="none" stroke="#000" stroke-width="${L.w}" stroke-linecap="${L.cap}" stroke-linejoin="round"${dash}>`);
+      for (const p of items) {
+        if (p.k === 'pl') {
+          const extra = p.solid ? ` stroke-dasharray="none"${p.thin ? ' stroke-width="0.18"' : ''}` : (p.dashOffset != null ? ` stroke-dashoffset="${f3(p.dashOffset)}"` : '');
+          const pts = p.pts.map(q => f3(q[0]) + ',' + f3(q[1])).join(' ');
+          out.push(`<${p.closed ? 'polygon' : 'polyline'} points="${pts}"${extra}/>`);
+        } else if (p.k === 'circle') {
+          out.push(`<circle cx="${f3(p.c[0])}" cy="${f3(p.c[1])}" r="${f3(p.r)}"/>`);
+        } else if (p.k === 'tri') {
+          out.push(`<polygon points="${p.pts.map(q => f3(q[0]) + ',' + f3(q[1])).join(' ')}" fill="#000" stroke="none"/>`);
+        }
+      }
+      out.push('</g>');
+    }
+    const texts = list.filter(p => p.k === 'text');
+    if (!texts.length) return;
+    out.push(`<g id="${prefix}TEXT" fill="#000" font-family="'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif">`);
+    for (const t of texts) {
+      const rot = t.rot ? ` transform="rotate(${-t.rot} ${f3(t.x)} ${f3(t.y)})"` : '';
+      out.push(`<text x="${f3(t.x)}" y="${f3(t.y)}" font-size="${t.h}" text-anchor="${t.anchor || 'start'}"${t.bold ? ' font-weight="700"' : ''}${rot}>${esc(t.str)}</text>`);
+    }
+    out.push('</g>');
+  };
+  layers(shown, '');
+  if (screen && ghosts.length) {
+    out.push('<g id="hidden-dims" opacity="0.22">'); layers(ghosts, 'ghost-'); out.push('</g>');
+  }
+  if (screen) {
+    // 點選範圍：尺寸線（或引線）與數字，透明但可點
+    out.push('<g id="dim-hits" fill="transparent" stroke="transparent" stroke-width="2.4">');
+    for (const p of prims) {
+      if (!p.dim) continue;
+      if (p.k === 'pl' && p.hit) out.push(`<polyline class="dimhit" data-dim="${esc(p.dim)}" fill="none" points="${p.pts.map(q => f3(q[0]) + ',' + f3(q[1])).join(' ')}"><title>點一下${p.ghost ? '顯示' : '隱藏'}這個尺寸</title></polyline>`);
+      if (p.k === 'text') {
+        const b = textBox(p);
+        out.push(`<rect class="dimhit" data-dim="${esc(p.dim)}" x="${f3(b.x0 - 0.5)}" y="${f3(b.y0 - 0.5)}" width="${f3(b.x1 - b.x0 + 1)}" height="${f3(b.y1 - b.y0 + 1)}" stroke="none"><title>點一下${p.ghost ? '顯示' : '隱藏'}這個尺寸</title></rect>`);
       }
     }
     out.push('</g>');
   }
-  out.push(`<g id="TEXT" fill="#000" font-family="'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif">`);
-  for (const t of prims.filter(p => p.k === 'text')) {
-    const rot = t.rot ? ` transform="rotate(${-t.rot} ${f3(t.x)} ${f3(t.y)})"` : '';
-    out.push(`<text x="${f3(t.x)}" y="${f3(t.y)}" font-size="${t.h}" text-anchor="${t.anchor || 'start'}"${t.bold ? ' font-weight="700"' : ''}${rot}>${esc(t.str)}</text>`);
-  }
-  out.push('</g></svg>');
+  out.push('</svg>');
   return out.join('\n');
 }
 
@@ -1184,7 +1510,8 @@ function toDXF({ prims, sheet }) {
   const o = [];
   const w = (c, v) => { o.push(String(c)); o.push(String(v)); };
   const Y = y => f3(sheet.h - y);   // DXF 為 Y 軸朝上
-  const enc = s => String(s).replace(/[^\x20-\x7e]/g, ch => '\\U+' + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0'));
+  // Ø 用 CAD 通用的直徑控制碼 %%c；其他非 ASCII 字元用 \U+XXXX（AutoCAD 支援）
+  const enc = s => String(s).replace(/Ø/g, '%%c').replace(/[^\x20-\x7e]/g, ch => '\\U+' + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0'));
   w(0, 'SECTION'); w(2, 'HEADER');
   w(9, '$ACADVER'); w(1, 'AC1009');
   w(9, '$INSUNITS'); w(70, 4);
@@ -1211,6 +1538,7 @@ function toDXF({ prims, sheet }) {
   w(0, 'ENDSEC');
   w(0, 'SECTION'); w(2, 'ENTITIES');
   for (const p of prims) {
+    if (p.ghost) continue;
     const layer = p.layer;
     const lt = p.solid ? 'CONTINUOUS' : null;
     if (p.k === 'pl') {
@@ -1256,7 +1584,7 @@ function printSheet() {
   document.body.appendChild(iframe);
   const doc = iframe.contentDocument;
   doc.open();
-  doc.write(`<!doctype html><html><head><meta charset="utf-8"><style>@page{size:${sheet.w}mm ${sheet.h}mm;margin:0}html,body{margin:0}svg{display:block}</style></head><body>${toSVG(lastDrawing)}</body></html>`);
+  doc.write(`<!doctype html><html><head><meta charset="utf-8"><style>@page{size:${sheet.w}mm ${sheet.h}mm;margin:0}html,body{margin:0}svg{display:block}</style></head><body>${toSVG(exportDrawing())}</body></html>`);
   doc.close();
   setTimeout(() => { iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(() => iframe.remove(), 1000); }, 200);
 }
@@ -1266,7 +1594,7 @@ function printSheet() {
 // ====================================================================
 function renderSheet() {
   const wrap = $('sheetWrap');
-  wrap.innerHTML = toSVG(lastDrawing);
+  wrap.innerHTML = toSVG(lastDrawing, true);
   if (!model) {
     const svg = wrap.querySelector('svg');
     const { sheet } = lastDrawing;
@@ -1510,6 +1838,7 @@ function setSoup(soup, name, zUp, unit, unitNote) {
       sel.value = String(unit);
       $('zup').checked = zUp;
       if (!$('tbTitle').value || $('tbTitle').dataset.auto === '1') { $('tbTitle').value = name; $('tbTitle').dataset.auto = '1'; }
+      state.hiddenDims.clear();
       rebuildModel(true);
     } catch (err) {
       console.error(err); $('warn').textContent = '處理失敗：' + err.message; $('busy').classList.remove('on');
@@ -1595,7 +1924,16 @@ function initUI() {
   }));
   $('sheet').addEventListener('change', e => { state.sheet = e.target.value; state.zoom = 0; scheduleDraw(); });
   $('scale').addEventListener('change', e => { state.scale = e.target.value; scheduleDraw(); });
-  const opts = { optHidden: 'showHidden', optCenter: 'showCenter', optDims: 'showDims', optIso: 'showIso', optLabels: 'showLabels' };
+  const opts = { optHidden: 'showHidden', optCenter: 'showCenter', optDims: 'showDims', optDetail: 'showDetail', optHoles: 'showHoles', optIso: 'showIso', optLabels: 'showLabels' };
+  // 點選尺寸：隱藏／復原
+  $('sheetWrap').addEventListener('click', e => {
+    const hit = e.target.closest('[data-dim]');
+    if (!hit) return;
+    const id = hit.getAttribute('data-dim');
+    if (state.hiddenDims.has(id)) state.hiddenDims.delete(id); else state.hiddenDims.add(id);
+    draw();
+  });
+  $('dimsReset').addEventListener('click', () => { state.hiddenDims.clear(); draw(); });
   for (const [id, key] of Object.entries(opts)) $(id).addEventListener('change', e => { state[key] = e.target.checked; scheduleDraw(); });
   let tbTimer = 0;
   Object.values(TB_FIELDS).forEach(id => $(id).addEventListener('input', () => {
@@ -1606,8 +1944,8 @@ function initUI() {
       draw();
     }, 250);
   }));
-  $('expSvg').addEventListener('click', () => download(baseName() + '.svg', toSVG(lastDrawing), 'image/svg+xml'));
-  $('expDxf').addEventListener('click', () => download(baseName() + '.dxf', toDXF(lastDrawing), 'application/dxf'));
+  $('expSvg').addEventListener('click', () => download(baseName() + '.svg', toSVG(exportDrawing()), 'image/svg+xml'));
+  $('expDxf').addEventListener('click', () => download(baseName() + '.dxf', toDXF(exportDrawing()), 'application/dxf'));
   $('expPrint').addEventListener('click', printSheet);
   $('zoomIn').addEventListener('click', () => { state.zoom *= 1.25; applyZoom(); });
   $('zoomOut').addEventListener('click', () => { state.zoom /= 1.25; applyZoom(); });
@@ -1620,7 +1958,7 @@ function initUI() {
 }
 
 // 除錯用：在主控台以 TSV.dxf() / TSV.svg() 取得目前圖面
-window.TSV = { svg: () => toSVG(lastDrawing), dxf: () => toDXF(lastDrawing) };
+window.TSV = { svg: () => toSVG(exportDrawing()), dxf: () => toDXF(exportDrawing()), drawing: () => exportDrawing() };
 
 // 被嵌入（例如 Google 協作平台的嵌入框）時，提示改用新分頁：嵌入框會擋下載
 (() => {
