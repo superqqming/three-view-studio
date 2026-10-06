@@ -9,6 +9,8 @@ const demo = lines.slice(at('function demoGeometry'), at('async function loadFil
 const stdStart = at('const STD = {');
 let stdEnd = stdStart; while (!lines[stdEnd].startsWith('};')) stdEnd++;
 const dims = lines.slice(at('const VIEW_AXES = {'), at('function computeLayout')).join('\n');
+// AI 辨識：草稿 → 工件 → manifold 實體（不含介面）
+const aiGeom = lines.slice(at('const pathTokens = '), at('function renderCompare')).join('\n');
 const basesStart = at('const BASES = {');
 let basesEnd = basesStart; while (!lines[basesEnd].startsWith('};')) basesEnd++;
 const out = `import * as THREE from 'three';
@@ -21,7 +23,10 @@ ${pipeline}
 ${loaders}
 ${demo}
 ${dims}
-export { planDims,  BASES, buildTopology, repairTJunctions, transformModel, classifyModel, computeView, processView, objectToSoup, geomToSoup, parseOBJ, unitFromComment, demoGeometry };
+const esc = s => String(s);
+${aiGeom}
+export function setMF(m) { MF = m; }
+export { applyChoices, toPart, buildPart, outlinePoints, planDims,  BASES, buildTopology, repairTJunctions, transformModel, classifyModel, computeView, processView, objectToSoup, geomToSoup, parseOBJ, unitFromComment, demoGeometry };
 `;
 fs.mkdirSync(new URL('./.gen/', import.meta.url), { recursive: true });
 fs.writeFileSync(new URL('./.gen/geom.mjs', import.meta.url), out);

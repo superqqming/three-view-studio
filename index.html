@@ -85,6 +85,24 @@
   rect.dimhit:hover { fill: rgba(31,111,235,.14); }
   polyline.dimhit:hover { stroke: rgba(31,111,235,.22); }
   .busy div { background: #fff; padding: 10px 16px; border-radius: 9px; box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+  .thumbs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .thumbs .thumb { position: relative; width: 64px; height: 64px; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; background: #fff; }
+  .thumbs img { width: 100%; height: 100%; object-fit: cover; }
+  .thumbs .x { position: absolute; top: 2px; right: 2px; min-height: 0; padding: 0 5px; font-size: 12px; line-height: 16px; border-radius: 9px; }
+  #aiNote { width: 100%; margin-top: 8px; font: inherit; border: 1px solid var(--line); border-radius: 7px; padding: 6px 9px; resize: vertical; }
+  .filebtn { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 7px; cursor: pointer; background: #fff; }
+  .ai-result { margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 8px; font-size: 12.5px; line-height: 1.6; }
+  .ai-result h3 { font-size: 12.5px; margin: 10px 0 4px; }
+  .ai-result ol, .ai-result ul { margin: 2px 0; padding-left: 20px; }
+  .ai-result .muted { color: var(--muted); }
+  .ai-result .q { margin: 6px 0; padding: 6px 8px; background: #f6f8fa; border-radius: 7px; }
+  .ai-result .q label { display: block; cursor: pointer; }
+  .ai-result .tag { display: inline-block; font-size: 11px; padding: 0 6px; margin-right: 6px; border-radius: 9px; background: var(--accent-soft); color: var(--accent); }
+  .compare {
+    position: absolute; top: 12px; right: 12px; z-index: 4; width: min(360px, 45%); max-height: calc(100% - 24px); overflow: auto;
+    background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; box-shadow: 0 6px 20px rgba(0,0,0,.15);
+  }
+  .compare img { width: 100%; display: block; margin-top: 6px; border-radius: 6px; }
   .popout {
     position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 20;
     background: var(--warn-soft); color: var(--warn); border: 1px solid #f5c58a; border-radius: 9px;
@@ -130,6 +148,42 @@
       </div>
       <div class="info" id="info">尚未載入模型</div>
       <div class="warn" id="warn"></div>
+    </section>
+
+    <section class="card" id="aiCard">
+      <h2>或 · 拍照辨識手繪三視圖（AI）</h2>
+      <div id="aiLogin">
+        <div class="tb-grid">
+          <span>學號</span><input type="password" id="aiSid" autocomplete="off" spellcheck="false" placeholder="老師請填教師密碼">
+          <span>姓名</span><input type="text" id="aiName" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="primary" id="aiLoginBtn">登入</button>
+          <label class="chip filebtn">載入辨識結果（JSON）<input type="file" id="aiLoadJson" accept=".json,application/json" hidden></label>
+        </div>
+        <div class="info">修課名單上的同學才能使用，每學期次數有限。學號姓名只以雜湊送出；照片與補充說明會送到 AI 服務辨識（伺服器不保存），拍照時請避開寫有姓名學號的地方。</div>
+      </div>
+      <div id="aiMain" hidden>
+        <div class="row"><span class="info" id="aiWho" style="margin:0;flex:1"></span><button class="chip" id="aiLogout">登出</button></div>
+        <label class="drop" id="aiDrop" style="margin-top:8px">
+          <strong>選擇手繪三視圖的照片（最多 4 張）</strong>
+          拍正、光線均勻；有畫等角圖也一起拍進來
+          <input type="file" id="aiFiles" accept="image/*" multiple hidden>
+        </label>
+        <div class="thumbs" id="aiThumbs"></div>
+        <div class="row"><span class="lbl">草圖單位</span>
+          <select id="aiUnits"><option value="auto">依圖上標示</option><option value="mm">mm</option><option value="cm">cm</option></select></div>
+        <div class="row"><span class="lbl">思考深度</span><select id="aiEffort"></select></div>
+        <textarea id="aiNote" rows="2" placeholder="補充說明（選填），例如：右下角是等角圖、孔是貫穿的"></textarea>
+        <div class="row" style="margin-top:6px">
+          <button class="primary" id="aiGo" disabled>開始辨識</button>
+          <button class="chip" id="aiCancel" hidden>取消</button>
+          <span class="info" id="aiStatus" style="margin:0"></span>
+        </div>
+        <div class="info">投影法依下方「圖面設定」。辨識完成後會自動建立 3D 模型並產生正式的三視圖。</div>
+      </div>
+      <div class="ai-result" id="aiResult" hidden></div>
+      <div class="warn" id="aiWarn"></div>
     </section>
 
     <section class="card">
@@ -248,6 +302,7 @@
       </div>
       <div class="spacer"></div>
       <span id="status"></span>
+      <button class="chip" id="compareBtn" hidden>對照原圖</button>
       <button class="chip" id="zoomOut">－</button>
       <button class="chip" id="zoomFit">符合視窗</button>
       <button class="chip" id="zoomIn">＋</button>
@@ -255,6 +310,10 @@
     <div class="stage" id="stage">
       <div class="sheet-wrap" id="sheetWrap"></div>
       <div class="busy" id="busy"><div>計算視圖中…</div></div>
+      <div class="compare" id="compare" hidden>
+        <div class="row" style="justify-content:space-between"><strong>手繪原圖</strong><button class="chip" id="compareClose">關閉</button></div>
+        <div id="compareImgs"></div>
+      </div>
     </div>
   </main>
 </div>
@@ -646,9 +705,9 @@ function findAxes(M) {
       const perp = Math.hypot(w[0] - t * g.n[0], w[1] - t * g.n[1], w[2] - t * g.n[2]);
       return perp < Math.max(M.diag * 1e-3, 0.02 * ci.r);
     });
-    if (!g) { g = { c0: ci.c, n: ci.n, tMin: 0, tMax: 0, rMax: ci.r, radii: [ci.r] }; axes.push(g); continue; }
+    if (!g) { g = { c0: ci.c, n: ci.n, tMin: 0, tMax: 0, rMax: ci.r, radii: [ci.r], circ: [{ t: 0, r: ci.r }] }; axes.push(g); continue; }
     const t = (ci.c[0] - g.c0[0]) * g.n[0] + (ci.c[1] - g.c0[1]) * g.n[1] + (ci.c[2] - g.c0[2]) * g.n[2];
-    g.tMin = Math.min(g.tMin, t); g.tMax = Math.max(g.tMax, t); g.rMax = Math.max(g.rMax, ci.r);
+    g.tMin = Math.min(g.tMin, t); g.tMax = Math.max(g.tMax, t); g.rMax = Math.max(g.rMax, ci.r); g.circ.push({ t, r: ci.r });
     if (!g.radii.some(r => Math.abs(r - ci.r) < 0.01 * ci.r)) g.radii.push(ci.r);
   }
   axes.forEach(g => classifyHole(M, g));
@@ -692,10 +751,14 @@ function classifyHole(M, g) {
     total++; if (insideSolid(M, at(g.tMin + L * f, rr, (i + 0.5) * Math.PI / 4))) inside++;
   }
   g.isHole = inside / total > 0.5;
-  if (!g.isHole || g.radii.length !== 1) return;
+  if (!g.isHole) return;
   const eps = M.diag * 5e-3;
   const endA = insideSolid(M, at(g.tMin - eps, 0, 0)), endB = insideSolid(M, at(g.tMax + eps, 0, 0));
-  if (endA !== endB) g.depth = L;   // 一端通到外面、一端是孔底
+  if (g.radii.length === 1) { if (endA !== endB) g.depth = L; return; }   // 一端通到外面、一端是孔底
+  // 階梯孔（柱坑）：最大徑那一段若從孔口開始、沒有貫穿，它的長度就是柱坑深度（標在最大徑的 Ø 後面）
+  const big = g.circ.filter(c => Math.abs(c.r - g.rMax) < 0.01 * g.rMax).map(c => c.t);
+  const ta = Math.min(...big), tb = Math.max(...big);
+  if (tb - ta > eps && tb - ta < L - eps && ((!endA && ta - g.tMin < eps) || (!endB && g.tMax - tb < eps))) g.depth = tb - ta;
 }
 
 // ====================================================================
@@ -770,7 +833,10 @@ function computeView(M, B) {
   const FN = M.FN;
   const stamp = new Int32Array(nt); let st = 0;
   const epsZ = diag * 2e-5, epsIn = diag * 1e-6, minLen = diag * 1e-5;
-  const vis = [], hid = [], visSharp = [];
+  const vis = [], hid = [], visSharp = [], hidSharp = [];
+  // 稜線是不是某個面的「邊視圖」（相鄰面與視線平行）：斜面、倒角、V 槽壁在此視圖看成一條線
+  const onF = f => Math.abs(M.FN[3 * f] * d[0] + M.FN[3 * f + 1] * d[1] + M.FN[3 * f + 2] * d[2]) < 1e-3;
+  const edgeOn = e => onF(E.f1[e]) || (E.n[e] >= 2 && onF(E.f2[e]));
   let iv = [];
   for (const e of cand) {
     const a = E.a[e], b = E.b[e];
@@ -847,13 +913,13 @@ function computeView(M, B) {
       // 真正的稜線（曲面輪廓不算），供尺寸找特徵；正對畫面的圓周是多邊形近似，也不算
       if (arr === vis && M.sharp[e]) {
         const ci = M.circleOf ? M.circleOf[e] : -1, cn = ci >= 0 ? M.circles[ci].n : null;
-        if (!cn || Math.abs(cn[0] * d[0] + cn[1] * d[1] + cn[2] * d[2]) < 0.5) visSharp.push(arr[arr.length - 1]);
+        if (!cn || Math.abs(cn[0] * d[0] + cn[1] * d[1] + cn[2] * d[2]) < 0.5) visSharp.push([...arr[arr.length - 1], s * L <= diag * 5e-4, (1 - t) * L <= diag * 5e-4, edgeOn(e)]);
       }
     };
-    for (const [s, t] of occ) { emit(vis, cur, s); emit(hid, s, t); cur = t; }
+    for (const [s, t] of occ) { emit(vis, cur, s); emit(hid, s, t); if (M.sharp[e] && t - s > minT) hidSharp.push(hid[hid.length - 1]); cur = t; }
     emit(vis, cur, 1);
   }
-  return { vis, hid, visSharp, bx0, by0, bw: bx1 - bx0, bh: by1 - by0 };
+  return { vis, hid, visSharp, hidSharp, bx0, by0, bw: bx1 - bx0, bh: by1 - by0 };
 }
 
 function unionIntervals(list, gap) {
@@ -966,7 +1032,7 @@ function processView(name) {
   const view = {
     name, bx0: raw.bx0, by0: raw.by0, bw: raw.bw, bh: raw.bh,
     vis: chainSegments(merged.vis, tol), hid: chainSegments(merged.hid, tol),
-    visSharp: raw.visSharp,
+    visSharp: raw.visSharp, hidSharp: raw.hidSharp,
     centers: { axes: [], crosses: [] },
     holes: [],   // 在這個視圖看起來是圓的孔：{x, y, r, radii, depth}
   };
@@ -979,7 +1045,9 @@ function processView(name) {
       const dup = view.centers.crosses.find(q => Math.hypot(q.x - c[0], q.y - c[1]) < tol * 5);
       if (dup) dup.r = Math.max(dup.r, g.rMax); else view.centers.crosses.push({ x: c[0], y: c[1], r: g.rMax });
       if (g.isHole && !view.holes.some(q => Math.hypot(q.x - c[0], q.y - c[1]) < tol * 5)) {
-        view.holes.push({ x: c[0], y: c[1], r: g.rMax, radii: g.radii.slice().sort((p, q) => q - p), depth: g.depth });
+        // 孔口不朝向這個視圖（圓只有虛線）：尺寸只能標在隱藏線上，planDims 會加註
+        const onC = sg => [[sg[0], sg[1]], [sg[2], sg[3]]].every(([x, y]) => Math.abs(Math.hypot(x - c[0], y - c[1]) - g.rMax) < tol * 5);
+        view.holes.push({ x: c[0], y: c[1], r: g.rMax, radii: g.radii.slice().sort((p, q) => q - p), depth: g.depth, hidden: !raw.vis.some(onC) });
       }
     } else if (a < 0.02 && g.tMax - g.tMin > tol * 5) {
       const p1 = proj(g.c0.map((c, k) => c + g.n[k] * g.tMin));
@@ -1015,7 +1083,7 @@ function datumScreen(view, sax) {
 }
 
 function planDims(views, proj, excludeHidden) {
-  const diag = model.diag, tolC = diag * 5e-4, tolA = diag * 1e-4, minFeat = diag * 0.01;
+  const diag = model.diag, tolC = diag * 5e-4, tolA = diag * 1e-4, minFeat = diag * 0.01, minSlant = diag * 0.05, cosSmooth = Math.cos(12 * Math.PI / 180);
   const third = proj === 'third';
   const primary = { X: third ? 'front' : 'top', Y: 'front', Z: third ? 'side' : 'top' };
   const overallSlot = { X: [primary.X, 'bottom'], Y: ['front', 'left'], Z: third ? ['side', 'bottom'] : ['top', 'right'] };
@@ -1032,12 +1100,36 @@ function planDims(views, proj, excludeHidden) {
       f.ext.push({ lo, hi, center });
       if (center) f.center = true;
     };
-    if (state.showDetail) for (const sg of v.visSharp) {
+    // 斜線端點是不是「真正的角」：同一點若有另一條可見稜線順著接下去（轉角 < 12°），
+    // 就是圓弧多邊形的接點或直線與圓弧的切點，不標（CNS：切點不標尺寸）
+    const vs = v.visSharp, ends = new Map(), ek = (x, y) => Math.round(x / tolC) + '_' + Math.round(y / tolC);
+    vs.forEach((sg, i) => { for (const j of [0, 2]) { const k = ek(sg[j], sg[j + 1]); if (!ends.has(k)) ends.set(k, []); ends.get(k).push([i, j]); } });
+    const isCorner = (i, j) => {
+      const sg = vs[i], px = sg[j], py = sg[j + 1], L = Math.hypot(sg[2] - sg[0], sg[3] - sg[1]);
+      const ix = (px - sg[2 - j]) / L, iy = (py - sg[3 - j]) / L, kx = Math.round(px / tolC), ky = Math.round(py / tolC);
+      for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (const [i2, j2] of ends.get((kx + a) + '_' + (ky + b)) || []) {
+        if (i2 === i) continue;
+        const s2 = vs[i2];
+        if (Math.hypot(s2[j2] - px, s2[j2 + 1] - py) > tolC) continue;
+        const qx = s2[2 - j2] - s2[j2], qy = s2[3 - j2] - s2[j2 + 1], L2 = Math.hypot(qx, qy);
+        if (L2 > 0 && (ix * qx + iy * qy) / L2 > cosSmooth) return false;
+      }
+      return true;
+    };
+    if (state.showDetail) vs.forEach((sg, i) => {
       const dx = sg[2] - sg[0], dy = sg[3] - sg[1];
       if (Math.abs(dx) <= tolA && Math.abs(dy) >= minFeat) add('x', (sg[0] + sg[2]) / 2, Math.min(sg[1], sg[3]), Math.max(sg[1], sg[3]), false);
       else if (Math.abs(dy) <= tolA && Math.abs(dx) >= minFeat) add('y', (sg[1] + sg[3]) / 2, Math.min(sg[0], sg[2]), Math.max(sg[0], sg[2]), false);
-    }
+      else if (Math.hypot(dx, dy) >= (sg[6] && model.exact ? minFeat : minSlant)) {
+        // 斜線：AI 建的精確實體上，面的邊視圖（斜面、倒角、V 槽壁）短到 1% 對角線也標；其他斜線與匯入的網格維持 5%
+        // （三面倒角交會的斜接線、粗分段網格圓弧的弦不標）
+        // 端點必須是網格上真正的端點（不是被遮住截斷的視覺交點），而且是角
+        for (const j of [0, 2]) if (sg[4 + j / 2] !== false && isCorner(i, j)) { const x = sg[j], y = sg[j + 1]; add('x', x, y, y, false); add('y', y, x, x, false); }
+      }
+    });
     if (state.showHoles) for (const h of v.holes) {
+      const hn = `${v.name === 'front' ? '前' : v.name === 'top' ? '俯' : '側'}視圖的 Ø${Math.round(h.r * 20) / 10} 孔從看不到的那一面加工，只有虛線，孔徑與孔位標在隱藏線上（建議加剖視圖）`;
+      if (h.hidden && !notes.includes(hn)) notes.push(hn);
       add('x', h.x, h.y - h.r, h.y + h.r, true);
       add('y', h.y, h.x - h.r, h.x + h.r, true);
     }
@@ -1091,6 +1183,32 @@ function planDims(views, proj, excludeHidden) {
       const datum = datumScreen(v, sax), b0 = sax === 'x' ? v.bx0 : v.by0, b1 = b0 + (sax === 'x' ? v.bw : v.bh);
       dims.push({ id: `ov:${axis}`, axis, role, side, sax, c: datum === b0 ? b1 : b0, datum, overall: true, value: mx });
     }
+  }
+  // 2b. 只在隱藏線上出現、沒被任何可見特徵或孔／圓柱交代的位置（凹穴、槽的深度）：不標在虛線上，但要提示
+  if (state.showDetail) {
+    const known = { X: [], Y: [], Z: [] };
+    for (const ax of ['X', 'Y', 'Z']) known[ax].push(...feats[ax].map(f => f.m), 0, model.size[AXIS_IDX[ax]]);
+    const bb = { X: Infinity, Y: Infinity, Z: Infinity };
+    for (const role of ['front', 'top', 'side']) { const v = views[role], A = VIEW_AXES[v.name]; bb[A.x[0]] = Math.min(bb[A.x[0]], A.x[1] > 0 ? v.bx0 : -(v.bx0 + v.bw)); bb[A.y[0]] = Math.min(bb[A.y[0]], A.y[1] > 0 ? v.by0 : -(v.by0 + v.bh)); }
+    for (const ax of ['X', 'Y', 'Z']) known[ax] = known[ax].map((m, i) => (i < feats[ax].length ? m : bb[ax] + m));
+    for (const g of model.axes) for (let k = 0; k < 3; k++) {
+      const ax = 'XYZ'[k];
+      if (Math.abs(g.n[k]) > 0.999) for (const t of [g.tMin, g.tMax, ...(g.circ || []).map(c => c.t)]) known[ax].push(g.c0[k] + g.n[k] * t);
+      else if (Math.abs(g.n[k]) < 1e-3) for (const r of g.radii) known[ax].push(g.c0[k] - r, g.c0[k] + r, g.c0[k]);
+    }
+    const hiddenOnly = { X: new Map(), Y: new Map(), Z: new Map() };
+    for (const role of ['front', 'top', 'side']) {
+      const v = views[role], A = VIEW_AXES[v.name];
+      for (const [x1, y1, x2, y2] of v.hidSharp) {
+        const sax = Math.abs(x2 - x1) <= tolA && Math.abs(y2 - y1) >= minFeat ? 'x' : Math.abs(y2 - y1) <= tolA && Math.abs(x2 - x1) >= minFeat ? 'y' : null;
+        if (!sax) continue;
+        const [ax, sg] = A[sax], c = sax === 'x' ? x1 : y1, m = sg * c;
+        if (known[ax].some(q => Math.abs(q - m) < tolC * 4)) continue;
+        const val = Math.abs(c - datumScreen(v, sax));
+        if (![...hiddenOnly[ax].keys()].some(q => Math.abs(q - m) < tolC * 4)) hiddenOnly[ax].set(m, val);
+      }
+    }
+    for (const ax of ['X', 'Y', 'Z']) if (hiddenOnly[ax].size) notes.push(`${ax} 方向 ${[...hiddenOnly[ax].values()].map(x => Math.round(x * 10) / 10).sort((p, q) => p - q).slice(0, 6).join('、')}${hiddenOnly[ax].size > 6 ? '…' : ''} 只出現在隱藏線（例如凹穴、槽的深度），未標註；建議加剖視圖`);
   }
   // 3. 依（視圖, 邊）分組：近的在內、總尺寸在最外
   const slots = {}, margins = { front: {}, top: {}, side: {} };
@@ -1836,12 +1954,13 @@ async function loadFile(file) {
   }
 }
 
-function setSoup(soup, name, zUp, unit, unitNote) {
+function setThr(t) { state.thr = t; $('thr').value = t; $('thrVal').textContent = t + '°'; }
+function setSoup(soup, name, zUp, unit, unitNote, exact = false) {
   if (!soup.length) { $('warn').textContent = '檔案中找不到三角網格。'; return; }
   $('busy').classList.add('on');
   setTimeout(() => {
     try {
-      topo = buildTopology(soup);
+      topo = buildTopology(soup); topo.exact = exact;   // AI 建的精確實體（planDims 用）
       state.name = name; state.zUp = zUp; state.rot.identity();
       state.unit = unit; state.unitNote = unitNote;
       const sel = $('unit');
@@ -1852,6 +1971,9 @@ function setSoup(soup, name, zUp, unit, unitNote) {
       $('zup').checked = zUp;
       if (!$('tbTitle').value || $('tbTitle').dataset.auto === '1') { $('tbTitle').value = name; $('tbTitle').dataset.auto = '1'; }
       state.hiddenDims.clear();
+      // AI 建出的實體是精確 CAD：曲面每段轉角 ≤ 360/48 = 7.5°，用 9° 才不會漏掉 9°–30° 的真實稜線（例如 1:2 斜面 26.6°、10° 斜面）
+      if (exact && !state.thrUser) { state.thrUser = state.thr; setThr(9); }
+      else if (!exact && state.thrUser) { setThr(state.thrUser); state.thrUser = 0; }
       rebuildModel(true);
     } catch (err) {
       console.error(err); $('warn').textContent = '處理失敗：' + err.message; $('busy').classList.remove('on');
@@ -1973,6 +2095,635 @@ function initUI() {
 // 除錯用：在主控台以 TSV.dxf() / TSV.svg() 取得目前圖面
 window.TSV = { svg: () => toSVG(exportDrawing()), dxf: () => toDXF(exportDrawing()), drawing: () => exportDrawing() };
 
+// ====================================================================
+// 12. 手繪三視圖 AI 辨識
+//    學生拍照上傳 → 課程的 AI 伺服器（與組合單元模擬器共用；金鑰在伺服器、名單登入、次數上限）
+//    → 料塊＋加工步驟 → manifold 建實體 → 既有的出圖流程；並列出學生圖面的問題
+// ====================================================================
+// 伺服器網址；測試時可用 ?ai=http://localhost:port 指到本機（只接受本機，避免連結被改去別的伺服器）
+const AI_BASE = (() => {
+  try {
+    const q = new URLSearchParams(location.search).get('ai');
+    if (q && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(q)) return q;
+  } catch { /* 沒有網址參數 */ }
+  return 'https://assembly-unit-ai.superqqming.workers.dev';
+})();
+
+// 學號姓名正規化：必須與組合單元模擬器的 deploy/build_gate.py、gate-template.html 逐字一致，否則名單比對不到
+const STRIP_RE = /[\t\n\v\f\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\u200b\u200c\u200d\u200e\u200f\u2060\ufeff\u00ad\u001c\u001d\u001e\u001f]+/g;
+const VS_RE = /[\uFE00-\uFE0F]|\uDB40[\uDD00-\uDDEF]/g;   // 變體選擇符（含 U+E0100–E01EF 的代理對）
+const gateClean = v => (v || '').normalize('NFKC').replace(STRIP_RE, '').replace(VS_RE, '');
+async function loginKey(sid, name) {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(gateClean(sid).toUpperCase() + '\n' + gateClean(name).toLowerCase()));
+  return [...new Uint8Array(d)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
+const AI = { token: null, who: '', cfg: null, images: [], draft: null, choices: [], ctrl: null, resultJson: null, rejected: new Set() };
+const EFFORT_NAMES = { low: '快', medium: '一般', high: '仔細' };
+const VIEW_TAGS = { front: '前視圖', top: '俯視圖', right: '右側視圖', left: '左側視圖', bottom: '仰視圖', back: '後視圖', iso: '等角圖', layout: '視圖配置', dims: '尺寸', general: '整體' };
+
+async function aiCall(path, { method = 'GET', body, signal } = {}) {
+  let res;
+  try {
+    res = await fetch(AI_BASE + path, {
+      method, signal, body: body ? JSON.stringify(body) : undefined,
+      headers: { 'Content-Type': 'application/json', ...(AI.token ? { Authorization: `Bearer ${AI.token}` } : {}) },
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') throw Object.assign(new Error('已取消。'), { aborted: true });
+    throw new Error('連不上 AI 伺服器，請確認網路連線。');
+  }
+  return res;
+}
+async function aiJson(res) {
+  let d = null;
+  try { d = await res.json(); } catch { /* 不是 JSON */ }
+  if (!res.ok) throw Object.assign(new Error((d && d.message) || `AI 伺服器回應 ${res.status}`), { status: res.status, code: d && d.error });
+  return d;
+}
+
+function aiSave() {
+  try {
+    if (AI.token) sessionStorage.setItem('tvs-ai', JSON.stringify({ token: AI.token, who: AI.who }));
+    else sessionStorage.removeItem('tvs-ai');
+  } catch { /* 無法儲存就每次重新登入 */ }
+}
+
+async function aiLogin() {
+  if ($('aiLoginBtn').disabled) return;   // 按 Enter 不要在送出中重送
+  const sid = $('aiSid').value, name = $('aiName').value;
+  if (!gateClean(sid) || !gateClean(name)) { aiWarn('請輸入學號與姓名。'); return; }
+  const k = await loginKey(sid, name);
+  // 伺服器以「同一個 IP 的失敗次數」暫停登入（全班共用校園網路）：同一組錯的不再送出，免得把全班的額度用掉
+  if (AI.rejected.has(k)) { aiWarn('這組學號姓名剛才已確認不在名單上，請先修改再登入（異體字也要一致）。'); return; }
+  aiWarn('');
+  $('aiLoginBtn').disabled = true;
+  try {
+    const d = await aiJson(await aiCall('/v1/login', { method: 'POST', body: { k, tool: 'threeview' } }));
+    AI.token = d.token; AI.who = name.trim(); AI.cfg = d;
+    $('aiSid').value = ''; $('aiName').value = '';
+    aiSave(); aiRenderAuth();
+  } catch (err) {
+    if (err.status === 403) AI.rejected.add(k);
+    aiWarn(err.status === 403 ? '名單上找不到這組學號姓名，請確認輸入（異體字也要一致）。' : err.message);
+  } finally { $('aiLoginBtn').disabled = false; }
+}
+
+async function aiRefresh() {
+  if (!AI.token) return;
+  try { AI.cfg = await aiJson(await aiCall('/v1/me')); }
+  catch (err) { if (err.status === 401) { AI.token = null; aiSave(); } else aiWarn(err.message); }
+  aiRenderAuth();
+}
+
+function aiRenderAuth() {
+  const on = !!AI.token;
+  $('aiLogin').hidden = on; $('aiMain').hidden = !on;
+  if (!on) return;
+  const c = AI.cfg || {};
+  $('aiWho').textContent = `${AI.who || '已登入'}　本學期剩 ${c.remaining ?? '—'} 次${c.enabled === false ? '（老師目前暫停）' : ''}`;
+  const sel = $('aiEffort'), known = (Array.isArray(c.efforts) ? c.efforts : []).filter(e => Object.prototype.hasOwnProperty.call(EFFORT_NAMES, e));
+  const efforts = known.length ? known : ['medium'];
+  sel.replaceChildren(...efforts.map(e => new Option(EFFORT_NAMES[e], e)));
+  sel.value = efforts.includes(c.defaultEffort) ? c.defaultEffort : efforts[0];
+  $('aiGo').disabled = !AI.images.length || c.enabled === false || c.remaining === 0;
+}
+
+const aiWarn = t => { $('aiWarn').textContent = t || ''; };
+const aiStatus = t => { $('aiStatus').textContent = t || ''; };
+
+// 照片：重畫成長邊 ≤ 2000 px 的 JPEG（會套用 EXIF 方向、去掉 GPS 等資料）
+async function prepareImage(file, maxEdge = 2000, quality = 0.85) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    try { await img.decode(); } catch { throw new Error(`「${file.name}」無法讀取，請改用 JPG 或 PNG（iPhone 可在「設定 → 相機 → 格式」選「最相容」）。`); }
+    const k = Math.min(1, maxEdge / Math.max(img.naturalWidth, img.naturalHeight));
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.round(img.naturalWidth * k)); cv.height = Math.max(1, Math.round(img.naturalHeight * k));
+    const g = cv.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+    g.drawImage(img, 0, 0, cv.width, cv.height);
+    const dataUrl = cv.toDataURL('image/jpeg', quality);
+    return { name: file.name, dataUrl, base64: dataUrl.slice(dataUrl.indexOf(',') + 1) };
+  } finally { URL.revokeObjectURL(url); }
+}
+
+async function aiAddFiles(files) {
+  aiWarn('');
+  for (const f of [...files]) {
+    if (AI.images.length >= 4) { aiWarn('最多 4 張照片。'); break; }
+    try { AI.images.push(await prepareImage(f)); } catch (err) { aiWarn(err.message); }
+  }
+  aiRenderThumbs(); aiRenderAuth(); renderCompare();
+}
+function aiRenderThumbs() {
+  $('aiThumbs').innerHTML = AI.images.map((im, i) => `<div class="thumb"><img src="${im.dataUrl}" alt=""><button class="x" data-i="${i}" title="移除">×</button></div>`).join('');
+}
+
+// 串流辨識：伺服器以 SSE 回傳 progress／result／error
+async function aiRecognize() {
+  if (!AI.images.length) return;
+  aiWarn(''); AI.ctrl = new AbortController();
+  $('aiGo').disabled = true; $('aiCancel').hidden = false;
+  aiStatus('上傳中…');
+  try {
+    const res = await aiCall('/v1/recognize', {
+      method: 'POST', signal: AI.ctrl.signal,
+      body: { tool: 'threeview', kind: 'threeView', projection: state.proj, units: $('aiUnits').value, note: $('aiNote').value.trim(),
+        effort: $('aiEffort').value, envelope: { w: 1000, h: 1000, d: 1000 }, images: AI.images.map(im => im.base64) },
+    });
+    if (!(res.headers.get('content-type') || '').includes('event-stream')) { await aiJson(res); throw new Error('AI 伺服器回傳了無法辨認的內容。'); }
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = '', out = null;
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf('\n\n')) >= 0) {
+        const block = buf.slice(0, i); buf = buf.slice(i + 2);
+        const ev = /^event: (.*)$/m.exec(block), data = /^data: (.*)$/m.exec(block);
+        if (!ev || !data) continue;
+        const d = JSON.parse(data[1]);
+        if (ev[1] === 'progress') aiStatus(d.phase === 'writing' ? `AI 正在寫結果…（${d.seconds ?? 0} 秒）` : `AI 判讀中…（${d.seconds ?? 0} 秒）`);
+        else if (ev[1] === 'result') out = d;
+        else if (ev[1] === 'error') throw Object.assign(new Error(d.message || 'AI 辨識失敗。'), { code: d.error });
+      }
+    }
+    if (!out) throw new Error('和 AI 伺服器的連線中斷了，請再試一次（沒有拿到結果就不會扣次數）。');
+    if (AI.cfg) Object.assign(AI.cfg, { remaining: out.remaining, used: out.used });
+    aiStatus(`完成（${Math.round((out.ms || 0) / 1000)} 秒）`);
+    await aiUseResult(out.result);
+  } catch (err) {
+    aiStatus('');
+    if (!err.aborted) aiWarn(err.message);
+    if (err.status === 401) { AI.token = null; aiSave(); }
+  } finally {
+    AI.ctrl = null; $('aiCancel').hidden = true; aiRenderAuth();
+  }
+}
+
+// 辨識結果 → 工件 → 實體 → 出圖
+async function aiUseResult(result) {
+  AI.resultJson = result;
+  if (!result || !result.is_part_sketch || !(result.parts && result.parts.length)) {
+    $('aiResult').hidden = false;
+    $('aiResult').innerHTML = `<div class="warn">${esc((result && result.message) || '照片裡找不到工件的三視圖。')}</div>`;
+    return;
+  }
+  AI.draft = result.parts[0];
+  AI.choices = (AI.draft.uncertain || []).map(u => u.chosen);
+  await aiBuild();
+}
+
+async function aiBuild() {
+  let part, issues, built;
+  try {
+    const { draft, failed } = applyChoices(AI.draft, AI.choices);
+    ({ part, issues } = toPart(draft));
+    issues.push(...failed.map(q => `「${q}」的選項無法套用（AI 給的路徑或值格式不對），這一項維持原本的判讀`));
+  } catch (err) {
+    aiStatus('');
+    aiWarn('辨識結果的格式不對：' + err.message);
+    return;
+  }
+  try {
+    aiStatus('建立 3D 模型…');
+    await new Promise(r => setTimeout(r, 0));   // 讓狀態先畫出來
+    built = await buildPart(part);
+  } catch (err) {
+    aiStatus('');
+    aiRenderResult(part, [...issues, '幾何建立失敗：' + (err instanceof Error ? err.message : '幾何核心內部錯誤') + '（右邊的圖面仍是上一個結果）']);
+    return;
+  }
+  aiStatus('');
+  aiRenderResult(part, [...issues, ...built.issues]);
+  $('tbTitle').dataset.auto = '1'; $('tbTitle').value = '';
+  setSoup(built.soup, part.name || '工件', false, 1, 'AI 辨識結果', true);
+  renderCompare();
+}
+
+function aiRenderResult(part, issues) {
+  const r = AI.resultJson || {}, d = AI.draft || {};
+  const li = a => a.map(x => `<li>${x}</li>`).join('');
+  const steps = (part.steps || []).map(st => `${esc(st.label)}${st.note ? `<span class="muted">（${esc(st.note)}）</span>` : ''}`);
+  const qs = (d.uncertain || []).map((u, i) => `<div class="q"><div>${esc(u.question)}</div>${u.options.map((o, j) =>
+    `<label><input type="radio" name="aiq${i}" data-q="${i}" value="${j}"${AI.choices[i] === j ? ' checked' : ''}>${esc(o.label)}</label>`).join('')}</div>`).join('');
+  const review = (d.review || []).map(x => `<span class="tag">${esc(VIEW_TAGS[x.view] || x.view)}</span>${esc(x.issue)}`);
+  $('aiResult').hidden = false;
+  $('aiResult').innerHTML = `
+    <h3>辨識結果</h3>
+    <div class="info" style="margin:0">料塊 ${part.stock.w}×${part.stock.d}×${part.stock.h} mm（寬×深×高）${(r.views_found || []).length ? '　找到：' + r.views_found.map(v => `${esc(VIEW_TAGS[v.view] || v.view)}（${esc(v.where)}）`).join('、') : ''}</div>
+    <ol class="steps">${li(steps)}</ol>
+    ${qs ? `<h3>AI 不確定的地方</h3>${qs}` : ''}
+    ${review.length ? `<h3>你的手繪圖面可以改進的地方</h3><ul class="review">${li(review)}</ul>` : '<h3>手繪圖面檢查</h3><div class="info" style="margin:0">AI 沒有發現明顯的問題。</div>'}
+    ${(d.assumptions || []).length ? `<h3>AI 的假設</h3><ul>${li(d.assumptions.map(esc))}</ul>` : ''}
+    ${r.message ? `<div class="info">${esc(r.message)}</div>` : ''}
+    ${issues.length ? `<div class="warn">${issues.map(esc).join('<br>')}</div>` : ''}
+    <div class="row"><button class="chip" id="aiSaveJson">下載辨識結果（JSON）</button></div>
+    <div class="info">辨識結果是 AI 的判讀，請和自己的手繪對照確認；有疑問的地方可以在上面改選。</div>`;
+}
+
+// AI 草稿 → 工件；套用「不確定項」的選擇（路徑如 steps[0].features[0].face、stock.h）
+const pathTokens = p => String(p).match(/[^.[\]]+/g) || [];
+const BAD_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+// 只改草稿裡本來就有的欄位：打錯字或超出範圍的路徑回報為失敗，而不是默默新增一個沒人用的欄位
+function setPath(obj, path, value) {
+  let ts = pathTokens(path);
+  if (ts[0] === 'parts' && /^\d+$/.test(ts[1] || '')) ts = ts.slice(2);   // 模型偶爾從根目錄寫起：parts[0].steps[…]
+  if (!ts.length || ts.some(t => BAD_KEYS.has(t))) return false;
+  let o = obj;
+  for (const t of ts.slice(0, -1)) { if (o == null || typeof o !== 'object' || !hasOwn(o, t)) return false; o = o[t]; }
+  const last = ts[ts.length - 1];
+  if (o == null || typeof o !== 'object' || !hasOwn(o, last)) return false;
+  // 用整個物件替換（例如整個特徵）時，替代值沒寫到的欄位沿用原本的，免得孔位等資料默默掉回預設
+  o[last] = isObj(o[last]) && isObj(value) ? { ...o[last], ...value } : value;
+  return true;
+}
+function applyChoices(draftPart, choices = []) {
+  const d = JSON.parse(JSON.stringify(draftPart)), failed = [];
+  (draftPart.uncertain || []).forEach((u, i) => {
+    const pick = choices[i] ?? u.chosen;
+    if (pick === u.chosen) return;
+    const opt = u.options[pick];
+    if (!opt) return;
+    try { if (!setPath(d, u.path, JSON.parse(opt.value_json))) failed.push(u.question); } catch { failed.push(u.question); }
+  });
+  return { draft: d, failed };
+}
+
+const FACES = ['front', 'back', 'right', 'left', 'top', 'bottom'];
+const EDGES = {
+  'front-left': ['front', 'left'], 'front-right': ['front', 'right'], 'back-left': ['back', 'left'], 'back-right': ['back', 'right'],
+  'top-front': ['top', 'front'], 'top-back': ['top', 'back'], 'top-left': ['top', 'left'], 'top-right': ['top', 'right'],
+  'bottom-front': ['bottom', 'front'], 'bottom-back': ['bottom', 'back'], 'bottom-left': ['bottom', 'left'], 'bottom-right': ['bottom', 'right'],
+};
+const FACE_EXT = { front: 'd', back: 'd', right: 'w', left: 'w', top: 'h', bottom: 'h' };   // 面的法向上料塊有多厚
+const EDGE_SWAP = { x: { left: 'right', right: 'left' }, y: { top: 'bottom', bottom: 'top' }, z: { front: 'back', back: 'front' } };
+// 不確定項的替代值不受 schema 約束：任何地方都可能是 null、字串或缺欄位
+const isObj = x => x != null && typeof x === 'object' && !Array.isArray(x);
+const arrOf = x => (Array.isArray(x) ? x : x == null ? [] : [x]);
+const txt = x => (x == null ? '' : String(x)).trim();
+const numOf = x => (typeof x === 'string' ? parseFloat(x) : Number(x));
+const posOf = x => { const v = numOf(x); return Number.isFinite(v) && v > 0 ? v : null; };
+const finOf = x => { const v = numOf(x); return Number.isFinite(v) ? v : null; };
+const r1 = v => Math.round(v * 10) / 10;
+function toPart(draft) {
+  const issues = [];
+  if (!isObj(draft)) draft = {};
+  const pos = (x, what) => { const v = posOf(x); if (v == null) { issues.push(`${what}應大於 0（讀到 ${x}），暫用 100`); return null; } return v; };
+  const s = isObj(draft.stock) ? draft.stock : {};
+  const stock = { w: pos(s.w, '料塊寬') || 100, h: pos(s.h, '料塊高') || 100, d: pos(s.d, '料塊深') || 100 };
+  for (const k of ['w', 'h', 'd']) if (stock[k] > 5000) issues.push(`料塊尺寸 ${stock[k]} mm 太大，請確認單位`);
+  const part = { name: txt(draft.name) || '工件', stock, steps: [] };
+  part.steps = arrOf(draft.steps).map((st, j) => {
+    const where = `步驟 ${j + 1}`;
+    if (!isObj(st)) { if (st != null) issues.push(`${where}：格式不對，已略過`); return null; }   // null = 選項「沒有這一步」
+    return {
+      label: txt(st.label) || where, note: txt(st.note),
+      features: arrOf(st.features).map((f, k) => {
+        if (!isObj(f)) { if (f != null) issues.push(`${where}：第 ${k + 1} 個特徵格式不對，已略過`); return null; }   // null = 選項「沒有這個特徵」
+        return toFeature(f, issues, where, stock);
+      }).filter(Boolean),
+    };
+  }).filter(Boolean);
+  return { part, issues };
+}
+const atOf = (centered, u, v) => (centered ? { mode: 'center', u: 0, v: 0 } : { mode: 'uv', u: finOf(u) ?? 0, v: finOf(v) ?? 0 });
+const mirrorOf = m => ['x', 'y', 'z'].filter(a => arrOf(m).includes(a));
+// 空的或讀不到的矩形回傳 null（由呼叫端略過），不讓 NaN 進到幾何核心
+function rectOf(r, issues, where) {
+  let { u0, u1, v0, v1 } = isObj(r) ? r : {};
+  [u0, u1, v0, v1] = [u0, u1, v0, v1].map(numOf);
+  if (u0 > u1) [u0, u1] = [u1, u0];
+  if (v0 > v1) [v0, v1] = [v1, v0];
+  if (![u0, u1, v0, v1].every(Number.isFinite) || !(u1 > u0 && v1 > v0)) { issues.push(`${where}：矩形範圍是空的或讀不到，已略過這個矩形`); return null; }
+  return { u0, u1, v0, v1 };
+}
+function toFeature(f, issues, where, stock) {
+  const name = { hole: '孔', pocket: '矩形切除', boss: '凸柱', profile: '輪廓切除', fillet: '圓角', chamfer: '倒角' }[f.type] || f.type;
+  // 深度：貫穿時不用；讀不到或 ≤ 0（例如用負號表示「往內」）時暫用 10 並說明
+  const depthOf = (need = !f.through) => {
+    const v = posOf(f.depth);
+    if (v == null && need) issues.push(`${where}：${name}深度應大於 0（讀到 ${f.depth}），暫用 10`);
+    return v || 10;
+  };
+  if (!FACES.includes(f.face) && !['fillet', 'chamfer'].includes(f.type)) { issues.push(`${where}：不認得的面「${f.face}」，已略過`); return null; }
+  switch (f.type) {
+    case 'hole': {
+      let d = posOf(f.d);
+      if (d == null) { issues.push(`${where}：孔徑應大於 0（讀到 ${f.d}），暫用 Ø10`); d = 10; }
+      return { type: 'hole', face: f.face, at: atOf(f.centered, f.u, f.v), d, depth: depthOf(), through: !!f.through, mirror: mirrorOf(f.mirror) };
+    }
+    case 'pocket': {
+      const rects = arrOf(f.rects).map(r => rectOf(r, issues, where)).filter(Boolean);
+      if (!rects.length) { issues.push(`${where}：矩形切除沒有有效的範圍，已略過`); return null; }
+      return { type: 'pocket', face: f.face, rects, depth: depthOf(), through: !!f.through, mirror: mirrorOf(f.mirror) };
+    }
+    case 'boss': {
+      const islands = arrOf(f.islands).map((is, k) => {
+        if (!isObj(is) || !['circle', 'rect'].includes(is.shape)) { issues.push(`${where}：凸柱的第 ${k + 1} 個形狀讀不到，已略過`); return null; }
+        if (is.shape === 'rect') { const rect = rectOf(is.rect, issues, where); return rect && { shape: 'rect', at: atOf(true), d: 0, rect }; }
+        let d = posOf(is.d);
+        if (d == null) { issues.push(`${where}：凸柱直徑應大於 0（讀到 ${is.d}），暫用 Ø10`); d = 10; }
+        return { shape: 'circle', at: atOf(is.centered, is.u, is.v), d, rect: null };
+      }).filter(Boolean);
+      if (!islands.length) { issues.push(`${where}：凸柱沒有指定形狀，已略過`); return null; }
+      return { type: 'boss', face: f.face, depth: depthOf(true), mirror: mirrorOf(f.mirror), islands };
+    }
+    case 'profile': {
+      const raw = arrOf(f.outline);
+      if (raw.some(sg => !isObj(sg))) { issues.push(`${where}：輪廓裡有格式不對的線段，已略過這個輪廓切除`); return null; }
+      const outline = raw.map(sg => ({ kind: sg.kind === 'arc' ? 'arc' : 'line', u: finOf(sg.u), v: finOf(sg.v), cu: finOf(sg.cu) ?? 0, cv: finOf(sg.cv) ?? 0, ccw: !!sg.ccw }));
+      if (!(outline.length >= 2 || (outline.length === 1 && outline[0].kind === 'arc'))) { issues.push(`${where}：輪廓切除沒有輪廓，已略過`); return null; }
+      // 座標讀不到或離料塊太遠（幾何核心只接受約 ±3e10 以內），整個輪廓略過
+      const lim = 10 * Math.max(stock.w, stock.h, stock.d);
+      if (outline.some(sg => [sg.u, sg.v, sg.cu, sg.cv].some(x => x == null || Math.abs(x) > lim))) { issues.push(`${where}：輪廓的座標讀不到或離料塊太遠，已略過`); return null; }
+      outline.forEach((sg, i) => {
+        if (sg.kind !== 'arc') return;
+        const p = outline[(i + outline.length - 1) % outline.length];
+        const ra = Math.hypot(p.u - sg.cu, p.v - sg.cv), rb = Math.hypot(sg.u - sg.cu, sg.v - sg.cv);
+        if (Math.abs(ra - rb) > Math.max(0.5, 0.02 * Math.max(ra, rb))) issues.push(`${where}：輪廓第 ${i + 1} 段圓弧的起點和終點離圓心不一樣遠（R${r1(ra)} 和 R${r1(rb)}），請確認圓心`);
+      });
+      return { type: 'profile', face: f.face, depth: depthOf(), through: !!f.through, mirror: mirrorOf(f.mirror), outline };
+    }
+    case 'fillet':
+    case 'chamfer': {
+      // 鏡射：稜邊名稱左右／前後／上下對調（例：top-front + 鏡射 z → 也做 top-back）
+      const set = new Set(arrOf(f.edges).filter(e => EDGES[e]));
+      if (!set.size) { issues.push(`${where}：${name}沒有指定稜邊，已略過`); return null; }
+      for (const a of mirrorOf(f.mirror)) for (const e of [...set]) set.add(e.split('-').map(t => EDGE_SWAP[a][t] || t).join('-'));
+      let size = posOf(f.size);
+      if (size == null) { issues.push(`${where}：${name}${f.type === 'fillet' ? '半徑' : ''}應大於 0（讀到 ${f.size}），暫用 5`); size = 5; }
+      const edges = [...set].filter(e => {
+        const lim = Math.min(...EDGES[e].map(fc => stock[FACE_EXT[fc]]));
+        if (size <= lim) return true;
+        issues.push(`${where}：${name} ${size} 比稜邊「${e}」旁的料塊（${lim} mm）還大，已略過這條稜邊`);
+        return false;
+      });
+      if (!edges.length) return null;
+      return { type: f.type, edges, size, mirror: [] };
+    }
+    default:
+      issues.push(`${where}：不認得的特徵「${f.type}」，已略過`);
+      return null;
+  }
+}
+
+// ---------- 幾何：manifold-3d（第一次建模時才從 CDN 載入）----------
+// 座標與組合單元模擬器相同：原點在料塊底面中心，Y 朝上、前方 +Z（與本工具的模型座標一致）
+const MANIFOLD_URL = 'https://cdn.jsdelivr.net/npm/manifold-3d@3.5.4/manifold.js';
+let MF = null;
+async function loadManifold() {
+  if (MF) return MF;
+  let Module;
+  try { ({ default: Module } = await import(MANIFOLD_URL)); } catch { throw new Error('無法載入幾何核心（需要網路連線）'); }
+  const w = await Module(); w.setup(); MF = w;
+  return MF;
+}
+const KE = 2;   // 切削工具超出料塊的延伸量，避免共面布林運算
+const ksegs = r => (r >= 20 ? 96 : r >= 12 ? 72 : 48);
+function kbox(x0, x1, y0, y1, z0, z1) {
+  const c = MF.Manifold.cube([x1 - x0, y1 - y0, z1 - z0]), m = c.translate([x0, y0, z0]); c.delete(); return m;
+}
+const KROT = { '+z': [0, 0, 0], '-z': [180, 0, 0], '+y': [-90, 0, 0], '-y': [90, 0, 0], '+x': [0, 90, 0], '-x': [0, -90, 0] };
+function kcyl(dir, base, r0, r1, len) {
+  const key = dir[0] > 0.5 ? '+x' : dir[0] < -0.5 ? '-x' : dir[1] > 0.5 ? '+y' : dir[1] < -0.5 ? '-y' : dir[2] > 0.5 ? '+z' : '-z';
+  const c = MF.Manifold.cylinder(len, r0, r1, ksegs(Math.max(r0, r1)));
+  const r = c.rotate(KROT[key]); c.delete();
+  const m = r.translate(base); r.delete();
+  return m;
+}
+function kunion(list) {
+  list = list.filter(Boolean);
+  if (!list.length) return null;
+  if (list.length === 1) return list[0];
+  const u = MF.Manifold.union(list); list.forEach(m => m.delete()); return u;
+}
+function kcut(a, b) { const m = a.subtract(b); a.delete(); b.delete(); return m; }
+function kplace(m, R, t) {
+  return m.transform([R[0][0], R[1][0], R[2][0], 0, R[0][1], R[1][1], R[2][1], 0, R[0][2], R[1][2], R[2][2], 0, t[0], t[1], t[2], 1]);
+}
+
+// 面座標系：u、v 是正對該面的視圖的右、上，原點在視圖的左下角
+function faceFrame(s, face) {
+  const { w, h, d } = s, hw = w / 2, hd = d / 2;
+  switch (face) {
+    case 'front':  return { o: [-hw, 0, hd], u: [1, 0, 0], v: [0, 1, 0], n: [0, 0, 1], U: w, V: h, T: d };
+    case 'back':   return { o: [hw, 0, -hd], u: [-1, 0, 0], v: [0, 1, 0], n: [0, 0, -1], U: w, V: h, T: d };
+    case 'right':  return { o: [hw, 0, hd], u: [0, 0, -1], v: [0, 1, 0], n: [1, 0, 0], U: d, V: h, T: w };
+    case 'left':   return { o: [-hw, 0, -hd], u: [0, 0, 1], v: [0, 1, 0], n: [-1, 0, 0], U: d, V: h, T: w };
+    case 'top':    return { o: [-hw, h, hd], u: [1, 0, 0], v: [0, 0, -1], n: [0, 1, 0], U: w, V: d, T: h };
+    case 'bottom': return { o: [-hw, 0, -hd], u: [1, 0, 0], v: [0, 0, 1], n: [0, -1, 0], U: w, V: d, T: h };
+    default: throw new Error('未知的面：' + face);
+  }
+}
+const facePoint = (F, u, v, t = 0) => [0, 1, 2].map(k => F.o[k] + u * F.u[k] + v * F.v[k] - t * F.n[k]);
+const resolveAt = (F, at) => (!at || at.mode === 'center' ? [F.U / 2, F.V / 2] : [at.u, at.v]);
+const FACE_NORMALS = { front: [0, 0, 1], back: [0, 0, -1], right: [1, 0, 0], left: [-1, 0, 0], top: [0, 1, 0], bottom: [0, -1, 0] };
+const facePlane = (s, face) => ({ front: s.d / 2, back: -s.d / 2, right: s.w / 2, left: -s.w / 2, top: s.h, bottom: 0 }[face]);
+const axisOf = n => (n[0] !== 0 ? 0 : n[1] !== 0 ? 1 : 2);
+const signOf = n => n[0] + n[1] + n[2];
+const inward = F => F.n.map(x => -x);
+const aabb = (p, q) => kbox(Math.min(p[0], q[0]), Math.max(p[0], q[0]), Math.min(p[1], q[1]), Math.max(p[1], q[1]), Math.min(p[2], q[2]), Math.max(p[2], q[2]));
+function extendRect(F, r) {
+  const eps = 1e-6;
+  return { u0: r.u0 <= eps ? r.u0 - KE : r.u0, u1: r.u1 >= F.U - eps ? r.u1 + KE : r.u1, v0: r.v0 <= eps ? r.v0 - KE : r.v0, v1: r.v1 >= F.V - eps ? r.v1 + KE : r.v1 };
+}
+function holeTool(s, f) {
+  const F = faceFrame(s, f.face), [u, v] = resolveAt(F, f.at), r = f.d / 2;
+  const depth = f.through ? F.T + KE : f.depth;
+  return kcyl(inward(F), facePoint(F, u, v, -KE), r, r, depth + KE);
+}
+function pocketTool(s, f) {
+  const F = faceFrame(s, f.face), depth = f.through ? F.T + KE : f.depth;
+  return kunion(f.rects.map(r0 => { const r = extendRect(F, r0); return aabb(facePoint(F, r.u0, r.v0, -KE), facePoint(F, r.u1, r.v1, depth)); }));
+}
+function bossTool(s, f) {
+  const F = faceFrame(s, f.face);
+  const region = aabb(facePoint(F, -KE, -KE, -KE), facePoint(F, F.U + KE, F.V + KE, f.depth));
+  const keep = kunion(f.islands.map(is => {
+    if (is.shape === 'circle') { const [u, v] = resolveAt(F, is.at); return kcyl(inward(F), facePoint(F, u, v, -2 * KE), is.d / 2, is.d / 2, f.depth + 3 * KE); }
+    const r = extendRect(F, is.rect);
+    return aabb(facePoint(F, r.u0, r.v0, -2 * KE), facePoint(F, r.u1, r.v1, f.depth + KE));
+  }));
+  return keep ? kcut(region, keep) : region;
+}
+// 輪廓（直線＋圓弧）→ 多邊形點列（面座標）
+function outlinePoints(segs) {
+  const out = [];
+  if (!segs.length) return out;
+  let prev = [segs[segs.length - 1].u, segs[segs.length - 1].v];
+  for (const sg of segs) {
+    const end = [sg.u, sg.v];
+    if (sg.kind === 'arc') {
+      const c = [sg.cu, sg.cv], r = Math.hypot(prev[0] - c[0], prev[1] - c[1]);
+      let a0 = Math.atan2(prev[1] - c[1], prev[0] - c[0]), a1 = Math.atan2(end[1] - c[1], end[0] - c[0]);
+      if (sg.ccw) { while (a1 <= a0 + 1e-9) a1 += 2 * Math.PI; } else { while (a1 >= a0 - 1e-9) a1 -= 2 * Math.PI; }
+      const n = Math.max(2, Math.ceil(Math.abs(a1 - a0) / (2 * Math.PI) * ksegs(r)));
+      // 等分點＋弧內的象限點（0/90/180/270°）：外框與總尺寸要落在真正的極值，而不是弦上
+      const angs = [];
+      for (let i = 1; i < n; i++) angs.push(a0 + (a1 - a0) * i / n);
+      const lo = Math.min(a0, a1), hi = Math.max(a0, a1), qa = Math.PI / 2;
+      for (let k = Math.ceil(lo / qa); k * qa < hi; k++) {
+        const a = k * qa;
+        if (a - lo > 1e-3 && hi - a > 1e-3 && angs.every(b => Math.abs(b - a) > 1e-3)) angs.push(a);
+      }
+      angs.sort((p, q) => (a1 > a0 ? p - q : q - p));
+      for (const a of angs) out.push([c[0] + r * Math.cos(a), c[1] + r * Math.sin(a)]);
+    }
+    out.push(end);
+    prev = end;
+  }
+  return out.filter((p, i) => i === 0 || Math.hypot(p[0] - out[i - 1][0], p[1] - out[i - 1][1]) > 1e-6);
+}
+// 輪廓切除：面上的封閉輪廓沿面的法向往內擠出
+function profileTool(s, f) {
+  const F = faceFrame(s, f.face), pts = outlinePoints(f.outline);
+  if (pts.length < 3) throw new Error('輪廓少於 3 個點');
+  let area = 0;
+  for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; area += p[0] * q[1] - q[0] * p[1]; }
+  if (Math.abs(area) < 1e-6) throw new Error('輪廓自己交叉或沒有面積');
+  if (area < 0) pts.reverse();
+  const cs = new MF.CrossSection([pts], 'NonZero');
+  const depth = f.through ? F.T + KE : f.depth;
+  const ex = cs.extrude(depth + KE); cs.delete();
+  // 區域座標 (u, v, z) → 世界：o + u·û + v·v̂ − (z − KE)·n̂
+  const R = [0, 1, 2].map(k => [F.u[k], F.v[k], -F.n[k]]), t = [0, 1, 2].map(k => F.o[k] + KE * F.n[k]);
+  const m = kplace(ex, R, t); ex.delete();
+  return m;
+}
+function edgeTool(s, edge, size, kind) {
+  const [fa, fb] = EDGES[edge];
+  const na = FACE_NORMALS[fa], nb = FACE_NORMALS[fb];
+  const ia = axisOf(na), ib = axisOf(nb), ic = 3 - ia - ib;
+  const pa = facePlane(s, fa), pb = facePlane(s, fb), sa = signOf(na), sb = signOf(nb);
+  const ext = [[-s.w / 2, s.w / 2], [0, s.h], [-s.d / 2, s.d / 2]][ic];
+  if (kind === 'fillet') {
+    const lo = [0, 0, 0], hi = [0, 0, 0];
+    const range = (p, sg, sz) => (sg > 0 ? [p - sz, p + KE] : [p - KE, p + sz]);
+    [lo[ia], hi[ia]] = range(pa, sa, size); [lo[ib], hi[ib]] = range(pb, sb, size);
+    lo[ic] = ext[0] - KE; hi[ic] = ext[1] + KE;
+    const corner = kbox(lo[0], hi[0], lo[1], hi[1], lo[2], hi[2]);
+    const c = [0, 0, 0], dir = [0, 0, 0];
+    c[ia] = pa - sa * size; c[ib] = pb - sb * size; c[ic] = ext[0] - 2 * KE; dir[ic] = 1;
+    return kcut(corner, kcyl(dir, c, size, size, ext[1] - ext[0] + 4 * KE));
+  }
+  const pts = [];
+  for (const t of [ext[0] - KE, ext[1] + KE]) {
+    const P = (da, db) => { const q = [0, 0, 0]; q[ia] = pa + da; q[ib] = pb + db; q[ic] = t; return q; };
+    pts.push(P(0, -sb * size), P(sa * KE, -sb * size), P(sa * KE, sb * KE), P(-sa * size, sb * KE), P(-sa * size, 0));
+  }
+  return MF.Manifold.hull(pts);
+}
+function mirrored(s, tool, axes) {
+  if (!axes || !axes.length) return tool;
+  const ops = {
+    x: m => m.mirror([1, 0, 0]),
+    z: m => m.mirror([0, 0, 1]),
+    y: m => { const a = m.translate([0, -s.h / 2, 0]), b = a.mirror([0, 1, 0]); a.delete(); const c = b.translate([0, s.h / 2, 0]); b.delete(); return c; },
+  };
+  let copies = [tool];
+  for (const a of new Set(axes)) copies = copies.concat(copies.map(ops[a]));
+  return kunion(copies);
+}
+function featureTool(s, f) {
+  let tool;
+  switch (f.type) {
+    case 'hole': tool = holeTool(s, f); break;
+    case 'pocket': tool = pocketTool(s, f); break;
+    case 'boss': tool = bossTool(s, f); break;
+    case 'profile': tool = profileTool(s, f); break;
+    case 'fillet': case 'chamfer': tool = kunion(f.edges.map(e => edgeTool(s, e, f.size, f.type))); break;
+    default: throw new Error('未知的特徵類型：' + f.type);
+  }
+  if (!tool) return null;
+  const m = mirrored(s, tool, f.mirror);
+  // 尺寸或位置不合理的工具（負值、NaN、無限大）會讓聯集後整個步驟、甚至整個工件失效：只略過這個特徵
+  if (m.status() !== 'NoError' || m.isEmpty()) { m.delete(); throw new Error('這個特徵的尺寸或位置不合理，已略過'); }
+  return m;
+}
+// 工件 → 三角網格（展開成每個三角形 9 個座標的 soup，接本工具的匯入流程）
+async function buildPart(part) {
+  await loadManifold();
+  const s = part.stock, issues = [];
+  let cur = kbox(-s.w / 2, s.w / 2, 0, s.h, -s.d / 2, s.d / 2);
+  (part.steps || []).forEach((st, i) => {
+    const tools = [];
+    for (const f of st.features) { try { const t = featureTool(s, f); if (t) tools.push(t); } catch (err) { issues.push(`步驟 ${i + 1}「${st.label}」：${err instanceof Error ? err.message : '幾何核心內部錯誤，這個特徵已略過'}`); } }
+    if (!tools.length) return;
+    const tool = kunion(tools), next = cur.subtract(tool);
+    tool.delete();
+    if (cur.volume() - next.volume() < 1e-3) issues.push(`步驟 ${i + 1}「${st.label}」沒有切到材料`);
+    cur.delete(); cur = next;
+  });
+  if (cur.isEmpty()) { cur.delete(); throw new Error('加工後沒有剩下材料'); }
+  const pieces = cur.decompose();
+  if (pieces.length > 1) issues.push(`加工後分成 ${pieces.length} 塊，請檢查切削範圍`);
+  pieces.forEach(p => p.delete());
+  const g = cur.getMesh(); cur.delete();
+  const np = g.numProp, vp = g.vertProperties, tv = g.triVerts, soup = new Float64Array(tv.length * 3);
+  for (let i = 0; i < tv.length; i++) for (let k = 0; k < 3; k++) soup[3 * i + k] = vp[np * tv[i] + k];
+  return { soup, issues };
+}
+
+// 對照原圖：浮在圖紙右上角的照片面板
+function renderCompare() {
+  const has = AI.images.length > 0;
+  $('compareBtn').hidden = !has;
+  if (!has) { $('compare').hidden = true; return; }
+  $('compareImgs').innerHTML = AI.images.map(im => `<img src="${im.dataUrl}" alt="手繪原圖">`).join('');
+}
+
+function initAI() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem('tvs-ai') || 'null');
+    if (saved && saved.token) { AI.token = saved.token; AI.who = saved.who || ''; }
+  } catch { /* 沒有存過 */ }
+  $('aiLoginBtn').addEventListener('click', aiLogin);
+  ['aiSid', 'aiName'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') aiLogin(); }));
+  $('aiLogout').addEventListener('click', () => {
+    if (AI.ctrl) AI.ctrl.abort();
+    Object.assign(AI, { token: null, who: '', cfg: null, images: [], draft: null, choices: [], resultJson: null });
+    $('aiSid').value = ''; $('aiName').value = ''; $('aiNote').value = '';
+    $('aiResult').hidden = true; $('aiResult').innerHTML = ''; aiWarn(''); aiStatus('');
+    aiSave(); aiRenderThumbs(); aiRenderAuth(); renderCompare();
+  });
+  $('aiFiles').addEventListener('change', e => { aiAddFiles(e.target.files); e.target.value = ''; });
+  const drop = $('aiDrop');
+  ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => aiAddFiles(e.dataTransfer.files));
+  $('aiThumbs').addEventListener('click', e => {
+    const b = e.target.closest('button.x'); if (!b) return;
+    AI.images.splice(+b.dataset.i, 1); aiRenderThumbs(); aiRenderAuth(); renderCompare();
+  });
+  $('aiGo').addEventListener('click', aiRecognize);
+  $('aiCancel').addEventListener('click', () => AI.ctrl && AI.ctrl.abort());
+  $('aiResult').addEventListener('change', e => {
+    const q = e.target.dataset && e.target.dataset.q;
+    if (q == null) return;
+    AI.choices[+q] = +e.target.value;
+    aiBuild().catch(err => { aiStatus(''); aiWarn('重新建立失敗：' + err.message); });
+  });
+  $('aiResult').addEventListener('click', e => {
+    if (e.target.id === 'aiSaveJson' && AI.resultJson) download((AI.draft && AI.draft.name || '辨識結果') + '.json', JSON.stringify(AI.resultJson, null, 2), 'application/json');
+  });
+  // 載入先前下載的辨識結果（不用登入、不扣次數）
+  $('aiLoadJson').addEventListener('change', async e => {
+    const f = e.target.files[0]; e.target.value = '';
+    if (!f) return;
+    try { await aiUseResult(JSON.parse(await f.text())); } catch (err) { aiWarn('無法讀取這個辨識結果：' + err.message); }
+  });
+  $('compareBtn').addEventListener('click', () => { $('compare').hidden = !$('compare').hidden; });
+  $('compareClose').addEventListener('click', () => { $('compare').hidden = true; });
+  aiRenderAuth();
+  if (AI.token) aiRefresh();
+}
+
 // 被嵌入（例如 Google 協作平台的嵌入框）時，提示改用新分頁：嵌入框會擋下載
 (() => {
   let embedded;
@@ -1983,6 +2734,7 @@ window.TSV = { svg: () => toSVG(exportDrawing()), dxf: () => toDXF(exportDrawing
 })();
 
 initUI();
+initAI();
 initPreview();
 draw();
 </script>

@@ -12,10 +12,11 @@ const ok = (cond, msg) => { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if 
 const r2 = v => Math.round(v * 100) / 100;
 const polyLen = polys => polys.reduce((s, p) => s + p.slice(1).reduce((t, q, i) => t + Math.hypot(q[0] - p[i][0], q[1] - p[i][1]), 0), 0);
 
-function prepare(soup, unit = 1) {
+function prepare(soup, unit = 1, { thr = 30, exact = false } = {}) {
   G.state.unit = unit; G.state.zUp = false; G.state.rot.identity();
-  const T = G.buildTopology(soup), M = G.transformModel(T);
-  G.classifyModel(M, 30); G.setModel(M);
+  const T = G.buildTopology(soup); T.exact = exact;
+  const M = G.transformModel(T);
+  G.classifyModel(M, thr); G.setModel(M);
   return M;
 }
 const summary = M => Object.fromEntries(['front', 'top', 'right'].map(v => {
@@ -279,6 +280,77 @@ if (fs.existsSync(fixture('cube1.obj'))) {
   const M = prepare(Float64Array.from([...top, ...bot, ...cyl]));
   const axes = M.axes.map(g => `${g.isHole ? '孔' : '柱'}r${Math.round(g.rMax * 10) / 10}${g.depth ? '深' + Math.round(g.depth * 10) / 10 : ''}`).sort();
   ok(axes.includes('孔r5深8') && axes.includes('柱r6'), `盲孔與凸柱判斷 ${JSON.stringify(axes)}`);
+}
+
+// ---------- 6. AI 辨識結果 → 實體 → 圖面 ----------
+console.log('\n[6] AI 辨識結果建模（manifold）');
+{
+  const { default: Module } = await import('manifold-3d');
+  const wasm = await Module(); wasm.setup(); G.setMF(wasm);
+  const load = async (path, choices) => {
+    const r = JSON.parse(fs.readFileSync(path, 'utf8')), d = r.parts[0];
+    const { draft } = G.applyChoices(d, choices || d.uncertain.map(u => u.chosen));
+    const { part, issues } = G.toPart(draft);
+    const built = await G.buildPart(part);
+    return { part, issues: [...issues, ...built.issues], M: prepare(built.soup, 1, { thr: 9, exact: true }), r };   // 與網頁相同：AI 實體用 9°
+  };
+  const cubeFx = new URL('../../assembly-unit-simulator/tests/fixtures/ai-threeview-cube.json', import.meta.url);
+  if (fs.existsSync(cubeFx)) {
+    const c = await load(cubeFx);
+    const d = dimsOf(c.M);
+    const vol = c.M.size.join('×');
+    ok(!c.issues.length && c.M.stats.open === 0 && vol === '100×100×100' && d.holes.length === 1 && d.holes[0].includes('Ø50'),
+      `草圖範例（8 角缺口＋Ø50 孔）：${vol}，開放邊 ${c.M.stats.open}，孔 ${JSON.stringify(d.holes)}，尺寸 ${JSON.stringify(d.slots)}`);
+    oracleAll('草圖範例重建', c.M, ['front', 'top', 'iso']);
+    // 改選「只鑽一段」：孔不再貫穿
+    const c2 = await load(cubeFx, [1]);
+    ok(c2.issues.length === 0 && dimsOf(c2.M).holes.length === 1, `改選不確定項後重建：${JSON.stringify(dimsOf(c2.M).holes)}`);
+  } else console.log('  （略過：找不到組合單元模擬器的三視圖範例）');
+  const p = await load(new URL('./ai-profile-sample.json', import.meta.url));
+  const dp = dimsOf(p.M);
+  const all = Object.values(dp.slots).join('|');
+  ok(!p.issues.length && p.M.stats.open === 0 && all.includes('40') && all.includes('30'),
+    `輪廓切除（斜面＋圓弧長槽）：開放邊 ${p.M.stats.open}，尺寸 ${JSON.stringify(dp.slots)}`);
+  oracleAll('輪廓切除重建', p.M, ['front', 'top', 'right', 'iso']);
+  // 審查抓到的情境
+  {
+    const mk = (stock, steps) => ({ name: 't', stock, steps: steps.map(fs => ({ label: 's', note: '', features: fs })) });
+    const L = ([u, v]) => ({ kind: 'line', u, v, cu: 0, cv: 0, ccw: false });
+    const build = async part => prepare((await G.buildPart(part)).soup, 1, { thr: 9, exact: true });
+    // 低角度斜面（20°）：俯視圖要畫出斜面與頂面的交線
+    const slope = Math.tan(20 * Math.PI / 180) * 60;
+    const M1 = await build(mk({ w: 100, h: 40, d: 30 }, [[{ type: 'profile', face: 'front', depth: 0, through: true, mirror: [], outline: [[40, 40], [100, 40 - slope], [102, 40 - slope], [102, 42], [38, 42]].map(L) }]]));
+    const top1 = G.processView('top'), has40 = top1.vis.some(pl => pl.some(([x]) => Math.abs(x - 40) < 1e-3) && pl.every(([x]) => Math.abs(x - 40) < 1e-3));
+    ok(has40, '20° 斜面：俯視圖畫出斜面起點的交線（x = 40）');
+    oracleAll('20° 斜面', M1, ['front', 'top', 'iso']);
+    // 柱坑：Ø20 深 6 ＋ Ø10 貫穿
+    const M2 = await build(mk({ w: 60, h: 20, d: 40 }, [[{ type: 'hole', face: 'top', at: { mode: 'center' }, d: 10, depth: 0, through: true, mirror: [] }, { type: 'hole', face: 'top', at: { mode: 'center' }, d: 20, depth: 6, through: false, mirror: [] }]]));
+    const hl = dimsOf(M2).holes.join(',');
+    ok(/Ø20深6/.test(hl), `柱坑深度：${hl}`);
+    // 直線切線接圓弧（連桿）：切點不能被當成尺寸點
+    const M3 = await build(mk({ w: 100, h: 10, d: 40 }, [[{ type: 'profile', face: 'top', depth: 0, through: true, mirror: [], outline: [
+      L([-2, -2]), L([102, -2]), L([102, 42]), L([-2, 42]), L([-2, 20]), L([0, 20]),
+      { kind: 'arc', u: 20, v: 40, cu: 20, cv: 20, ccw: false }, L([80, 40]), { kind: 'arc', u: 80, v: 0, cu: 80, cv: 20, ccw: false }, L([20, 0]),
+      { kind: 'arc', u: 0, v: 20, cu: 20, cv: 20, ccw: false }, L([-2, 20]), L([-2, -2]) ] }]]));
+    const d3 = Object.values(dimsOf(M3).slots).join('|');
+    ok(!/\b0\.\d/.test(d3), `長圓形（直線切圓弧）：沒有標到切點的怪尺寸（${d3}）`);
+  }
+  // 每個面（含鏡射）：矩形輪廓的輪廓切除 = 矩形切除（體積與重心）
+  {
+    const stock = { w: 60, h: 40, d: 30 }, props = soup => { let V = 0, c = [0, 0, 0]; for (let i = 0; i < soup.length; i += 9) { const q = soup.slice(i, i + 9); const v = (q[0] * (q[4] * q[8] - q[5] * q[7]) - q[1] * (q[3] * q[8] - q[5] * q[6]) + q[2] * (q[3] * q[7] - q[4] * q[6])) / 6; V += v; for (let k = 0; k < 3; k++) c[k] += v * (q[k] + q[3 + k] + q[6 + k]) / 4; } return [V, ...c.map(x => x / V)]; };
+    const outline = [[17, 4], [17, 11], [5, 11], [5, 4]].map(([u, v]) => ({ kind: 'line', u, v, cu: 0, cv: 0, ccw: false }));
+    let same = 0, n = 0;
+    for (const face of ['front', 'back', 'right', 'left', 'top', 'bottom']) for (const mirror of [[], ['x', 'z']]) {
+      const mk = f => ({ name: 't', stock, steps: [{ label: 's', note: '', features: [f] }] });
+      const a = props((await G.buildPart(mk({ type: 'pocket', face, rects: [{ u0: 5, u1: 17, v0: 4, v1: 11 }], depth: 6, through: false, mirror }))).soup);
+      const b = props((await G.buildPart(mk({ type: 'profile', face, outline, depth: 6, through: false, mirror }))).soup);
+      n++; if (a.every((x, i) => Math.abs(x - b[i]) < 1e-6 * Math.max(1, Math.abs(x)))) same++;
+    }
+    ok(same === n, `輪廓切除的方向：6 個面（含鏡射）與矩形切除相同 ${same}/${n}`);
+  }
+  // 圓弧方向：ccw 繞半圈，點要在圓上
+  const pts = G.outlinePoints([{ kind: 'line', u: 10, v: 0 }, { kind: 'arc', u: -10, v: 0, cu: 0, cv: 0, ccw: true }]);
+  ok(pts.every(([x, y]) => Math.abs(Math.hypot(x, y) - 10) < 1e-9) && pts.some(([, y]) => y > 9), `圓弧逆時針取點在圓上、經過上半圓（${pts.length} 點）`);
 }
 
 console.log(fails ? `\n✗ ${fails} 項失敗` : '\n✓ 全部通過');

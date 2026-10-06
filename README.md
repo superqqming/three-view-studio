@@ -27,6 +27,16 @@
   - 一個方向上特徵超過 7 個（例如陣列孔）時不自動標細部尺寸，會提示
 - 匯出：SVG（1:1 mm）、DXF R12（OUTLINE / HIDDEN / CENTER / DIM / ISO / FRAME / TB / TEXT 圖層）、列印
 
+### 手繪三視圖 AI 辨識
+
+拍照上傳手繪三視圖（可附等角草圖）→ AI 判讀成「料塊＋加工步驟」→ 以 manifold-3d 建出實體 → 自動產生正式三視圖與尺寸，並列出手繪圖面可改進的地方（視圖配置、漏線、線型、中心線、尺寸標法）。
+
+- 經課程的 AI 伺服器（與組合單元模擬器共用的 Cloudflare Worker，`tool: 'threeview'`）：Anthropic 金鑰只在伺服器；修課名單上的同學以學號＋姓名登入（只送雜湊），每學期次數上限由老師在組合單元模擬器的管理面板設定。老師在「學號」欄填教師密碼登入。
+- 加工特徵：孔、矩形切除、凸柱、圓角、倒角，以及「輪廓切除」（面上的直線＋圓弧封閉輪廓，用於斜面、圓弧端、溝槽），可鏡射。
+- AI 不確定的地方會列成選項，改選後立即重建；辨識結果可下載成 JSON，之後用「載入辨識結果」重現（不用登入、不扣次數）。
+- 「對照原圖」把照片浮在圖紙旁邊對照。
+- 本機測試：`assembly-unit-simulator/worker` 的 `node test/dev-stack.mjs http://localhost:8791`（假 Anthropic＋wrangler dev），再開 `index.html?ai=http://127.0.0.1:8902`（`?ai=` 只接受本機網址）。
+
 ### 匯入時的自動修補
 
 各家軟體匯出的網格常有小毛病，會讓模型被誤判成「不是封閉實體」或多出線條。匯入時會自動處理：
@@ -65,7 +75,7 @@ python3 -m http.server 8791
 cd tests && npm install && npm test
 ```
 
-`build-geom.mjs` 從 `index.html` 抽出幾何管線給 Node 執行；`regress.mjs` 檢查範例快照、匯入情境，並用射線法獨立驗證最終圖面：每一點真正可見的邊都要畫成實線，每一段畫出來的線都要有真實的邊支撐。使用者模型放在 `tests/fixtures/`（不進 git）。
+`build-geom.mjs` 從 `index.html` 抽出幾何管線（含 AI 辨識的建模部分，用 npm 版 manifold-3d）給 Node 執行；`regress.mjs` 檢查範例快照、匯入情境，並用射線法獨立驗證最終圖面：每一點真正可見的邊都要畫成實線，每一段畫出來的線都要有真實的邊支撐。使用者模型放在 `tests/fixtures/`（不進 git）。
 
 ## 已知限制
 

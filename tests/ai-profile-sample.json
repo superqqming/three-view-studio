@@ -1,0 +1,33 @@
+{
+  "is_part_sketch": true,
+  "message": "",
+  "units_on_sketch": "mm",
+  "transcribed": ["80", "50", "40", "30", "R6"],
+  "views_found": [{ "view": "front", "where": "左下" }, { "view": "top", "where": "左上" }, { "view": "right", "where": "右下" }],
+  "parts": [{
+    "name": "斜面長槽塊",
+    "stock": { "w": 80, "h": 50, "d": 40 },
+    "steps": [
+      { "label": "切斜面", "note": "前視圖右上角斜切到右側高 30",
+        "features": [{ "type": "profile", "face": "front", "centered": false, "u": 0, "v": 0, "d": 0, "depth": 0, "through": true,
+          "rects": [], "islands": [], "edges": [], "size": 0, "mirror": [],
+          "outline": [
+            { "kind": "line", "u": 40, "v": 50, "cu": 0, "cv": 0, "ccw": false },
+            { "kind": "line", "u": 80, "v": 30, "cu": 0, "cv": 0, "ccw": false },
+            { "kind": "line", "u": 82, "v": 30, "cu": 0, "cv": 0, "ccw": false },
+            { "kind": "line", "u": 82, "v": 52, "cu": 0, "cv": 0, "ccw": false },
+            { "kind": "line", "u": 38, "v": 52, "cu": 0, "cv": 0, "ccw": false }
+          ] }] },
+      { "label": "銑長槽", "note": "寬 12、兩端 R6、深 10",
+        "features": [{ "type": "profile", "face": "top", "centered": false, "u": 0, "v": 0, "d": 0, "depth": 10, "through": false,
+          "rects": [], "islands": [], "edges": [], "size": 0, "mirror": [],
+          "outline": [
+            { "kind": "line", "u": 30, "v": 14, "cu": 0, "cv": 0, "ccw": false },
+            { "kind": "arc", "u": 30, "v": 26, "cu": 30, "cv": 20, "ccw": true },
+            { "kind": "line", "u": 12, "v": 26, "cu": 0, "cv": 0, "ccw": false },
+            { "kind": "arc", "u": 12, "v": 14, "cu": 12, "cv": 20, "ccw": true }
+          ] }] }
+    ],
+    "uncertain": [], "assumptions": [], "review": []
+  }]
+}
