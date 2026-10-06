@@ -232,7 +232,7 @@
           <li>尺寸：細實線，尺寸線距輪廓 10 mm，延伸線留 1 mm 空隙、超出尺寸線 2 mm；箭頭長寬比 3:1 塗黑；數字高 3 mm，採對齊式（垂直尺寸由右側閱讀）</li>
           <li>視圖對齊：前視與俯視等寬、前視與側視等高、俯視與側視等深</li>
           <li>第三角法：俯視在前視上方、右側視在右方；第一角法：俯視在前視下方、左側視在右方</li>
-          <li>比例採 CNS 建議值（10:1、5:1、2:1、1:1、1:2、1:5、1:10…），尺寸一律標註實際大小</li>
+          <li>比例可選 10:1、5:1、2:1、1:1、1:2、1:3、1:4、1:5、1:10…，「自動」挑放得下的最大比例；尺寸一律標註實際大小</li>
           <li>圖框距紙邊 10 mm，標題欄在右下角並附投影法符號</li>
         </ul>
       </details>
@@ -284,7 +284,7 @@ const SHEETS = {
   A3L: { w: 420, h: 297 },
   A4P: { w: 210, h: 297 },
 };
-const SCALES = [[10, 1], [5, 1], [2, 1], [1, 1], [1, 2], [1, 5], [1, 10], [1, 20], [1, 50], [1, 100]];
+const SCALES = [[10, 1], [5, 1], [2, 1], [1, 1], [1, 2], [1, 3], [1, 4], [1, 5], [1, 10], [1, 20], [1, 50], [1, 100]];
 const TB_W = 180, TB_H = 28;
 const ISO_K = 1 / Math.sqrt(2 / 3);   // 等角投影 → 等角圖（軸向取實長）
 
@@ -1155,16 +1155,26 @@ function buildDrawing(mode) {
     const o = { proj: state.proj, labels: state.showLabels };
     const plan = planDims(views, state.proj, mode === 'export');
     notes = plan.notes;
-    let sc = null;
+    // 放得下的最大比例（「自動」用；手動選的比例放不下時也拿來提示）
+    let autoSc = null;
+    for (const [n, d] of SCALES) {
+      const L = computeLayout(W, H, D, n / d, area, o, plan.margins);
+      if (L.gw <= area.w && L.gh <= area.h) { autoSc = [n, d]; break; }
+    }
+    if (!autoSc) autoSc = SCALES[SCALES.length - 1];
+    let sc;
     if (mode === 'export' && lastScale) sc = lastScale;
-    else if (state.scale === 'auto') {
-      for (const [n, d] of SCALES) {
-        const L = computeLayout(W, H, D, n / d, area, o, plan.margins);
-        if (L.gw <= area.w && L.gh <= area.h) { sc = [n, d]; break; }
-      }
-      if (!sc) sc = SCALES[SCALES.length - 1];
-    } else sc = state.scale.split(':').map(Number);
-    if (mode === 'screen') lastScale = sc;
+    else if (state.scale === 'auto') sc = autoSc;
+    else {
+      sc = String(state.scale).split(':').map(Number);
+      if (sc.length !== 2 || !(sc[0] > 0) || !(sc[1] > 0)) sc = autoSc;   // 無效的比例值 → 自動
+    }
+    if (mode === 'screen') {
+      lastScale = sc;
+      state.autoScale = autoSc;
+      const fitsManual = state.scale === 'auto' || sc[0] / sc[1] <= autoSc[0] / autoSc[1] + 1e-9;
+      if (!fitsManual) notes.push(`${sc[0]}:${sc[1]} 放不下（尺寸會超出圖框或壓到標題欄），放得下的最大比例是 ${autoSc[0]}:${autoSc[1]}`);
+    }
     const s = sc[0] / sc[1];
     scaleLabel = sc[0] + ':' + sc[1];
     const L = computeLayout(W, H, D, s, area, o, plan.margins);
@@ -1193,6 +1203,9 @@ function buildDrawing(mode) {
 
 function draw() {
   lastDrawing = buildDrawing('screen');
+  // 比例選單：「自動」顯示目前實際用的比例
+  const autoOpt = $('scale').querySelector('option[value="auto"]');
+  if (autoOpt) autoOpt.textContent = state.autoScale ? `自動（目前 ${state.autoScale[0]}:${state.autoScale[1]}）` : '自動（最大可容納比例）';
   const n = state.hiddenDims.size;
   $('dimNote').textContent = [...lastDrawing.notes, n ? `已隱藏 ${n} 個尺寸（淡色顯示、不會匯出）` : ''].filter(Boolean).join('；');
   $('dimsReset').hidden = !n;
