@@ -153,6 +153,17 @@ function oracleAll(name, M, views = Object.keys(VIEWS)) {
   }
 }
 
+// ---------- 0. 共用 AI 程式與原始檔一致 ----------
+console.log('\n[0] 共用 AI 程式（雙入口元件、三視圖指令與格式、申請說明頁）');
+{
+  const { execFileSync } = await import('node:child_process');
+  const { fileURLToPath } = await import('node:url');
+  let out = '', good = true;
+  try { out = execFileSync('node', [fileURLToPath(new URL('./sync-ai.mjs', import.meta.url)), '--check'], { encoding: 'utf8' }); }
+  catch (err) { good = false; out = String(err.stderr || err.message); }
+  ok(good, out.trim());
+}
+
 // ---------- 1. 範例快照 ----------
 console.log('\n[1] 範例模型快照');
 const SNAP = {

@@ -98,6 +98,9 @@
   .ai-result .q { margin: 6px 0; padding: 6px 8px; background: #f6f8fa; border-radius: 7px; }
   .ai-result .q label { display: block; cursor: pointer; }
   .ai-result .tag { display: inline-block; font-size: 11px; padding: 0 6px; margin-right: 6px; border-radius: 9px; background: var(--accent-soft); color: var(--accent); }
+  #aiCard .aia { background: #fff; color: var(--ink); border-color: var(--line); font-size: 13px; }
+  #aiCard .aia input, #aiCard .aia select, #aiCard .aia button { background: #fff; color: var(--ink); border-color: var(--line); }
+  #aiCard .aia .aia-sub, #aiCard .aia .aia-msg:not(.err):not(.ok) { color: var(--muted); }
   .compare {
     position: absolute; top: 12px; right: 12px; z-index: 4; width: min(360px, 45%); max-height: calc(100% - 24px); overflow: auto;
     background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; box-shadow: 0 6px 20px rgba(0,0,0,.15);
@@ -152,36 +155,27 @@
 
     <section class="card" id="aiCard">
       <h2>或 · 拍照辨識手繪三視圖（AI）</h2>
-      <div id="aiLogin">
-        <div class="tb-grid">
-          <span>學號</span><input type="password" id="aiSid" autocomplete="off" spellcheck="false" placeholder="老師請填教師密碼">
-          <span>姓名</span><input type="text" id="aiName" autocomplete="off" spellcheck="false">
-        </div>
-        <div class="row" style="margin-top:8px">
-          <button class="primary" id="aiLoginBtn">登入</button>
-          <label class="chip filebtn">載入辨識結果（JSON）<input type="file" id="aiLoadJson" accept=".json,application/json" hidden></label>
-        </div>
-        <div class="info">修課名單上的同學才能使用，每學期次數有限。學號姓名只以雜湊送出；照片與補充說明會送到 AI 服務辨識（伺服器不保存），拍照時請避開寫有姓名學號的地方。</div>
+      <div id="aiAccess"></div>
+      <div class="info" id="aiFileNote" hidden>直接用檔案開啟時只能「使用自己的 API 金鑰」；要用課程額度請開線上版。</div>
+      <label class="drop" id="aiDrop" style="margin-top:10px">
+        <strong>選擇手繪三視圖的照片（最多 4 張）</strong>
+        拍正、光線均勻；有畫等角圖也一起拍進來
+        <input type="file" id="aiFiles" accept="image/*" multiple hidden>
+      </label>
+      <div class="thumbs" id="aiThumbs"></div>
+      <div class="row"><span class="lbl">草圖單位</span>
+        <select id="aiUnits"><option value="auto">依圖上標示</option><option value="mm">mm</option><option value="cm">cm</option></select></div>
+      <div class="row"><span class="lbl">思考深度</span><select id="aiEffort"></select></div>
+      <textarea id="aiNote" rows="2" maxlength="300" placeholder="補充說明（選填），例如：右下角是等角圖、孔是貫穿的"></textarea>
+      <div class="row" style="margin-top:6px">
+        <button class="primary" id="aiGo" disabled>開始辨識</button>
+        <button class="chip" id="aiCancel" hidden>取消</button>
+        <span class="info" id="aiStatus" style="margin:0"></span>
       </div>
-      <div id="aiMain" hidden>
-        <div class="row"><span class="info" id="aiWho" style="margin:0;flex:1"></span><button class="chip" id="aiLogout">登出</button></div>
-        <label class="drop" id="aiDrop" style="margin-top:8px">
-          <strong>選擇手繪三視圖的照片（最多 4 張）</strong>
-          拍正、光線均勻；有畫等角圖也一起拍進來
-          <input type="file" id="aiFiles" accept="image/*" multiple hidden>
-        </label>
-        <div class="thumbs" id="aiThumbs"></div>
-        <div class="row"><span class="lbl">草圖單位</span>
-          <select id="aiUnits"><option value="auto">依圖上標示</option><option value="mm">mm</option><option value="cm">cm</option></select></div>
-        <div class="row"><span class="lbl">思考深度</span><select id="aiEffort"></select></div>
-        <textarea id="aiNote" rows="2" placeholder="補充說明（選填），例如：右下角是等角圖、孔是貫穿的"></textarea>
-        <div class="row" style="margin-top:6px">
-          <button class="primary" id="aiGo" disabled>開始辨識</button>
-          <button class="chip" id="aiCancel" hidden>取消</button>
-          <span class="info" id="aiStatus" style="margin:0"></span>
-        </div>
-        <div class="info">投影法依下方「圖面設定」。辨識完成後會自動建立 3D 模型並產生正式的三視圖。</div>
+      <div class="row" style="margin-top:8px">
+        <label class="chip filebtn">載入辨識結果（JSON）<input type="file" id="aiLoadJson" accept=".json,application/json" hidden></label>
       </div>
+      <div class="info">投影法依下方「圖面設定」。學號姓名只以雜湊送出；照片與補充說明會送到 AI 服務辨識（課程額度經課程伺服器轉送、不保存；自己的金鑰直接送到 Anthropic），拍照時請避開寫有姓名學號的地方。辨識完成後會自動建立 3D 模型並產生正式的三視圖。</div>
       <div class="ai-result" id="aiResult" hidden></div>
       <div class="warn" id="aiWarn"></div>
     </section>
@@ -2096,101 +2090,595 @@ function initUI() {
 window.TSV = { svg: () => toSVG(exportDrawing()), dxf: () => toDXF(exportDrawing()), drawing: () => exportDrawing() };
 
 // ====================================================================
-// 12. 手繪三視圖 AI 辨識
-//    學生拍照上傳 → 課程的 AI 伺服器（與組合單元模擬器共用；金鑰在伺服器、名單登入、次數上限）
+// 12. 手繪三視圖 AI 辨識（AI 雙入口）
+//    ◉ 使用課程額度：學號＋姓名登入 → 課程閘道 course-ai-gateway（功能代碼 threeview-recognize；
+//      老師的金鑰在伺服器、名單登入、每人次數上限、課程結束日）
+//    ○ 使用自己的 API 金鑰：金鑰只存在這個瀏覽器，直接呼叫 Anthropic（模型、指令、輸出格式和閘道完全相同）
 //    → 料塊＋加工步驟 → manifold 建實體 → 既有的出圖流程；並列出學生圖面的問題
+//    兩個入口回傳同一種辨識結果（JSON），後面的流程只有一套。
 // ====================================================================
-// 伺服器網址；測試時可用 ?ai=http://localhost:port 指到本機（只接受本機，避免連結被改去別的伺服器）
-const AI_BASE = (() => {
+const GATEWAY_URL = 'https://course-ai-gateway.superqqming.workers.dev';
+const AI_TOOL = 'threeview-recognize';
+const AI_MODEL = 'claude-opus-5-5';      // 與閘道 worker/src/tools/assembly-recognize.js 的 MODEL 相同
+const AI_SDK_URL = 'https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0.131.0/+esm';
+// 本機測試用：?gateway=、?own-base= 只接受本機網址，避免連結被改去別的伺服器
+const localOverride = name => {
   try {
-    const q = new URLSearchParams(location.search).get('ai');
+    const q = new URLSearchParams(location.search).get(name);
     if (q && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(q)) return q;
   } catch { /* 沒有網址參數 */ }
-  return 'https://assembly-unit-ai.superqqming.workers.dev';
-})();
+  return null;
+};
+const AI_GATEWAY = localOverride('gateway') || GATEWAY_URL;
+const AI_OWN_BASE = localOverride('own-base');
+const AI_FILE_MODE = location.protocol === 'file:';   // 直接開檔案：閘道不接受，只能用自己的金鑰
 
-// 學號姓名正規化：必須與組合單元模擬器的 deploy/build_gate.py、gate-template.html 逐字一致，否則名單比對不到
+/* ==== BEGIN 共用 AI 程式（tests/sync-ai.mjs 自動產生：請改原始檔再同步，不要直接改這一段）==== */
+// ---- Shared_Services/ai-gateway/client/gateway-client.js
+const AI_GW = (() => {
+// 課程 AI 閘道 · 瀏覽器端（工具要接閘道時 import 這個檔）
+//
+//   import { createGateway } from './gateway-client.js';
+//   const gw = createGateway({ url: 'https://course-ai-gateway.<帳號>.workers.dev', tool: 'lamp-image' });
+//   await gw.login(學號, 姓名);              // 在多門課名單上會丟出 code === 'choose_course'，err.data.courses 讓學生選，再 gw.login(學號, 姓名, 課程代碼)
+//   const out = await gw.run({ prompt: '...' }, { onProgress: d => ... });   // out.result、out.remaining …
+//
+// 姓名學號只在這裡算成雜湊再送出；正規化規則必須與 scripts/roster.py 完全一致（e2e 測試會比對）。
+
+// 空白與隱形字元：與 roster.py 的 _STRIP 逐字相同（不能用 \s，Python 與 JS 的 \s 範圍不同）
 const STRIP_RE = /[\t\n\v\f\r \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\u200b\u200c\u200d\u200e\u200f\u2060\ufeff\u00ad\u001c\u001d\u001e\u001f]+/g;
-const VS_RE = /[\uFE00-\uFE0F]|\uDB40[\uDD00-\uDDEF]/g;   // 變體選擇符（含 U+E0100–E01EF 的代理對）
-const gateClean = v => (v || '').normalize('NFKC').replace(STRIP_RE, '').replace(VS_RE, '');
+const VS_RE = /[\uFE00-\uFE0F]|\uDB40[\uDD00-\uDDEF]/g;
+const clean = v => String(v || '').normalize('NFKC').replace(STRIP_RE, '').replace(VS_RE, '');
+const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+
+// 送給閘道的登入值：SHA-256(學號正規化 + "\n" + 姓名正規化)
 async function loginKey(sid, name) {
-  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(gateClean(sid).toUpperCase() + '\n' + gateClean(name).toLowerCase()));
-  return [...new Uint8Array(d)].map(x => x.toString(16).padStart(2, '0')).join('');
+  const data = new TextEncoder().encode(clean(sid).toUpperCase() + '\n' + clean(name).toLowerCase());
+  return hex(await crypto.subtle.digest('SHA-256', data));
 }
 
-const AI = { token: null, who: '', cfg: null, images: [], draft: null, choices: [], ctrl: null, resultJson: null, rejected: new Set() };
-const EFFORT_NAMES = { low: '快', medium: '一般', high: '仔細' };
-const VIEW_TAGS = { front: '前視圖', top: '俯視圖', right: '右側視圖', left: '左側視圖', bottom: '仰視圖', back: '後視圖', iso: '等角圖', layout: '視圖配置', dims: '尺寸', general: '整體' };
+class GatewayError extends Error {
+  constructor(message, { status = 0, code = null, data = null } = {}) {
+    super(message);
+    Object.assign(this, { status, code, data });
+  }
+}
 
-async function aiCall(path, { method = 'GET', body, signal } = {}) {
+// 登入憑證放在 sessionStorage（關掉分頁就沒了；共用電腦比較安全）；不能用時只放記憶體
+function memoStore(key) {
+  let mem = null;
+  return {
+    get() { try { return sessionStorage.getItem(key); } catch { return mem; } },
+    set(v) { mem = v; try { if (v) sessionStorage.setItem(key, v); else sessionStorage.removeItem(key); } catch { /* 隱私模式 */ } },
+  };
+}
+
+function createGateway({ url, tool }) {
+  const base = String(url || '').replace(/\/+$/, '');
+  const store = memoStore('course-ai-gateway:' + base);
+  let token = store.get();
+
+  async function call(path, { method = 'GET', body, signal } = {}) {
+    let res;
+    try {
+      res = await fetch(base + path, {
+        method, signal, body: body ? JSON.stringify(body) : undefined,
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      });
+    } catch (err) {
+      if (err.name === 'AbortError') throw new GatewayError('已取消。', { code: 'aborted' });
+      throw new GatewayError('連不上 AI 伺服器，請確認網路連線。', { code: 'network' });
+    }
+    return res;
+  }
+  async function readJson(res) {
+    let d = null;
+    try { d = await res.json(); } catch { /* 不是 JSON */ }
+    if (!res.ok) {
+      if (res.status === 401) { token = null; store.set(null); }
+      throw new GatewayError((d && d.message) || `AI 伺服器回應 ${res.status}`, { status: res.status, code: d && d.error, data: d });
+    }
+    return d;
+  }
+
+  return {
+    get loggedIn() { return !!token; },
+    logout() { token = null; store.set(null); },
+
+    // 回傳 { course: {id, name, enabled}, tools: { 工具代碼: {name, quota, used, remaining, efforts, defaultEffort} } }
+    async login(sid, name, course) {
+      return this.loginWithKey(await loginKey(sid, name), course);
+    },
+    async loginWithKey(k, course) {
+      const d = await readJson(await call('/v1/login', { method: 'POST', body: { k, ...(course ? { course } : {}), ...(tool ? { tool } : {}) } }));
+      token = d.token; store.set(token);
+      delete d.token;
+      return d;
+    },
+    async me() { return readJson(await call('/v1/me')); },
+
+    // 執行工具：回傳 { result, usage, ms, effort, quota, used, remaining, ... }
+    async run(body, { tool: which = tool, onProgress, signal } = {}) {
+      const res = await call(`/v1/run/${encodeURIComponent(which)}`, { method: 'POST', body, signal });
+      if (!(res.headers.get('content-type') || '').includes('event-stream')) {
+        await readJson(res);                                 // 不是串流＝錯誤（次數用完、暫停、登入過期…）
+        throw new GatewayError('AI 伺服器回傳了無法辨認的內容。');
+      }
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '', out = null;
+      try {
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          let i;
+          while ((i = buf.indexOf('\n\n')) >= 0) {
+            const block = buf.slice(0, i);
+            buf = buf.slice(i + 2);
+            const ev = /^event: (.*)$/m.exec(block), data = /^data: (.*)$/m.exec(block);
+            if (!ev || !data) continue;
+            const d = JSON.parse(data[1]);
+            if (ev[1] === 'progress') onProgress?.(d);
+            else if (ev[1] === 'result') out = d;
+            else if (ev[1] === 'error') throw new GatewayError(d.message || 'AI 功能失敗。', { code: d.error, data: d });
+          }
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') throw new GatewayError('已取消。', { code: 'aborted' });
+        throw err;
+      }
+      if (!out) throw new GatewayError('和 AI 伺服器的連線中斷了，請再試一次（沒有拿到結果就不會扣次數）。', { code: 'interrupted' });
+      return out;
+    },
+  };
+}
+return { STRIP_RE, VS_RE, loginKey, GatewayError, createGateway };
+})();
+// ---- Shared_Services/ai-gateway/client/own-key.js
+const AI_KEY = (() => {
+// 使用者自己的 API 金鑰（BYOK）· 瀏覽器端
+//
+// 金鑰只存在使用者自己的瀏覽器：預設只到關閉分頁為止（sessionStorage），勾「在這台電腦記住」才放 localStorage。
+// 呼叫直接從瀏覽器送到 Anthropic／OpenAI，不經過課程閘道，也不經過老師的任何伺服器。
+//
+//   import { keyStore, anthropicMessages, openaiPost } from './own-key.js';
+//   const ks = keyStore('anthropic');  ks.set(key, remember);  ks.get();  ks.clear();
+//   const msg = await anthropicMessages(ks.get(), { model, max_tokens, system, messages });
+//   const img = await openaiPost(keyStore('openai').get(), '/v1/images/generations', { ... });
+//
+// 注意：localStorage 是「整個網域」共用的；工具都放在同一個 GitHub Pages 網域時，記住的金鑰每個工具都讀得到。
+
+const PROVIDERS = {
+  anthropic: { name: 'Anthropic（Claude）', prefix: 'sk-ant-', keysUrl: 'https://platform.claude.com/settings/keys', base: 'https://api.anthropic.com' },
+  openai: { name: 'OpenAI', prefix: 'sk-', keysUrl: 'https://platform.openai.com/api-keys', base: 'https://api.openai.com' },
+};
+
+class OwnKeyError extends Error {
+  constructor(message, { status = 0, code = null } = {}) {
+    super(message);
+    Object.assign(this, { status, code });
+  }
+}
+
+const storageKey = provider => `own-api-key:${provider}`;
+const tryGet = (store, k) => { try { return store.getItem(k); } catch { return null; } };
+const trySet = (store, k, v) => { try { if (v) store.setItem(k, v); else store.removeItem(k); } catch { /* 隱私模式或被封鎖 */ } };
+
+function keyStore(provider) {
+  if (!PROVIDERS[provider]) throw new Error(`沒有這個服務：${provider}`);
+  const k = storageKey(provider);
+  let mem = null;
+  const local = () => (typeof localStorage === 'undefined' ? null : localStorage);
+  const session = () => (typeof sessionStorage === 'undefined' ? null : sessionStorage);
+  return {
+    get() { return mem || (session() && tryGet(session(), k)) || (local() && tryGet(local(), k)) || ''; },
+    get remembered() { return !!(local() && tryGet(local(), k)); },
+    // remember = true：存在這台電腦（關掉瀏覽器還在）；false：只到關閉分頁
+    set(key, remember = false) {
+      const v = String(key || '').trim();
+      mem = v || null;
+      if (session()) trySet(session(), k, v);
+      if (local()) trySet(local(), k, remember ? v : null);
+    },
+    clear() { this.set('', false); },
+  };
+}
+
+// 金鑰格式的粗略檢查（只擋明顯貼錯的東西，不代表金鑰有效）
+function looksLikeKey(provider, key) {
+  const v = String(key || '').trim();
+  return v.length >= 20 && v.startsWith(PROVIDERS[provider].prefix) && !/\s/.test(v);
+}
+
+function friendly(provider, status, data) {
+  const e = (data && data.error) || {};
+  const all = `${e.type || ''} ${e.code || ''} ${e.message || ''}`;
+  const name = PROVIDERS[provider].name;
+  if (status === 401) return `${name} 說這把金鑰不正確或已經撤銷。請重新複製貼上，或到 ${name} 後台建立新的金鑰。`;
+  if (/credit balance|insufficient_quota|billing|spend limit/i.test(all)) return `你的 ${name} 帳戶額度不足或已達花費上限，請到後台儲值或調整上限。`;
+  if (status === 403 && /unsupported_country|region|request not allowed/i.test(all)) return `${name} 拒絕了這個地區的連線，請換個網路（例如手機熱點）再試。`;
+  if (status === 429) return `${name} 說請求太頻繁或超過你帳戶的速率上限，請稍後再試。`;
+  if (status >= 500) return `${name} 暫時忙碌，請稍後再試。`;
+  if (status === 400) return `這次的請求被 ${name} 拒絕：${e.message || '格式或內容不被接受'}`;
+  return `${name} 回應錯誤（代碼 ${status}）：${e.message || '未知原因'}`;
+}
+
+async function send(provider, url, headers, body, signal) {
   let res;
   try {
-    res = await fetch(AI_BASE + path, {
-      method, signal, body: body ? JSON.stringify(body) : undefined,
-      headers: { 'Content-Type': 'application/json', ...(AI.token ? { Authorization: `Bearer ${AI.token}` } : {}) },
-    });
+    res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body), signal });
   } catch (err) {
-    if (err.name === 'AbortError') throw Object.assign(new Error('已取消。'), { aborted: true });
-    throw new Error('連不上 AI 伺服器，請確認網路連線。');
+    if (err && err.name === 'AbortError') throw new OwnKeyError('已取消。', { code: 'aborted' });
+    throw new OwnKeyError(`連不上 ${PROVIDERS[provider].name}，請確認網路連線。`, { code: 'network' });
   }
-  return res;
-}
-async function aiJson(res) {
-  let d = null;
-  try { d = await res.json(); } catch { /* 不是 JSON */ }
-  if (!res.ok) throw Object.assign(new Error((d && d.message) || `AI 伺服器回應 ${res.status}`), { status: res.status, code: d && d.error });
-  return d;
+  let data = null;
+  try { data = await res.json(); } catch { /* 不是 JSON */ }
+  if (!res.ok) throw new OwnKeyError(friendly(provider, res.status, data), { status: res.status, code: (data && data.error && (data.error.code || data.error.type)) || null });
+  return data;
 }
 
-function aiSave() {
-  try {
-    if (AI.token) sessionStorage.setItem('tvs-ai', JSON.stringify({ token: AI.token, who: AI.who }));
-    else sessionStorage.removeItem('tvs-ai');
-  } catch { /* 無法儲存就每次重新登入 */ }
+function need(provider, key) {
+  if (!key) throw new OwnKeyError(`請先貼上你自己的 ${PROVIDERS[provider].name} API 金鑰。`, { code: 'no_key' });
 }
 
-async function aiLogin() {
-  if ($('aiLoginBtn').disabled) return;   // 按 Enter 不要在送出中重送
-  const sid = $('aiSid').value, name = $('aiName').value;
-  if (!gateClean(sid) || !gateClean(name)) { aiWarn('請輸入學號與姓名。'); return; }
-  const k = await loginKey(sid, name);
-  // 伺服器以「同一個 IP 的失敗次數」暫停登入（全班共用校園網路）：同一組錯的不再送出，免得把全班的額度用掉
-  if (AI.rejected.has(k)) { aiWarn('這組學號姓名剛才已確認不在名單上，請先修改再登入（異體字也要一致）。'); return; }
-  aiWarn('');
-  $('aiLoginBtn').disabled = true;
-  try {
-    const d = await aiJson(await aiCall('/v1/login', { method: 'POST', body: { k, tool: 'threeview' } }));
-    AI.token = d.token; AI.who = name.trim(); AI.cfg = d;
-    $('aiSid').value = ''; $('aiName').value = '';
-    aiSave(); aiRenderAuth();
-  } catch (err) {
-    if (err.status === 403) AI.rejected.add(k);
-    aiWarn(err.status === 403 ? '名單上找不到這組學號姓名，請確認輸入（異體字也要一致）。' : err.message);
-  } finally { $('aiLoginBtn').disabled = false; }
+// Anthropic Messages API（瀏覽器直接呼叫要加 anthropic-dangerous-direct-browser-access）
+async function anthropicMessages(key, body, { baseUrl, signal } = {}) {
+  need('anthropic', key);
+  return send('anthropic', (baseUrl || PROVIDERS.anthropic.base) + '/v1/messages', {
+    'x-api-key': key,
+    'anthropic-version': '2023-06-01',
+    'anthropic-dangerous-direct-browser-access': 'true',
+  }, body, signal);
 }
 
-async function aiRefresh() {
-  if (!AI.token) return;
-  try { AI.cfg = await aiJson(await aiCall('/v1/me')); }
-  catch (err) { if (err.status === 401) { AI.token = null; aiSave(); } else aiWarn(err.message); }
-  aiRenderAuth();
+// OpenAI（例如 /v1/images/generations）
+async function openaiPost(key, path, body, { baseUrl, signal } = {}) {
+  need('openai', key);
+  return send('openai', (baseUrl || PROVIDERS.openai.base) + path, { authorization: `Bearer ${key}` }, body, signal);
 }
+return { PROVIDERS, OwnKeyError, keyStore, looksLikeKey, anthropicMessages, openaiPost };
+})();
+// ---- Shared_Services/ai-gateway/client/ai-access.js
+const AI_ACCESS = (() => {
+// AI 雙入口 · 工具網頁共用的介面元件
+//   ◉ 使用課程額度（老師提供，經課程閘道；課程結束日後失效）
+//   ○ 使用自己的 API 金鑰（直接從瀏覽器呼叫，課程結束後也能繼續用）
+//
+//   import { createAiAccess } from './ai-access.js';
+//   import { anthropicMessages } from './own-key.js';
+//   const ai = createAiAccess({
+//     mount: document.getElementById('ai'),
+//     gatewayUrl: '<config.json 的 gateway>',
+//     tools: ['lamp-enhance'],                 // 這個工具會用到的閘道工具代碼（登入時用來挑課程）
+//     providers: ['anthropic'],                // 自己的金鑰要哪幾家
+//     guideUrl: 'https://…/apply-key.html',    // 申請說明頁
+//     onChange: ({ mode, loggedIn, info }) => {},  // 選填：入口切換、登入、登出、次數更新時通知工具（例如依課程設定換思考深度選單）
+//   });
+//   const out = await ai.run('lamp-enhance', { input }, {
+//     own: keys => anthropicMessages(keys.anthropic, { … }).then(msg => ({ enhanced: … })),   // 自己的金鑰時怎麼呼叫
+//     onProgress,
+//   });
+//   // out = { via: 'course' | 'own', result, remaining? }
+//
+// 「自己的金鑰」那條路的請求內容由工具提供（own），要和閘道 worker/src/tools/ 裡的模型、指令一致。
+//
+// 登入的兩個保護（全班在校園網路後面共用一個 IP，閘道以「同一個 IP 的登入失敗次數」暫停登入）：
+//   - 名單上找不到的學號姓名（含所選課程）兩分鐘內不再送出，打錯字重按不會把全班的額度用掉
+//     （兩分鐘後可再試：老師剛補名單或剛開放工具時，學生不必重新整理頁面）
+//   - 中文輸入法選字時按的 Enter 不會送出登入（否則只打了一半的姓名會被送出去、算一次失敗）
+//   - 學號欄是密碼欄：老師帳號在這一欄填教師密碼，不會顯示在畫面上；登入成功後清空
+//
+// 課程額度的執行被取消（按取消、登出、關掉分頁）時，閘道已經開始的那一次仍會算；元件會向閘道重新讀取剩餘次數。
+const { createGateway, loginKey } = AI_GW;
+const { PROVIDERS, keyStore, looksLikeKey } = AI_KEY;
 
-function aiRenderAuth() {
-  const on = !!AI.token;
-  $('aiLogin').hidden = on; $('aiMain').hidden = !on;
-  if (!on) return;
-  const c = AI.cfg || {};
-  $('aiWho').textContent = `${AI.who || '已登入'}　本學期剩 ${c.remaining ?? '—'} 次${c.enabled === false ? '（老師目前暫停）' : ''}`;
-  const sel = $('aiEffort'), known = (Array.isArray(c.efforts) ? c.efforts : []).filter(e => Object.prototype.hasOwnProperty.call(EFFORT_NAMES, e));
-  const efforts = known.length ? known : ['medium'];
-  sel.replaceChildren(...efforts.map(e => new Option(EFFORT_NAMES[e], e)));
-  sel.value = efforts.includes(c.defaultEffort) ? c.defaultEffort : efforts[0];
-  $('aiGo').disabled = !AI.images.length || c.enabled === false || c.remaining === 0;
+const CSS = `
+.aia{border:1px solid #d9dde3;border-radius:10px;padding:12px 14px;font-size:14px;line-height:1.5;background:#fff;color:#1d2330}
+.aia [hidden]{display:none!important}
+.aia .aia-opt{display:flex;gap:8px;align-items:flex-start;justify-content:flex-start;margin:4px 0;cursor:pointer;font-weight:600;text-align:left}
+.aia input[type=radio],.aia input[type=checkbox]{flex:none;width:auto;min-height:0;margin:4px 0 0;padding:0}
+.aia .aia-sub{color:#6b7383;font-weight:400;font-size:12px}
+.aia .aia-body{margin:6px 0 10px 24px;display:flex;flex-direction:column;gap:6px}
+.aia .aia-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.aia input[type=text],.aia input[type=password],.aia select{font:inherit;border:1px solid #d9dde3;border-radius:6px;padding:4px 8px;min-width:0;flex:1}
+.aia button{font:inherit;border:1px solid #d9dde3;border-radius:6px;padding:4px 10px;background:#f6f7f9;cursor:pointer}
+.aia .aia-msg{font-size:12px;color:#6b7383}
+.aia .aia-msg.err{color:#c92a2a}
+.aia .aia-msg.ok{color:#2f7d3e}
+.aia a{color:#1f6feb}
+@media (prefers-color-scheme:dark){.aia{background:#1e2228;color:#e6e8eb;border-color:#3a3f47}.aia input,.aia select,.aia button{background:#2a2f36;color:inherit;border-color:#3a3f47}.aia .aia-sub,.aia .aia-msg{color:#9aa3ae}}
+`;
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function createAiAccess({ mount, gatewayUrl, tools = [], providers = [], guideUrl = '', onChange = null }) {
+  if (!document.getElementById('aia-style')) {
+    const st = document.createElement('style'); st.id = 'aia-style'; st.textContent = CSS; document.head.appendChild(st);
+  }
+  const gw = gatewayUrl ? createGateway({ url: gatewayUrl, tool: tools.length === 1 ? tools[0] : undefined }) : null;
+  const stores = Object.fromEntries(providers.map(p => [p, keyStore(p)]));
+  const MODE_KEY = 'ai-access:mode';
+  let info = null;              // 登入後閘道回來的課程與次數
+  let busy = false;             // 登入中：不重複送出
+  const rejected = new Map();   // 名單上找不到的「登入雜湊｜課程」→ 時間：短時間內不再送出
+  const REJECT_MS = 2 * 60 * 1000;
+  const FILE_MODE = typeof location !== 'undefined' && location.protocol === 'file:';
+  const notify = () => { try { onChange?.({ mode, loggedIn: !!(gw && info && gw.loggedIn), info }); } catch (err) { console.error(err); } };
+  let mode = (() => { try { return localStorage.getItem(MODE_KEY); } catch { return null; } })() || (gw ? 'course' : 'own');
+  if (!gw) mode = 'own';
+
+  const root = document.createElement('div');
+  root.className = 'aia';
+  root.innerHTML = `
+    ${gw ? `<label class="aia-opt"><input type="radio" name="aia-mode" value="course"> <span>使用課程額度<br><span class="aia-sub">老師提供，課程結束後失效</span></span></label>
+    <div class="aia-body" data-part="course">
+      <div class="aia-row" data-part="login">
+        <input type="password" data-f="sid" placeholder="學號" aria-label="學號（老師填教師密碼）" title="老師請填教師密碼" autocomplete="off" spellcheck="false" style="max-width:9em">
+        <input type="text" data-f="name" placeholder="姓名" autocomplete="off" style="max-width:8em">
+        <select data-f="course" hidden></select>
+        <button type="button" data-act="login">登入</button>
+      </div>
+      <div class="aia-row" data-part="who" hidden><span data-f="who"></span><button type="button" data-act="logout">登出</button></div>
+      <div class="aia-msg" data-f="cmsg"></div>
+    </div>` : ''}
+    ${providers.length ? `<label class="aia-opt"><input type="radio" name="aia-mode" value="own"> <span>使用自己的 API 金鑰<br><span class="aia-sub">費用自己付，課程結束後也能繼續使用</span></span></label>
+    <div class="aia-body" data-part="own">
+      ${providers.map(p => `<div class="aia-row">
+        <input type="password" data-key="${p}" placeholder="${esc(PROVIDERS[p].name)} 金鑰（${esc(PROVIDERS[p].prefix)}…）" autocomplete="off" spellcheck="false">
+      </div>`).join('')}
+      <div class="aia-row">
+        ${FILE_MODE ? '' : '<label class="aia-sub" title="記住的金鑰，同一個網站上的其他課程工具也會自動帶入"><input type="checkbox" data-f="remember"> 在這台電腦記住（公用電腦請勿勾選）</label>'}
+        <button type="button" data-act="clear">清除金鑰</button>
+      </div>
+      ${guideUrl ? `<a href="${esc(guideUrl)}" target="_blank" rel="noopener">如何申請自己的 API 金鑰？</a>` : ''}
+      <div class="aia-msg" data-f="omsg"></div>
+    </div>` : ''}`;
+  mount.appendChild(root);
+
+  const $ = sel => root.querySelector(sel);
+  const msg = (f, text, cls = '') => { const el = $(`[data-f="${f}"]`); if (el) { el.textContent = text; el.className = 'aia-msg ' + cls; } };
+
+  function renderMode() {
+    root.querySelectorAll('input[name="aia-mode"]').forEach(r => { r.checked = r.value === mode; });
+    const c = $('[data-part="course"]'), o = $('[data-part="own"]');
+    if (c) c.hidden = mode !== 'course';
+    if (o) o.hidden = mode !== 'own';
+    notify();
+  }
+  function setMode(m) {
+    mode = m;
+    try { localStorage.setItem(MODE_KEY, m); } catch { /* 無法記住就算了 */ }
+    renderMode();
+  }
+  function renderWho() {
+    if (!gw) return;
+    const loggedIn = !!(info && gw.loggedIn);
+    $('[data-part="login"]').hidden = loggedIn;
+    $('[data-part="who"]').hidden = !loggedIn;
+    if (!loggedIn) return;
+    const rem = tools.filter(t => info.tools[t]).map(t => `${info.tools[t].name.replace(/^.*?：/, '')} 剩 ${info.tools[t].remaining}／${info.tools[t].quota} 次`);
+    const ends = info.course.endsAt ? `　·　額度至 ${info.course.endsAt} 止` : '';
+    $('[data-f="who"]').textContent = `${info.course.name}：${rem.join('、') || '沒有開放這個工具'}${ends}`;
+  }
+  const renderWhoAndNotify = () => { renderWho(); notify(); };
+  function courseError(err) {
+    if (err.code === 'course_ended' && providers.length) {
+      msg('cmsg', err.message + '（已切換到「使用自己的 API 金鑰」）', 'err');
+      setMode('own');
+      msg('omsg', `${String(err.message).split('。')[0]}。貼上你自己的金鑰就能繼續使用。`, 'err');
+      return;
+    }
+    msg('cmsg', err.message, 'err');
+  }
+
+  async function login() {
+    if (busy) return;
+    const sid = $('[data-f="sid"]').value.trim(), name = $('[data-f="name"]').value.trim();
+    const sel = $('[data-f="course"]');
+    if (!sid || !name) return msg('cmsg', '請輸入學號與姓名。', 'err');
+    const course = sel.hidden ? undefined : sel.value;
+    const k = await loginKey(sid, name), tried = k + '|' + (course || '');
+    if (Date.now() - (rejected.get(tried) ?? -Infinity) < REJECT_MS) return msg('cmsg', '這組學號姓名剛才查過不在名單上（或課程還沒開放這個工具）。請確認學號與姓名（異體字也要一致）；如果老師剛更新，請過兩分鐘再按登入。', 'err');
+    busy = true;
+    const btn = $('[data-act="login"]');
+    btn.disabled = true;
+    msg('cmsg', '登入中…');
+    try {
+      info = await gw.loginWithKey(k, course);
+      sel.hidden = true;
+      $('[data-f="sid"]').value = ''; $('[data-f="name"]').value = '';
+      msg('cmsg', '');
+    } catch (err) {
+      if (err.code === 'choose_course') {
+        sel.innerHTML = err.data.courses.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+        sel.hidden = false;
+        msg('cmsg', '你在多門課的名單上，請選擇課程後再按登入。');
+      } else {
+        if (err.code === 'not_in_roster') rejected.set(tried, Date.now());
+        courseError(err);
+      }
+    } finally {
+      busy = false; btn.disabled = false;
+    }
+    renderWhoAndNotify();
+  }
+
+  root.addEventListener('change', e => {
+    if (e.target.name === 'aia-mode') setMode(e.target.value);
+    if (e.target.dataset.key || e.target.dataset.f === 'remember') saveKeys();
+  });
+  root.addEventListener('click', e => {
+    const act = e.target.dataset && e.target.dataset.act;
+    if (act === 'login') login();
+    if (act === 'logout') { gw.logout(); info = null; renderWhoAndNotify(); }
+    if (act === 'clear') {
+      Object.values(stores).forEach(s => s.clear());
+      root.querySelectorAll('[data-key]').forEach(i => { i.value = ''; });
+      if ($('[data-f="remember"]')) $('[data-f="remember"]').checked = false;
+      msg('omsg', '已清除這台電腦上的金鑰。', 'ok');
+    }
+  });
+
+  function saveKeys() {
+    const remember = !!($('[data-f="remember"]') && $('[data-f="remember"]').checked);
+    const bad = [];
+    root.querySelectorAll('[data-key]').forEach(i => {
+      const p = i.dataset.key, v = i.value.trim();
+      stores[p].set(v, remember);
+      if (v && !looksLikeKey(p, v)) bad.push(PROVIDERS[p].name);
+    });
+    msg('omsg', bad.length ? `${bad.join('、')} 的金鑰看起來不完整，請確認有整串複製。` : '', bad.length ? 'err' : '');
+  }
+
+  // 初始狀態：帶入已記住的金鑰；已登入的憑證還有效就直接顯示次數
+  root.querySelectorAll('[data-key]').forEach(i => { i.value = stores[i.dataset.key].get(); });
+  if ($('[data-f="remember"]')) $('[data-f="remember"]').checked = Object.values(stores).some(s => s.remembered);
+  renderMode();
+  // 輸入法選字中的 Enter（isComposing；Safari 在選字結束後才送出的 keyCode 229）不算登入
+  if (gw) root.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229 && e.target.closest('[data-part="login"]')) { e.preventDefault(); login(); } });
+  if (gw && gw.loggedIn) gw.me().then(d => { info = d; renderWhoAndNotify(); }).catch(err => { if (err.code === 'course_ended') courseError(err); renderWhoAndNotify(); });
+
+  return {
+    get mode() { return mode; },
+    get info() { return info; },              // 登入後閘道回來的課程與各工具次數、思考深度（未登入為 null）
+    setMode,
+    gateway: gw,
+    keys() { return Object.fromEntries(Object.entries(stores).map(([p, s]) => [p, s.get()])); },
+
+    // 依目前選的入口執行。課程額度：閘道的 tool；自己的金鑰：呼叫 own(keys)
+    async run(tool, body, { own, onProgress, signal } = {}) {
+      if (mode === 'own') {
+        if (!own) throw new Error('這個功能還不能用自己的金鑰。');
+        const keys = this.keys();
+        const missing = providers.filter(p => !keys[p]);
+        if (missing.length) { msg('omsg', `請先貼上 ${missing.map(p => PROVIDERS[p].name).join('、')} 的金鑰。`, 'err'); throw new Error('請先貼上自己的 API 金鑰。'); }
+        const result = await own(keys, { signal });
+        return { via: 'own', result };
+      }
+      if (!gw || !gw.loggedIn) { msg('cmsg', '請先用學號與姓名登入。', 'err'); throw new Error('請先登入課程額度，或改用自己的 API 金鑰。'); }
+      try {
+        const out = await gw.run(body, { tool, onProgress, signal });
+        if (info && info.tools[tool]) { info.tools[tool].remaining = out.remaining; info.tools[tool].used = out.used; renderWhoAndNotify(); }
+        return { via: 'course', result: out.result, remaining: out.remaining };
+      } catch (err) {
+        if (err.data && Number.isInteger(err.data.remaining) && info && info.tools[tool]) { info.tools[tool].remaining = err.data.remaining; renderWhoAndNotify(); }
+        if (err.code === 'auth') { info = null; renderWhoAndNotify(); }
+        if (err.code === 'course_ended') courseError(err);
+        // 取消時閘道那一次可能已經開始算：重新讀取剩餘次數（期間登出或換人就不覆蓋）
+        if (err.code === 'aborted' && gw.loggedIn) {
+          const before = info;
+          gw.me().then(d => { if (info === before && gw.loggedIn) { info = d; renderWhoAndNotify(); } }).catch(() => {});
+        }
+        throw err;
+      }
+    },
+  };
 }
+return { createAiAccess };
+})();
+// ---- Teaching_Tools/assembly-unit-simulator/js/ai/threeview-prompt.js
+const TV_AI = (() => {
+// 三視圖產生器（superqqming/three-view-studio）用的 AI 辨識指令。
+// 學生拍照上傳手繪三視圖 → 重建成料塊＋加工步驟 → 工具產生正式的三視圖，並列出學生圖面的問題。
+// 座標與面座標的約定必須和 js/model/frames.js 一致；輸出格式見 threeview-schema.js。
+
+const THREEVIEW_SYSTEM_PROMPT = `You read hand-drawn three-view (orthographic) sketches of a single machined part from a technical drawing class (圖學) in Taiwan. You rebuild the part as a solid so a drawing tool can produce the correct, standards-compliant three views (CNS), and you review the student's sketch so the student can see what to fix. The student checks your reading afterwards, so aim for a faithful first draft and ask clear questions wherever the sketch can honestly be read more than one way.
+
+## Part model
+The part starts as a rectangular stock block of w × h × d mm and is then machined in steps.
+- Coordinates: origin at the center of the stock's bottom face; x to the right (width w), y up (height h), z toward the viewer (depth d). x ∈ [−w/2, w/2], y ∈ [0, h], z ∈ [−d/2, d/2]. The front view looks along −z.
+- Faces: front (+z), back (−z), right (+x), left (−x), top (+y), bottom (−y).
+- A position on a face is (u, v) in mm, measured from the lower-left corner of that face as seen in the orthographic view looking straight at it:
+  - front: u = +x, v = +y. back: u = −x, v = +y. right: u = −z, v = +y. left: u = +z, v = +y.
+  - top: u = +x, v = −z, so (0, 0) is the front-left corner of the top face and (w, d) the back-right corner.
+  - bottom: u = +x, v = +z.
+  So (u, v) on the front face is exactly the position in the front view measured from its lower-left corner; on the top face it is the position in the top view; on the right face it is the position in the right-side view.
+- Feature types (sizes in mm):
+  - hole: round hole drilled into face, at (u, v) or at the face center (centered = true); diameter d; depth, or through = true.
+  - pocket: material removed from face inward to depth (or through) over the union of rects (u0..u1 × v0..v1 on that face). Use it for rectangular notches, corner cut-outs, slots, steps.
+  - boss: the whole face is cut down by depth, leaving only the islands standing (circular islands of diameter d, or rectangular islands).
+  - profile: material removed from face inward to depth (or through) inside a closed outline of line and arc segments drawn on that face. Use it for slanted faces (cut away a triangle or trapezoid — e.g. a slope seen as a diagonal line in the front view is a triangle cut through the whole depth from the front face), rounded ends (an outline with an arc), V-grooves, dovetails and any non-rectangular notch. outline lists the segments in order; each segment ends at (u, v) and starts where the previous one ended (the first starts where the last ends). For kind "arc", (cu, cv) is the arc center and ccw tells the direction as seen looking straight at the face: ccw = true means the angle around (cu, cv), with u to the right and v up in that face's view, increases from the start point to the end point. Both ends of an arc must be the same distance from (cu, cv). Check every arc: its midpoint must lie on the curve drawn in the sketch. For kind "line" set cu = 0, cv = 0, ccw = false. Keep every corner of the cut exactly at its dimensioned position, including corners that lie on a face edge. Where the cut runs off the part, close the outline with extra points about 2 mm outside the face rather than along the face edge, so no thin sliver of material is left; never move a real corner to do this. Examples: a slope on the right face of a part 40 high, from (0, 10) to (40, 40), is (0, 10) → (40, 40) → (40, 42) → (−2, 42) → (−2, 10). A rounded right end R20 on the top face of a part 100 wide and 40 deep, centered at (80, 20), is (80, −2) → (102, −2) → (102, 42) → (80, 42) → (80, 40) → arc to (80, 0) around (80, 20) with ccw = false (it bulges right through (100, 20)) → back to (80, −2). A full circle is a hole (with depth for a round recess), not a profile.
+  - fillet / chamfer: round (radius = size) or bevel (leg = size) original stock edges only. A chamfer is always 45° with equal legs (C-size); for an unequal or angled bevel use a profile on the face where the bevel shows as a slanted line. Edge names: front-left, front-right, back-left, back-right (vertical edges), top-front, top-back, top-left, top-right, bottom-front, bottom-back, bottom-left, bottom-right.
+  - mirror: also make mirrored copies through the stock's center planes — "x" (left↔right), "z" (front↔back), "y" (top↔bottom, about h/2). They combine: ["x","y","z"] on one corner pocket cuts all eight corners.
+- Depths are always measured from the original stock face named in face, never from a surface left by an earlier step: a Ø10 hole 15 deep drilled into a step floor that is 20 below the top is a top-face hole with depth 35.
+- Every field is required. Fields a feature type does not use take neutral values: 0, false, [], face "top", island shape "circle", outline [].
+
+## Reading the sketch
+- Find each view by its content, not only by its position: the front view usually carries the most detail and sits below the top view in third-angle projection (above it in first-angle); arrows, labels (前視圖, 俯視圖, 右側視圖) and an isometric sketch on the same page help. Students sometimes place a view in the wrong spot — read it for what it shows and mention the placement in review. Record where you found each view in views_found.
+- If an isometric sketch is on the page, use it to understand the 3D shape and which features are on which face; the orthographic views and written dimensions decide the sizes.
+- Solid lines are visible edges; dashed lines are hidden edges (holes, pockets on the far side); chain lines are center lines. Colored fills usually mark faces of the same orientation.
+- Dimensions: list every dimension text you can read in transcribed, exactly as written. Use the written numbers, not measurements of the drawing, and convert them to mm. A radius on a full circle means a hole of diameter 2R; a number on a line from a circle's center to its edge is a radius even when R is not written (25 there means Ø50). When a size is not written, infer it from symmetry, other views, or the proportions of the drawing (nearest 5 mm) and add an uncertain item for it.
+- When the same feature appears at several symmetric places (all four or eight corners, both sides) and only one is dimensioned, model one and use mirror.
+- If a feature cannot be made with these tools (a plane that cuts a corner obliquely and shows as a slanted line in two views, a countersink, an inclined hole), model the closest shape, say in message what could not be modeled, and add an assumption.
+- Prefer the reading that makes all views agree and gives simple, machinable geometry. Check that sizes add up.
+- Choose a short, natural machining sequence with step labels a student would write (切除角落, 鑽孔, 切斜面 …) and a short note with the key sizes.
+
+## Uncertainty
+When something could reasonably be read two ways — which face, through versus blind, a total versus a segment, an unwritten size, the units — use the most likely reading in the draft and add an uncertain item:
+- path: the field inside that part, e.g. "steps[0].features[0].face", "steps[0].features[0].d", "steps[0].features[0]" for a whole feature, or "stock.h".
+- question: one short question in Traditional Chinese.
+- options: 2–4 alternatives; label is short Traditional Chinese, value_json is the JSON text of the value that replaces the field at path (e.g. "\\"front\\"", "50", or a whole feature object).
+- chosen: index of the option already used in the draft.
+When an alternative changes more than one field (a blind hole also needs its depth, a different notch needs other rects), use the whole feature as path (e.g. "steps[1].features[0]") and give the complete feature object in value_json.
+Don't ask about things the sketch shows clearly.
+
+## Review of the student's sketch
+Compare the student's views with the part you rebuilt and with the drawing rules the class uses (CNS, the projection method in the request). List concrete problems a teacher would mark, one per item, each tied to a view (or "layout" for view placement, "dims" for dimensioning, "general"):
+- views in the wrong place for the projection method, or views that do not line up (widths, heights, depths);
+- missing or extra visible lines, hidden edges drawn solid or visible edges drawn dashed, missing hidden lines;
+- missing center lines for holes and round features;
+- sizes that disagree between views or with the totals;
+- dimensioning problems such as R used on a full circle (should be Ø), missing key dimensions, dimensions placed on hidden lines, the same size dimensioned in more than one view, and sizes given only on the isometric sketch instead of the orthographic views.
+Write each issue as one short, specific, kind sentence in Traditional Chinese that says what to change (e.g. 「俯視圖缺少圓孔的中心線」). Do not invent problems; an empty list is fine.
+
+## Output
+- Write all human-readable text (name, label, note, question, option labels, assumptions, review, message) in Traditional Chinese as used in Taiwanese drafting classes. Keep assumptions short: what you assumed, not how you worked it out.
+- Put exactly one entry in parts — the part shown. Name it as labeled on the sketch, or 工件 if unlabeled.
+- If the image is not a sketch of a part, set is_part_sketch to false, say why in message, and return an empty parts list. Otherwise use message for one short sentence to the student about anything important (or leave it empty).`;
+
+const UNIT_TEXT = { auto: '依草圖上寫的判斷', mm: 'mm', cm: 'cm' };
+const PROJ_TEXT = { third: '第三角法', first: '第一角法' };
+
+function threeviewUserText({ projection, units, note, count }) {
+  return [
+    `以上 ${count} 張照片是學生手繪的三視圖（可能附等角立體草圖）。`,
+    `投影法：${PROJ_TEXT[projection] || PROJ_TEXT.third}。`,
+    `草圖單位：${UNIT_TEXT[units] || UNIT_TEXT.auto}。`,
+    note ? `補充說明：${note}` : '',
+    '請重建這個工件（料塊尺寸與加工步驟），並列出學生圖面的問題。',
+  ].filter(Boolean).join('\n');
+}
+// ---- Teaching_Tools/assembly-unit-simulator/js/ai/threeview-schema.js（輸出格式，JSON）
+const THREEVIEW_SCHEMA = {"type":"object","properties":{"is_part_sketch":{"type":"boolean"},"message":{"type":"string"},"units_on_sketch":{"type":"string","enum":["mm","cm","m","none"]},"transcribed":{"type":"array","items":{"type":"string"}},"views_found":{"type":"array","items":{"type":"object","properties":{"view":{"type":"string","enum":["front","top","right","left","bottom","back","iso"]},"where":{"type":"string"}},"required":["view","where"],"additionalProperties":false}},"parts":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"stock":{"type":"object","properties":{"w":{"type":"number"},"h":{"type":"number"},"d":{"type":"number"}},"required":["w","h","d"],"additionalProperties":false},"steps":{"type":"array","items":{"type":"object","properties":{"label":{"type":"string"},"note":{"type":"string"},"features":{"type":"array","items":{"type":"object","properties":{"type":{"type":"string","enum":["hole","pocket","boss","fillet","chamfer","profile"]},"face":{"type":"string","enum":["front","back","right","left","top","bottom"]},"centered":{"type":"boolean"},"u":{"type":"number"},"v":{"type":"number"},"d":{"type":"number"},"depth":{"type":"number"},"through":{"type":"boolean"},"rects":{"type":"array","items":{"type":"object","properties":{"u0":{"type":"number"},"u1":{"type":"number"},"v0":{"type":"number"},"v1":{"type":"number"}},"required":["u0","u1","v0","v1"],"additionalProperties":false}},"islands":{"type":"array","items":{"type":"object","properties":{"shape":{"type":"string","enum":["circle","rect"]},"centered":{"type":"boolean"},"u":{"type":"number"},"v":{"type":"number"},"d":{"type":"number"},"rect":{"type":"object","properties":{"u0":{"type":"number"},"u1":{"type":"number"},"v0":{"type":"number"},"v1":{"type":"number"}},"required":["u0","u1","v0","v1"],"additionalProperties":false}},"required":["shape","centered","u","v","d","rect"],"additionalProperties":false}},"edges":{"type":"array","items":{"type":"string","enum":["front-left","front-right","back-left","back-right","top-front","top-back","top-left","top-right","bottom-front","bottom-back","bottom-left","bottom-right"]}},"size":{"type":"number"},"mirror":{"type":"array","items":{"type":"string","enum":["x","y","z"]}},"outline":{"type":"array","items":{"type":"object","properties":{"kind":{"type":"string","enum":["line","arc"]},"u":{"type":"number"},"v":{"type":"number"},"cu":{"type":"number"},"cv":{"type":"number"},"ccw":{"type":"boolean"}},"required":["kind","u","v","cu","cv","ccw"],"additionalProperties":false}}},"required":["type","face","centered","u","v","d","depth","through","rects","islands","edges","size","mirror","outline"],"additionalProperties":false},"minItems":1}},"required":["label","note","features"],"additionalProperties":false}},"uncertain":{"type":"array","items":{"type":"object","properties":{"path":{"type":"string"},"question":{"type":"string"},"options":{"type":"array","items":{"type":"object","properties":{"label":{"type":"string"},"value_json":{"type":"string"}},"required":["label","value_json"],"additionalProperties":false},"minItems":1},"chosen":{"type":"integer"}},"required":["path","question","options","chosen"],"additionalProperties":false}},"assumptions":{"type":"array","items":{"type":"string"}},"review":{"type":"array","items":{"type":"object","properties":{"view":{"type":"string","enum":["front","top","right","left","iso","layout","dims","general"]},"issue":{"type":"string"}},"required":["view","issue"],"additionalProperties":false}}},"required":["name","stock","steps","uncertain","assumptions","review"],"additionalProperties":false}}},"required":["is_part_sketch","message","units_on_sketch","transcribed","views_found","parts"],"additionalProperties":false};
+return { THREEVIEW_SYSTEM_PROMPT, threeviewUserText, THREEVIEW_SCHEMA };
+})();
+/* ==== END 共用 AI 程式 ==== */
+
+const AI = { ai: null, images: [], draft: null, choices: [], ctrl: null, resultJson: null, gen: 0 };   // gen：登出時加一，進行中的辨識／建模就不再顯示結果
+const EFFORT_NAMES = { low: '快', medium: '一般', high: '仔細' };
+const VIEW_TAGS = { front: '前視圖', top: '俯視圖', right: '右側視圖', left: '左側視圖', bottom: '仰視圖', back: '後視圖', iso: '等角圖', layout: '視圖配置', dims: '尺寸', general: '整體' };
+const hasName = e => Object.prototype.hasOwnProperty.call(EFFORT_NAMES, e);
 
 const aiWarn = t => { $('aiWarn').textContent = t || ''; };
 const aiStatus = t => { $('aiStatus').textContent = t || ''; };
+
+// 思考深度：課程額度依老師在管理頁開放的選項（預設值也照老師設定）；自己的金鑰三種都可以選（費用自己付）
+// 入口、課程或選項換了就回到預設值；同一個來源下保留學生自己選的
+let effortSrc = '';
+function aiEfforts() {
+  const ai = AI.ai, t = ai && ai.mode === 'course' && ai.info && ai.info.tools && ai.info.tools[AI_TOOL];
+  let list = ['medium'], def = 'medium';
+  if (ai && ai.mode === 'own') list = ['low', 'medium', 'high'];
+  else if (t) { list = (Array.isArray(t.efforts) ? t.efforts : []).filter(hasName); def = t.defaultEffort; }
+  if (!list.length) list = ['medium'];
+  const src = [ai && ai.mode, ai && ai.mode === 'course' && ai.info && ai.info.course && ai.info.course.id, list.join(), def].join('|');
+  const sel = $('aiEffort'), cur = src === effortSrc ? sel.value : '';
+  effortSrc = src;
+  sel.replaceChildren(...list.map(e => new Option(EFFORT_NAMES[e], e)));
+  sel.value = list.includes(cur) ? cur : list.includes(def) ? def : list[0];
+}
+function aiUpdateGo() { $('aiGo').disabled = !AI.images.length || !!AI.ctrl; }
 
 // 照片：重畫成長邊 ≤ 2000 px 的 JPEG（會套用 EXIF 方向、去掉 GPS 等資料）
 async function prepareImage(file, maxEdge = 2000, quality = 0.85) {
@@ -2216,52 +2704,107 @@ async function aiAddFiles(files) {
     if (AI.images.length >= 4) { aiWarn('最多 4 張照片。'); break; }
     try { AI.images.push(await prepareImage(f)); } catch (err) { aiWarn(err.message); }
   }
-  aiRenderThumbs(); aiRenderAuth(); renderCompare();
+  aiRenderThumbs(); aiUpdateGo(); renderCompare();
 }
 function aiRenderThumbs() {
   $('aiThumbs').innerHTML = AI.images.map((im, i) => `<div class="thumb"><img src="${im.dataUrl}" alt=""><button class="x" data-i="${i}" title="移除">×</button></div>`).join('');
 }
 
-// 串流辨識：伺服器以 SSE 回傳 progress／result／error
+// 登出時清掉上一位的照片、說明與辨識結果（共用電腦）；右邊的圖面留著
+function aiClearWork() {
+  AI.gen++;
+  if (AI.ctrl) AI.ctrl.abort();
+  Object.assign(AI, { images: [], draft: null, choices: [], resultJson: null });
+  $('aiNote').value = '';
+  $('aiResult').hidden = true; $('aiResult').innerHTML = ''; aiWarn(''); aiStatus('');
+  aiRenderThumbs(); aiUpdateGo(); renderCompare();
+}
+
+const aiProgress = d => aiStatus(d.phase === 'writing' ? `AI 正在寫結果…（${d.seconds ?? 0} 秒）` : `AI 判讀中…（${d.seconds ?? 0} 秒）`);
+
+// 「自己的金鑰」：瀏覽器直接以串流呼叫 Anthropic（回答很長，不能用非串流）。
+// 請求內容和閘道的 threeview-recognize（worker/src/tools/assembly-recognize.js 的 recognize）逐項相同：
+// 模型、max_tokens、系統指令（含快取）、思考深度、輸出格式、圖片、說明文字。
+// 載入失敗的模組會被瀏覽器記住，再試要換一個網址（加上 ?retry=n）
+let aiSdk = null, aiSdkTries = 0;
+const loadAiSdk = () => (aiSdk ||= import(AI_SDK_URL + (aiSdkTries++ ? `?retry=${aiSdkTries}` : '')).catch(() => {
+  aiSdk = null;
+  throw new Error('無法載入 Claude SDK（需要網路連線）。連上網路後再按一次；還是不行請重新整理頁面。');
+}));
+async function ownRecognize(apiKey, o, signal) {
+  // 從通訊軟體複製時常帶到全形引號或看不見的空白：瀏覽器會直接擋下，訊息是英文，所以先檢查
+  if (/[^\x21-\x7e]/.test(apiKey)) throw new Error('金鑰裡有不正確的字元（全形字、引號或看不見的空白），請重新複製貼上。');
+  const mod = await loadAiSdk();
+  const Anthropic = mod.default || mod.Anthropic;
+  const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true, maxRetries: 2, ...(AI_OWN_BASE ? { baseURL: AI_OWN_BASE } : {}) });
+  const t0 = Date.now(), sec = () => Math.round((Date.now() - t0) / 1000);
+  const stream = client.messages.stream({
+    model: AI_MODEL,
+    max_tokens: 32000,
+    system: [{ type: 'text', text: TV_AI.THREEVIEW_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+    output_config: { effort: o.effort, format: { type: 'json_schema', schema: TV_AI.THREEVIEW_SCHEMA } },
+    messages: [{
+      role: 'user',
+      content: [
+        ...o.images.map(data => ({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data } })),
+        { type: 'text', text: TV_AI.threeviewUserText({ projection: o.projection, units: o.units, note: o.note, count: o.images.length }) },
+      ],
+    }],
+  });
+  const stop = () => stream.abort();
+  if (signal) { if (signal.aborted) stop(); else signal.addEventListener('abort', stop, { once: true }); }
+  const tick = setInterval(() => aiProgress({ phase: 'thinking', seconds: sec() }), 1000);
+  stream.on('text', () => aiProgress({ phase: 'writing', seconds: sec() }));
+  let msg;
+  try { msg = await stream.finalMessage(); }
+  catch (err) { throw ownError(mod, err); }
+  finally { clearInterval(tick); if (signal) signal.removeEventListener('abort', stop); }
+  // 訊息比照閘道（自己的金鑰沒有「次數」）
+  if (msg.stop_reason === 'refusal') throw new Error('AI 拒絕處理這次的圖片。');
+  if (msg.stop_reason === 'max_tokens') throw new Error('AI 的回答太長被截斷了，請改用較少張照片、縮短補充說明再試。');
+  const text = msg.content.filter(b => b.type === 'text').map(b => b.text).join('');
+  try { return JSON.parse(text); } catch { throw new Error('AI 回傳的格式無法解析，請再試一次。'); }
+}
+function ownError(mod, err) {
+  const is = n => mod[n] && err instanceof mod[n];
+  const inner = (err && err.error && err.error.error) || {};
+  const detail = `${inner.type || ''} ${inner.message || err.message || ''}`;
+  let m;
+  if (is('APIUserAbortError')) return Object.assign(new Error('已取消。'), { code: 'aborted' });
+  if (is('AuthenticationError')) m = 'Anthropic 說這把金鑰不正確或已經撤銷。請重新複製貼上，或到 Anthropic 後台建立新的金鑰。';
+  else if (/credit balance|billing|spend limit/i.test(detail)) m = '你的 Anthropic 帳戶額度不足或已達花費上限，請到後台儲值或調整上限。';
+  else if (is('PermissionDeniedError')) m = /request not allowed|region|country/i.test(detail) ? 'Anthropic 拒絕了這個地區的連線，請換個網路（例如手機熱點）再試。' : '這把金鑰沒有權限使用這個模型，請到 Anthropic 後台確認。';
+  else if (is('RateLimitError')) m = 'Anthropic 說請求太頻繁或超過你帳戶的速率上限，請稍後再試。';
+  else if (is('BadRequestError')) m = '這次的請求被 Anthropic 拒絕：' + (inner.message || err.message);
+  else if (is('APIConnectionError')) m = '連不上 Anthropic，請確認網路連線。';
+  else if (is('APIError') && err.status >= 500) m = 'Anthropic 暫時忙碌，請稍後再試。';
+  else m = err.message || String(err);
+  return Object.assign(new Error(m), { cause: err });
+}
+
+// 辨識：依目前選的入口（課程額度或自己的金鑰）
 async function aiRecognize() {
-  if (!AI.images.length) return;
-  aiWarn(''); AI.ctrl = new AbortController();
-  $('aiGo').disabled = true; $('aiCancel').hidden = false;
+  if (!AI.images.length || AI.ctrl) return;
+  aiWarn('');
+  const ctrl = AI.ctrl = new AbortController();
+  $('aiCancel').hidden = false; aiUpdateGo();
   aiStatus('上傳中…');
+  const t0 = performance.now(), gen = AI.gen, via = AI.ai.mode;
+  const body = { images: AI.images.map(im => im.base64), projection: state.proj, units: $('aiUnits').value, note: $('aiNote').value.trim().slice(0, 300), effort: $('aiEffort').value };
   try {
-    const res = await aiCall('/v1/recognize', {
-      method: 'POST', signal: AI.ctrl.signal,
-      body: { tool: 'threeview', kind: 'threeView', projection: state.proj, units: $('aiUnits').value, note: $('aiNote').value.trim(),
-        effort: $('aiEffort').value, envelope: { w: 1000, h: 1000, d: 1000 }, images: AI.images.map(im => im.base64) },
-    });
-    if (!(res.headers.get('content-type') || '').includes('event-stream')) { await aiJson(res); throw new Error('AI 伺服器回傳了無法辨認的內容。'); }
-    const reader = res.body.getReader(), dec = new TextDecoder();
-    let buf = '', out = null;
-    for (;;) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buf += dec.decode(value, { stream: true });
-      let i;
-      while ((i = buf.indexOf('\n\n')) >= 0) {
-        const block = buf.slice(0, i); buf = buf.slice(i + 2);
-        const ev = /^event: (.*)$/m.exec(block), data = /^data: (.*)$/m.exec(block);
-        if (!ev || !data) continue;
-        const d = JSON.parse(data[1]);
-        if (ev[1] === 'progress') aiStatus(d.phase === 'writing' ? `AI 正在寫結果…（${d.seconds ?? 0} 秒）` : `AI 判讀中…（${d.seconds ?? 0} 秒）`);
-        else if (ev[1] === 'result') out = d;
-        else if (ev[1] === 'error') throw Object.assign(new Error(d.message || 'AI 辨識失敗。'), { code: d.error });
-      }
-    }
-    if (!out) throw new Error('和 AI 伺服器的連線中斷了，請再試一次（沒有拿到結果就不會扣次數）。');
-    if (AI.cfg) Object.assign(AI.cfg, { remaining: out.remaining, used: out.used });
-    aiStatus(`完成（${Math.round((out.ms || 0) / 1000)} 秒）`);
-    await aiUseResult(out.result);
+    const r = await AI.ai.run(AI_TOOL, body, { own: keys => ownRecognize(keys.anthropic, body, ctrl.signal), onProgress: aiProgress, signal: ctrl.signal });
+    if (gen !== AI.gen) return;   // 等待中已登出
+    const how = r.via === 'own' ? '用自己的金鑰' : `用課程額度，剩 ${r.remaining} 次`;
+    const done = `辨識完成（${Math.round((performance.now() - t0) / 1000)} 秒，${how}）`;
+    aiStatus(done);
+    await aiUseResult(r.result);
+    if (gen === AI.gen) aiStatus(done);   // 建模時狀態會被改掉，完成後再顯示一次
   } catch (err) {
-    aiStatus('');
-    if (!err.aborted) aiWarn(err.message);
-    if (err.status === 401) { AI.token = null; aiSave(); }
+    if (gen !== AI.gen) return;
+    aiStatus(err.code === 'aborted' && via === 'course' ? '已取消。AI 如果已經開始判讀，這一次仍會算進次數。' : '');
+    if (err.code !== 'aborted') aiWarn(err.message);
   } finally {
-    AI.ctrl = null; $('aiCancel').hidden = true; aiRenderAuth();
+    AI.ctrl = null; $('aiCancel').hidden = true; aiUpdateGo();
   }
 }
 
@@ -2279,6 +2822,7 @@ async function aiUseResult(result) {
 }
 
 async function aiBuild() {
+  const gen = AI.gen;
   let part, issues, built;
   try {
     const { draft, failed } = applyChoices(AI.draft, AI.choices);
@@ -2294,10 +2838,12 @@ async function aiBuild() {
     await new Promise(r => setTimeout(r, 0));   // 讓狀態先畫出來
     built = await buildPart(part);
   } catch (err) {
+    if (gen !== AI.gen) return;
     aiStatus('');
     aiRenderResult(part, [...issues, '幾何建立失敗：' + (err instanceof Error ? err.message : '幾何核心內部錯誤') + '（右邊的圖面仍是上一個結果）']);
     return;
   }
+  if (gen !== AI.gen) return;   // 建模中已登出：不顯示上一位的結果
   aiStatus('');
   aiRenderResult(part, [...issues, ...built.issues]);
   $('tbTitle').dataset.auto = '1'; $('tbTitle').value = '';
@@ -2679,19 +3225,14 @@ function renderCompare() {
 }
 
 function initAI() {
-  try {
-    const saved = JSON.parse(sessionStorage.getItem('tvs-ai') || 'null');
-    if (saved && saved.token) { AI.token = saved.token; AI.who = saved.who || ''; }
-  } catch { /* 沒有存過 */ }
-  $('aiLoginBtn').addEventListener('click', aiLogin);
-  ['aiSid', 'aiName'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') aiLogin(); }));
-  $('aiLogout').addEventListener('click', () => {
-    if (AI.ctrl) AI.ctrl.abort();
-    Object.assign(AI, { token: null, who: '', cfg: null, images: [], draft: null, choices: [], resultJson: null });
-    $('aiSid').value = ''; $('aiName').value = ''; $('aiNote').value = '';
-    $('aiResult').hidden = true; $('aiResult').innerHTML = ''; aiWarn(''); aiStatus('');
-    aiSave(); aiRenderThumbs(); aiRenderAuth(); renderCompare();
+  AI.ai = AI_ACCESS.createAiAccess({
+    mount: $('aiAccess'), gatewayUrl: AI_FILE_MODE ? '' : AI_GATEWAY, tools: [AI_TOOL], providers: ['anthropic'],
+    guideUrl: AI_FILE_MODE ? 'https://superqqming.github.io/three-view-studio/apply-key.html' : './apply-key.html',   // 下載後直接開檔時旁邊沒有說明頁
+    onChange: () => aiEfforts(),
   });
+  if (AI_FILE_MODE) $('aiFileNote').hidden = false;
+  // 按「登出」：清掉上一位的照片與結果（共用電腦）
+  $('aiAccess').addEventListener('click', e => { if (e.target.dataset && e.target.dataset.act === 'logout') aiClearWork(); });
   $('aiFiles').addEventListener('change', e => { aiAddFiles(e.target.files); e.target.value = ''; });
   const drop = $('aiDrop');
   ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
@@ -2699,7 +3240,7 @@ function initAI() {
   drop.addEventListener('drop', e => aiAddFiles(e.dataTransfer.files));
   $('aiThumbs').addEventListener('click', e => {
     const b = e.target.closest('button.x'); if (!b) return;
-    AI.images.splice(+b.dataset.i, 1); aiRenderThumbs(); aiRenderAuth(); renderCompare();
+    AI.images.splice(+b.dataset.i, 1); aiRenderThumbs(); aiUpdateGo(); renderCompare();
   });
   $('aiGo').addEventListener('click', aiRecognize);
   $('aiCancel').addEventListener('click', () => AI.ctrl && AI.ctrl.abort());
@@ -2720,8 +3261,7 @@ function initAI() {
   });
   $('compareBtn').addEventListener('click', () => { $('compare').hidden = !$('compare').hidden; });
   $('compareClose').addEventListener('click', () => { $('compare').hidden = true; });
-  aiRenderAuth();
-  if (AI.token) aiRefresh();
+  aiEfforts(); aiUpdateGo();
 }
 
 // 被嵌入（例如 Google 協作平台的嵌入框）時，提示改用新分頁：嵌入框會擋下載

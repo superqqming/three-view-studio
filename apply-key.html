@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>申請自己的 AI 金鑰</title>
+<style>
+  :root { --bg: #ffffff; --ink: #111111; --muted: #5f6368; --line: #d6d6d6; --soft: #f3f3f3; --accent: #c8102e; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #16181b; --ink: #ececec; --muted: #a3a7ad; --line: #3a3d42; --soft: #22252a; --accent: #ff6b7d; } }
+  :root[data-theme="dark"] { --bg: #16181b; --ink: #ececec; --muted: #a3a7ad; --line: #3a3d42; --soft: #22252a; --accent: #ff6b7d; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif; font-size: 16px; line-height: 1.75; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1 { font-size: 28px; font-weight: 900; margin: 0 0 6px; padding-left: 14px; border-left: 10px solid var(--ink); line-height: 1.3; }
+  .lead { color: var(--muted); margin: 0 0 28px; }
+  h2 { font-size: 20px; font-weight: 900; margin: 36px 0 10px; padding-bottom: 6px; border-bottom: 2px solid var(--ink); }
+  h3 { font-size: 17px; margin: 20px 0 6px; }
+  ol, ul { padding-left: 1.4em; margin: 6px 0; }
+  li { margin: 4px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 15px; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--soft); }
+  .box { border: 2px solid var(--accent); border-radius: 6px; padding: 12px 16px; margin: 14px 0; }
+  .box b { color: var(--accent); }
+  code { background: var(--soft); padding: 1px 6px; border-radius: 4px; font-size: 14px; }
+  a { color: var(--accent); }
+  .note { color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>申請自己的 AI 金鑰</h1>
+  <p class="lead">課程期間可以用老師提供的額度；課程結束後，或額度用完還想繼續做，可以申請自己的 API 金鑰，在同一個工具裡選「使用自己的 API 金鑰」。費用由你自己的帳戶支付，大約 10 分鐘可以完成。</p>
+
+  <div class="box"><b>最重要的一件事：</b>申請完一定要在帳戶裡設定<b>每月花費上限</b>。就算金鑰不小心外流，損失最多也就是這個上限。</div>
+
+  <h2>1 · 要申請哪一家？</h2>
+  <p>看你用的工具需要哪一家的 AI（工具畫面上的金鑰欄位會寫）：</p>
+  <table>
+    <tr><th style="width:42%">工具與功能</th><th>需要的金鑰</th></tr>
+    <tr><td>Lamp Pattern Studio：改寫圖案描述</td><td>Anthropic（Claude）</td></tr>
+    <tr><td>Lamp Pattern Studio：產生圖案圖片</td><td>OpenAI</td></tr>
+    <tr><td>組合單元模擬器、三視圖：草圖辨識</td><td>Anthropic（Claude）</td></tr>
+  </table>
+  <p class="note">兩家都是用多少付多少。實際價格以官方網站公告為準。</p>
+
+  <h2>2 · Anthropic（Claude）</h2>
+  <ol>
+    <li>到 <a href="https://platform.claude.com/" target="_blank" rel="noopener">Claude 開發者平台（Claude Console）</a> 註冊帳號。</li>
+    <li>在帳單（Billing）頁面儲值或設定付款方式。最低金額依官方規定。</li>
+    <li>在用量上限（Limits）設定<b>每月花費上限</b>，例如 US$5。</li>
+    <li>到 <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">API Keys</a> 建立一把新金鑰，名稱可以寫「課程工具」。</li>
+    <li>金鑰只會完整顯示一次，以 <code>sk-ant-</code> 開頭。<b>立刻複製</b>，存到下面第 4 節說的地方。</li>
+  </ol>
+
+  <h2>3 · OpenAI</h2>
+  <ol>
+    <li>到 <a href="https://platform.openai.com/" target="_blank" rel="noopener">OpenAI Platform</a> 註冊帳號（和 ChatGPT 的訂閱是分開計費的）。</li>
+    <li>在 Billing 頁面儲值。最低金額依官方規定。</li>
+    <li>在 Limits 設定<b>每月預算上限</b>。</li>
+    <li>產生圖片的模型可能要先完成組織驗證（Verify Organization），畫面有提示時照著做。</li>
+    <li>到 <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">API keys</a> 建立新金鑰，以 <code>sk-</code> 開頭，<b>立刻複製</b>並存好。</li>
+  </ol>
+  <p class="note">各家後台常常改版。如果畫面和這裡寫的不一樣，就照「註冊 → 付款 → 設上限 → 建金鑰」的順序，在官方頁面找對應的選項。</p>
+
+  <h2>4 · 金鑰存在哪裡？</h2>
+  <table>
+    <tr><th style="width:30%">情境</th><th>建議做法</th></tr>
+    <tr><td>學校電腦教室</td><td>金鑰存在自己的記事本（USB、雲端硬碟或手機），每次上課<b>貼上</b>。<b>不要</b>勾「在這台電腦記住」；下課前關掉工具的分頁。教室電腦關機還原後不會留下金鑰。</td></tr>
+    <tr><td>自己的筆電</td><td>可以勾「在這台電腦記住」，之後打開工具就會自動帶入（同一個網站上的其他課程工具也會帶入）。把工具下載成檔案直接開啟時沒有這個選項，金鑰只留到關閉分頁。</td></tr>
+    <tr><td>更安全的存法</td><td>存在會上鎖的地方，例如 iPhone／Mac 的上鎖備忘錄，或密碼管理工具（例如 Bitwarden）。</td></tr>
+  </table>
+  <p>金鑰只存在你的瀏覽器，工具會直接把請求送到 AI 公司。<b>老師和課程伺服器都看不到你的金鑰。</b></p>
+
+  <h2>5 · 安全守則</h2>
+  <ul>
+    <li>不要把金鑰貼在群組、作業、簡報或截圖裡，也不要借給別人用（費用算你的）。</li>
+    <li>用完公用電腦，記得按工具裡的「清除金鑰」，並關掉分頁。</li>
+    <li>Windows 的剪貼簿歷程（<code>Win</code>＋<code>V</code>）會留下複製過的內容，用完可以在那裡刪除。</li>
+  </ul>
+
+  <h2>6 · 金鑰外流或懷疑外流</h2>
+  <ol>
+    <li>到後台的 API Keys 頁面，把那把金鑰<b>刪除（撤銷）</b>。撤銷後立刻失效。</li>
+    <li>建一把新的金鑰，換到你的記事本裡。</li>
+    <li>看一下用量（Usage）頁面，有沒有不是你造成的花費。</li>
+  </ol>
+</div>
+</body>
+</html>

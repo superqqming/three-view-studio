@@ -6,3 +6,4 @@ tests/fixtures/
 tests/sketches/
 *.orig
 *.rej
+tests/.gateway-state/
