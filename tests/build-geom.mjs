@@ -24,6 +24,9 @@ ${loaders}
 ${demo}
 ${dims}
 const esc = s => String(s);
+// 介面語言：測試一律用中文原文（與網頁的 t()／N() 相同的變數代換）
+const t = (s, v) => { let o = s.includes('|') ? s.slice(s.indexOf('|') + 1) : s; if (v) o = o.replace(/\{(\w+)\}/g, (m, k) => (k in v ? String(v[k]) : m)); return o; };
+const N = s => s;
 ${aiGeom}
 export function setMF(m) { MF = m; }
 export { applyChoices, toPart, buildPart, outlinePoints, reviewItems, planDims,  BASES, buildTopology, repairTJunctions, transformModel, classifyModel, computeView, processView, objectToSoup, geomToSoup, parseOBJ, unitFromComment, demoGeometry };

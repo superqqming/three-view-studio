@@ -3,6 +3,7 @@
 //   - 本工具 ai/ 的 threeview-prompt.js、threeview-schema.js（原始檔；2026-10-13 從組合單元模擬器搬來）
 //     （「自己的金鑰」那條路用的指令與輸出格式；閘道的 threeview-recognize 也是同步自這兩個檔）
 //   - Shared_Services/ai-gateway/client/apply-key.html → 本工具的 apply-key.html（「如何申請自己的 API 金鑰」說明頁）
+//   - 本工具 i18n/ 的 i18n.js、en.js、vi.js、id.js（介面語言；另一組標記「介面語言」）
 //
 //   node sync-ai.mjs           重新產生 index.html 裡兩個標記之間的段落
 //   node sync-ai.mjs --check   只檢查有沒有落後（regress.mjs 會跑；落後就失敗），也檢查閘道的副本和來源一致
@@ -21,6 +22,9 @@ const HTML = path.join(here, '../index.html');
 const GUIDE_SRC = path.join(CLIENT, 'apply-key.html'), GUIDE = path.join(here, '../apply-key.html');
 const BEGIN = '/* ==== BEGIN 共用 AI 程式（tests/sync-ai.mjs 自動產生：請改原始檔再同步，不要直接改這一段）==== */';
 const END = '/* ==== END 共用 AI 程式 ==== */';
+const I18N_DIR = path.join(here, '../i18n');
+const I_BEGIN = '/* ==== BEGIN 介面語言（tests/sync-ai.mjs 自動產生：請改 i18n/ 的原始檔再同步，不要直接改這一段）==== */';
+const I_END = '/* ==== END 介面語言 ==== */';
 
 for (const dir of [CLIENT, AUS]) if (!existsSync(dir)) { console.error(`找不到來源資料夾：${dir}`); process.exit(2); }
 
@@ -30,6 +34,8 @@ function wrap(varName, file, deps = {}, extra = '') {
   const names = [...src.matchAll(/^export (?:async function|function|const|class|let) ([A-Za-z_$][\w$]*)/gm)].map(m => m[1]);
   src = src.replace(/^import \{([^}]+)\} from '\.\/([\w-]+)\.js';$/gm, (_, list, mod) => {
     if (!deps[mod]) throw new Error(`${path.basename(file)} 用到 ${mod}.js，但沒有指定對應的變數`);
+    // 變數名稱不能和 import 進來的名稱相同（const { X } = X 會在初始化前就讀它，整頁的 AI 區塊都會壞掉）
+    if (list.split(',').map(x => x.trim()).includes(deps[mod])) throw new Error(`${path.basename(file)}：${mod}.js 對應的變數 ${deps[mod]} 和 import 的名稱相同，請換一個`);
     return `const {${list}} = ${deps[mod]};`;
   });
   if (/^import /m.test(src)) throw new Error(`${path.basename(file)} 還有沒處理的 import`);
@@ -44,20 +50,33 @@ const block = [
   BEGIN,
   wrap('AI_GW', path.join(CLIENT, 'gateway-client.js')),
   wrap('AI_KEY', path.join(CLIENT, 'own-key.js')),
-  wrap('AI_ACCESS', path.join(CLIENT, 'ai-access.js'), { 'gateway-client': 'AI_GW', 'own-key': 'AI_KEY' }),
+  ...(existsSync(path.join(CLIENT, 'ai-access-i18n.js')) ? [wrap('AI_I18N_MOD', path.join(CLIENT, 'ai-access-i18n.js'))] : []),
+  wrap('AI_ACCESS', path.join(CLIENT, 'ai-access.js'), { 'gateway-client': 'AI_GW', 'own-key': 'AI_KEY', 'ai-access-i18n': 'AI_I18N_MOD' }),
   wrap('TV_AI', path.join(AUS, 'threeview-prompt.js'), {},
     `// ---- ${path.relative(HUB, path.join(AUS, 'threeview-schema.js'))}（輸出格式，JSON）\nconst THREEVIEW_SCHEMA = ${JSON.stringify(THREEVIEW_SCHEMA)};\n`),
   END,
 ].join('\n');
 
+const iblock = [
+  I_BEGIN,
+  wrap('I18N_EN', path.join(I18N_DIR, 'en.js')),
+  wrap('I18N_VI', path.join(I18N_DIR, 'vi.js')),
+  wrap('I18N_ID', path.join(I18N_DIR, 'id.js')),
+  wrap('I18N', path.join(I18N_DIR, 'i18n.js'), { en: 'I18N_EN', vi: 'I18N_VI', id: 'I18N_ID' }),
+  I_END,
+].join('\n');
+
 const html = readFileSync(HTML, 'utf8');
-const a = html.indexOf(BEGIN), b = html.indexOf(END);
-if (a < 0 || b < a) { console.error('index.html 裡找不到同步標記'); process.exit(2); }
-const next = html.slice(0, a) + block + html.slice(b + END.length);
+const replaceBlock = (src, b0, b1, content) => {
+  const a = src.indexOf(b0), b = src.indexOf(b1);
+  if (a < 0 || b < a) { console.error(`index.html 裡找不到同步標記：${b0.slice(0, 30)}`); process.exit(2); }
+  return src.slice(0, a) + content + src.slice(b + b1.length);
+};
+const next = replaceBlock(replaceBlock(html, BEGIN, END, block), I_BEGIN, I_END, iblock);
 
 if (process.argv.includes('--check')) {
   let bad = 0;
-  if (next !== html) { console.error('index.html 裡的共用 AI 程式落後原始檔：請執行 node tests/sync-ai.mjs'); bad++; }
+  if (next !== html) { console.error('index.html 裡的共用 AI 程式或介面語言落後原始檔：請執行 node tests/sync-ai.mjs'); bad++; }
   if (!existsSync(GUIDE) || readFileSync(GUIDE, 'utf8') !== readFileSync(GUIDE_SRC, 'utf8')) { console.error('apply-key.html 和 Shared_Services 的說明頁不同：請執行 node tests/sync-ai.mjs'); bad++; }
   // 閘道的 threeview-recognize 用的指令與格式也同步自同一份來源：確認閘道沒有落後（否則兩個入口的辨識不一致）
   try { execFileSync('node', [path.join(GATEWAY, 'scripts/sync-assembly.mjs'), '--check'], { stdio: 'pipe' }); }

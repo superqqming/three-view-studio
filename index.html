@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>三視圖產生器</title>
+<title data-i18n>三視圖產生器</title>
 <meta name="description" content="匯入 3D 模型（STL / OBJ / GLB），自動產生符合圖學規範（CNS）的三視圖與等角圖，可下載 SVG、DXF 或列印成 PDF。">
 <style>
   :root {
@@ -21,6 +21,8 @@
   aside { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; }
   aside header { padding: 16px 18px 10px; border-bottom: 1px solid var(--line); }
   aside h1 { font-size: 17px; margin: 0 0 2px; letter-spacing: .02em; }
+  aside header .hdr { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  aside header select#lang { font-size: 12px; padding: 2px 4px; max-width: 46%; }
   aside header p { margin: 0; color: var(--muted); font-size: 12px; }
   section.card { padding: 14px 18px; border-bottom: 1px solid var(--line); }
   section.card h2 { font-size: 12px; font-weight: 700; color: var(--muted); margin: 0 0 10px; letter-spacing: .08em; }
@@ -127,161 +129,163 @@
 </head>
 <body>
 <div class="popout" id="popout" hidden>
-  目前在嵌入的框框裡，下載 SVG／DXF 與列印可能被瀏覽器擋下。<a id="popoutLink" href="#" target="_blank" rel="noopener">在新分頁開啟 ↗</a>
+  <span data-i18n>目前在嵌入的框框裡，下載 SVG／DXF 與列印可能被瀏覽器擋下。</span><a id="popoutLink" href="#" target="_blank" rel="noopener" data-i18n>在新分頁開啟 ↗</a>
 </div>
 <div class="app">
   <aside>
     <header>
-      <h1>三視圖產生器</h1>
-      <p>匯入 3D 模型 → 自動產生符合圖學規範的正投影視圖</p>
+      <div class="hdr"><h1 data-i18n>三視圖產生器</h1><select id="lang" aria-label="Language / 語言" title="Language / 語言"></select></div>
+      <p data-i18n>匯入 3D 模型 → 自動產生符合圖學規範的正投影視圖</p>
     </header>
 
     <section class="card">
-      <h2>1 · 匯入模型</h2>
+      <h2 data-i18n>1 · 匯入模型</h2>
       <label class="drop" id="drop">
-        <strong>拖曳檔案到這裡，或點擊選擇</strong>
-        支援 STL / OBJ / GLB（單位預設 mm）
+        <strong data-i18n>拖曳檔案到這裡，或點擊選擇</strong>
+        <span data-i18n>支援 STL / OBJ / GLB（單位預設 mm）</span>
         <input type="file" id="file" accept=".stl,.obj,.glb,.gltf" hidden>
       </label>
       <div class="row" style="margin-top:10px">
-        <span class="lbl">範例模型</span>
-        <button class="chip" data-demo="bracket">L 型支架</button>
-        <button class="chip" data-demo="shaft">階梯軸</button>
-        <button class="chip" data-demo="channel">U 型槽塊</button>
+        <span class="lbl" data-i18n>範例模型</span>
+        <button class="chip" data-demo="bracket" data-i18n>L 型支架</button>
+        <button class="chip" data-demo="shaft" data-i18n>階梯軸</button>
+        <button class="chip" data-demo="channel" data-i18n>U 型槽塊</button>
       </div>
-      <div class="info" id="info">尚未載入模型</div>
+      <div class="info" id="info"><span data-i18n>尚未載入模型</span></div>
       <div class="warn" id="warn"></div>
     </section>
 
     <section class="card" id="aiCard">
-      <h2>或 · 拍照辨識手繪三視圖（AI）</h2>
+      <h2 data-i18n>或 · 拍照辨識手繪三視圖（AI）</h2>
       <div id="aiAccess"></div>
-      <div class="info" id="aiFileNote" hidden>直接用檔案開啟時只能「使用自己的 API 金鑰」；要用課程額度請開線上版。</div>
+      <div class="info" id="aiFileNote" hidden data-i18n>直接用檔案開啟時只能「使用自己的 API 金鑰」；要用課程額度請開線上版。</div>
       <label class="drop" id="aiDrop" style="margin-top:10px">
-        <strong>選擇手繪三視圖的照片（最多 4 張）</strong>
-        拍正、光線均勻；有畫等角圖也一起拍進來
+        <strong data-i18n>選擇手繪三視圖的照片（最多 4 張）</strong>
+        <span data-i18n>拍正、光線均勻；有畫等角圖也一起拍進來</span>
         <input type="file" id="aiFiles" accept="image/*" multiple hidden>
       </label>
       <div class="thumbs" id="aiThumbs"></div>
-      <div class="row"><span class="lbl">草圖單位</span>
-        <select id="aiUnits"><option value="auto">依圖上標示</option><option value="mm">mm</option><option value="cm">cm</option></select></div>
-      <div class="row"><span class="lbl">思考深度</span><select id="aiEffort"></select></div>
-      <textarea id="aiNote" rows="2" maxlength="300" placeholder="補充說明（選填），例如：右下角是等角圖、孔是貫穿的"></textarea>
+      <div class="row"><span class="lbl" data-i18n>草圖單位</span>
+        <select id="aiUnits"><option value="auto" data-i18n>依圖上標示</option><option value="mm">mm</option><option value="cm">cm</option></select></div>
+      <div class="row"><span class="lbl" data-i18n>思考深度</span><select id="aiEffort"></select></div>
+      <textarea id="aiNote" rows="2" maxlength="300" placeholder="補充說明（選填），例如：右下角是等角圖、孔是貫穿的" data-i18n-placeholder></textarea>
       <div class="row" style="margin-top:6px">
-        <button class="primary" id="aiGo" disabled>開始辨識</button>
-        <button class="chip" id="aiCancel" hidden>取消</button>
+        <button class="primary" id="aiGo" disabled data-i18n>開始辨識</button>
+        <button class="chip" id="aiCancel" hidden data-i18n>取消</button>
         <span class="info" id="aiStatus" style="margin:0"></span>
       </div>
       <div class="row" style="margin-top:8px">
-        <label class="chip filebtn">載入辨識結果（JSON）<input type="file" id="aiLoadJson" accept=".json,application/json" hidden></label>
+        <label class="chip filebtn"><span data-i18n>載入辨識結果（JSON）</span><input type="file" id="aiLoadJson" accept=".json,application/json" hidden></label>
       </div>
-      <div class="info">投影法依下方「圖面設定」。學號姓名只以雜湊送出；照片與補充說明會送到 AI 服務辨識（課程額度經課程伺服器轉送、不保存；自己的金鑰直接送到 Anthropic），拍照時請避開寫有姓名學號的地方。辨識完成後會自動建立 3D 模型並產生正式的三視圖。</div>
+      <div class="info" data-i18n>投影法依下方「圖面設定」。學號姓名只以雜湊送出；照片與補充說明會送到 AI 服務辨識（課程額度經課程伺服器轉送、不保存；自己的金鑰直接送到 Anthropic），拍照時請避開寫有姓名學號的地方。辨識完成後會自動建立 3D 模型並產生正式的三視圖。</div>
       <div class="ai-result" id="aiResult" hidden></div>
       <div class="warn" id="aiWarn"></div>
     </section>
 
     <section class="card">
-      <h2>2 · 擺放方向（決定哪一面是前視）</h2>
-      <div id="preview"><span class="hint">拖曳旋轉 · 滾輪縮放　橘＝前視　藍＝俯視　綠＝側視</span></div>
+      <h2 data-i18n>2 · 擺放方向（決定哪一面是前視）</h2>
+      <div id="preview"><span class="hint" data-i18n>拖曳旋轉 · 滾輪縮放　橘＝前視　藍＝俯視　綠＝側視</span></div>
       <div class="row" style="margin-top:10px">
-        <span class="lbl">旋轉模型</span>
-        <button class="chip" data-rot="x">繞 X 90°</button>
-        <button class="chip" data-rot="y">繞 Y 90°</button>
-        <button class="chip" data-rot="z">繞 Z 90°</button>
-        <button class="chip" id="rotReset">重設</button>
+        <span class="lbl" data-i18n>旋轉模型</span>
+        <button class="chip" data-rot="x" data-i18n>繞 X 90°</button>
+        <button class="chip" data-rot="y" data-i18n>繞 Y 90°</button>
+        <button class="chip" data-rot="z" data-i18n>繞 Z 90°</button>
+        <button class="chip" id="rotReset" data-i18n>重設</button>
       </div>
       <div class="row">
         <label style="display:flex;gap:6px;align-items:center;cursor:pointer">
-          <input type="checkbox" id="zup"> 來源檔為 Z 軸朝上（CAD 匯出的 STL 常見）
+          <input type="checkbox" id="zup"> <span data-i18n>來源檔為 Z 軸朝上（CAD 匯出的 STL 常見）</span>
         </label>
       </div>
       <div class="row">
-        <span class="lbl">檔案單位</span>
+        <span class="lbl" data-i18n>檔案單位</span>
         <select id="unit">
           <option value="1">mm</option><option value="10">cm</option>
           <option value="1000">m</option><option value="25.4">inch</option><option value="304.8">ft</option>
         </select>
       </div>
       <div class="row">
-        <span class="lbl">稜線角度</span>
+        <span class="lbl" data-i18n>稜線角度</span>
         <input type="range" id="thr" min="5" max="80" step="1" value="30" style="flex:1">
         <span id="thrVal" style="width:34px;text-align:right">30°</span>
       </div>
-      <div class="info">兩面夾角大於此值才畫成輪廓線；網格曲面若出現多餘的折線，請調大。</div>
+      <div class="info" data-i18n>兩面夾角大於此值才畫成輪廓線；網格曲面若出現多餘的折線，請調大。</div>
     </section>
 
     <section class="card">
-      <h2>3 · 圖面設定</h2>
+      <h2 data-i18n>3 · 圖面設定</h2>
       <div class="row">
-        <span class="lbl">投影法</span>
+        <span class="lbl" data-i18n>投影法</span>
         <div class="seg">
-          <label><input type="radio" name="proj" value="third" checked>第三角法</label>
-          <label><input type="radio" name="proj" value="first">第一角法</label>
+          <label><input type="radio" name="proj" value="third" checked><span data-i18n>第三角法</span></label>
+          <label><input type="radio" name="proj" value="first"><span data-i18n>第一角法</span></label>
         </div>
       </div>
       <div class="row">
-        <span class="lbl">圖紙</span>
+        <span class="lbl" data-i18n>圖紙</span>
         <select id="sheet">
-          <option value="A4L">A4 橫式（297×210）</option>
-          <option value="A3L">A3 橫式（420×297）</option>
-          <option value="A4P">A4 直式（210×297）</option>
+          <option value="A4L" data-i18n>A4 橫式（297×210）</option>
+          <option value="A3L" data-i18n>A3 橫式（420×297）</option>
+          <option value="A4P" data-i18n>A4 直式（210×297）</option>
         </select>
       </div>
       <div class="row">
-        <span class="lbl">比例</span>
+        <span class="lbl" data-i18n>比例</span>
         <select id="scale"></select>
       </div>
       <div class="checks">
-        <label><input type="checkbox" id="optHidden" checked>隱藏線</label>
-        <label><input type="checkbox" id="optCenter" checked>中心線</label>
-        <label><input type="checkbox" id="optIso" checked>等角圖</label>
-        <label><input type="checkbox" id="optDims" checked>總尺寸</label>
-        <label><input type="checkbox" id="optDetail" checked>細部尺寸</label>
-        <label><input type="checkbox" id="optHoles" checked>孔徑與孔位</label>
-        <label><input type="checkbox" id="optLabels">視圖名稱</label>
+        <label><input type="checkbox" id="optHidden" checked><span data-i18n>隱藏線</span></label>
+        <label><input type="checkbox" id="optCenter" checked><span data-i18n>中心線</span></label>
+        <label><input type="checkbox" id="optIso" checked><span data-i18n>等角圖</span></label>
+        <label><input type="checkbox" id="optDims" checked><span data-i18n>總尺寸</span></label>
+        <label><input type="checkbox" id="optDetail" checked><span data-i18n>細部尺寸</span></label>
+        <label><input type="checkbox" id="optHoles" checked><span data-i18n>孔徑與孔位</span></label>
+        <label><input type="checkbox" id="optLabels"><span data-i18n>視圖名稱</span></label>
       </div>
-      <div class="info">細部尺寸採並聯（基準）尺寸：X 由左、Y 由下、Z 由前面量起。點圖面上的尺寸可隱藏，再點一下復原。</div>
+      <div class="info" data-i18n>細部尺寸採並聯（基準）尺寸；圓柱與凸台標直徑（Ø），孔以引線標 Ø。X 由左、Y 由下、Z 由前面量起。點圖面上的尺寸可隱藏，再點一下復原。</div>
       <div class="row" style="margin-top:6px">
         <span class="info" id="dimNote" style="margin:0;flex:1"></span>
-        <button class="chip" id="dimsReset" hidden>顯示全部尺寸</button>
+        <button class="chip" id="dimsReset" hidden data-i18n>顯示全部尺寸</button>
       </div>
     </section>
 
     <section class="card">
-      <h2>4 · 標題欄</h2>
+      <h2 data-i18n>4 · 標題欄</h2>
       <div class="tb-grid">
-        <span>圖名</span><input type="text" id="tbTitle" placeholder="例：L 型支架">
-        <span>單位</span><input type="text" id="tbOrg" placeholder="學校／系所">
-        <span>繪圖</span><input type="text" id="tbAuthor">
-        <span>學號</span><input type="text" id="tbSid">
-        <span>日期</span><input type="date" id="tbDate">
-        <span>圖號</span><input type="text" id="tbNo" placeholder="01">
+        <span data-i18n>標題欄|圖名</span><input type="text" id="tbTitle" placeholder="例：L 型支架" data-i18n-placeholder>
+        <span data-i18n>標題欄|單位</span><input type="text" id="tbOrg" placeholder="學校／系所" data-i18n-placeholder>
+        <span data-i18n>標題欄|繪圖</span><input type="text" id="tbAuthor">
+        <span data-i18n>標題欄|學號</span><input type="text" id="tbSid">
+        <span data-i18n>標題欄|日期</span><input type="date" id="tbDate">
+        <span data-i18n>標題欄|圖號</span><input type="text" id="tbNo" placeholder="01">
+        <div class="info" style="grid-column:1/-1;margin:0" data-i18n>圖面上的標題欄固定用中文（CNS），這裡只翻輸入欄的名稱。</div>
       </div>
     </section>
 
     <section class="card">
-      <h2>5 · 匯出</h2>
+      <h2 data-i18n>5 · 匯出</h2>
       <div class="row">
-        <button class="primary" id="expSvg">下載 SVG</button>
-        <button id="expDxf">下載 DXF</button>
-        <button id="expPrint">列印 / PDF</button>
+        <button class="primary" id="expSvg" data-i18n>下載 SVG</button>
+        <button id="expDxf" data-i18n>下載 DXF</button>
+        <button id="expPrint" data-i18n>列印 / PDF</button>
       </div>
-      <div class="info">SVG／列印為 1:1 圖紙尺寸（mm）。DXF 為 R12 格式，依線型分圖層（OUTLINE、HIDDEN、CENTER、DIM…）。</div>
+      <div class="info" data-i18n>SVG／列印為 1:1 圖紙尺寸（mm）。DXF 為 R12 格式，依線型分圖層（OUTLINE、HIDDEN、CENTER、DIM…）。</div>
     </section>
 
     <section class="card">
       <details>
-        <summary>本工具套用的圖學規範</summary>
+        <summary data-i18n>本工具套用的圖學規範</summary>
         <ul>
-          <li>可見輪廓線：粗實線 0.6 mm</li>
-          <li>隱藏線：中虛線 0.35 mm，線段 3、間隔 1</li>
-          <li>中心線：細鏈線 0.25 mm（長劃 12、間隔 1、短劃 1.5），超出輪廓 3 mm；圓孔於交點處以長劃相交</li>
-          <li>線條重疊時優先順序：輪廓線 &gt; 隱藏線 &gt; 中心線</li>
-          <li>尺寸：細實線，尺寸線距輪廓 10 mm，延伸線留 1 mm 空隙、超出尺寸線 2 mm；箭頭長寬比 3:1 塗黑；數字高 3 mm，採對齊式（垂直尺寸由右側閱讀）</li>
-          <li>視圖對齊：前視與俯視等寬、前視與側視等高、俯視與側視等深</li>
-          <li>第三角法：俯視在前視上方、右側視在右方；第一角法：俯視在前視下方、左側視在右方</li>
-          <li>比例可選 10:1、5:1、2:1、1:1、1:2、1:3、1:4、1:5、1:10…，「自動」挑放得下的最大比例；尺寸一律標註實際大小</li>
-          <li>圖框距紙邊 10 mm，標題欄在右下角並附投影法符號</li>
+          <li data-i18n>可見輪廓線：粗實線 0.6 mm</li>
+          <li data-i18n>隱藏線：中虛線 0.35 mm，線段 3、間隔 1</li>
+          <li data-i18n>中心線：細鏈線 0.25 mm（長劃 12、間隔 1、短劃 1.5），超出輪廓 3 mm；圓孔於交點處以長劃相交</li>
+          <li data-i18n>線條重疊時優先順序：輪廓線 &gt; 隱藏線 &gt; 中心線</li>
+          <li data-i18n>尺寸：細實線，尺寸線距輪廓 10 mm，延伸線留 1 mm 空隙、超出尺寸線 2 mm；箭頭長寬比 3:1 塗黑；數字高 3 mm，採對齊式（垂直尺寸由右側閱讀）</li>
+          <li data-i18n>直徑：圓柱與凸台的 Ø 標在非圓視圖，孔的 Ø 以引線標在圓視圖；外形是圓柱（圓盤、軸）時外徑標 Ø、另一個方向不重複標</li>
+          <li data-i18n>視圖對齊：前視與俯視等寬、前視與側視等高、俯視與側視等深</li>
+          <li data-i18n>第三角法：俯視在前視上方、右側視在右方；第一角法：俯視在前視下方、左側視在右方</li>
+          <li data-i18n>比例可選 10:1、5:1、2:1、1:1、1:2、1:3、1:4、1:5、1:10…，「自動」挑放得下的最大比例；尺寸一律標註實際大小</li>
+          <li data-i18n>圖框距紙邊 10 mm，標題欄在右下角並附投影法符號</li>
         </ul>
       </details>
     </section>
@@ -290,22 +294,22 @@
   <main>
     <div class="toolbar">
       <div class="legend">
-        <span><svg viewBox="0 0 42 8"><line x1="1" y1="4" x2="41" y2="4" stroke="#111" stroke-width="2.4"/></svg>輪廓線</span>
-        <span><svg viewBox="0 0 42 8"><line x1="1" y1="4" x2="41" y2="4" stroke="#111" stroke-width="1.4" stroke-dasharray="6 2.5"/></svg>隱藏線</span>
-        <span><svg viewBox="0 0 42 8"><line x1="1" y1="4" x2="41" y2="4" stroke="#111" stroke-width="1" stroke-dasharray="14 2.5 3 2.5"/></svg>中心線</span>
+        <span><svg viewBox="0 0 42 8"><line x1="1" y1="4" x2="41" y2="4" stroke="#111" stroke-width="2.4"/></svg><span data-i18n>輪廓線</span></span>
+        <span><svg viewBox="0 0 42 8"><line x1="1" y1="4" x2="41" y2="4" stroke="#111" stroke-width="1.4" stroke-dasharray="6 2.5"/></svg><span data-i18n>隱藏線</span></span>
+        <span><svg viewBox="0 0 42 8"><line x1="1" y1="4" x2="41" y2="4" stroke="#111" stroke-width="1" stroke-dasharray="14 2.5 3 2.5"/></svg><span data-i18n>中心線</span></span>
       </div>
       <div class="spacer"></div>
       <span id="status"></span>
-      <button class="chip" id="compareBtn" hidden>對照原圖</button>
+      <button class="chip" id="compareBtn" hidden data-i18n>對照原圖</button>
       <button class="chip" id="zoomOut">－</button>
-      <button class="chip" id="zoomFit">符合視窗</button>
+      <button class="chip" id="zoomFit" data-i18n>符合視窗</button>
       <button class="chip" id="zoomIn">＋</button>
     </div>
     <div class="stage" id="stage">
       <div class="sheet-wrap" id="sheetWrap"></div>
-      <div class="busy" id="busy"><div>計算視圖中…</div></div>
+      <div class="busy" id="busy"><div data-i18n>計算視圖中…</div></div>
       <div class="compare" id="compare" hidden>
-        <div class="row" style="justify-content:space-between"><strong>手繪原圖</strong><button class="chip" id="compareClose">關閉</button></div>
+        <div class="row" style="justify-content:space-between"><strong data-i18n>手繪原圖</strong><button class="chip" id="compareClose" data-i18n>關閉</button></div>
         <div id="compareImgs"></div>
       </div>
     </div>
@@ -319,6 +323,758 @@ import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const $ = id => document.getElementById(id);
+
+/* ==== BEGIN 介面語言（tests/sync-ai.mjs 自動產生：請改 i18n/ 的原始檔再同步，不要直接改這一段）==== */
+// ---- Teaching_Tools/3 side view generator/i18n/en.js
+const I18N_EN = (() => {
+// 介面翻譯（EN）：中文原文 → 譯文。用詞照 翻譯用語對照表.md；新增介面文字時三份字典都要補（tests/i18n-check.mjs 會檢查）。
+const EN = {
+  "{view}的 Ø{d} 孔從看不到的那一面加工，只有虛線，孔徑與孔位標在隱藏線上（建議加剖視圖）": "{view}: the Ø{d} hole is machined from the side not visible in this view and shows only as dashed lines, so its diameter and position are dimensioned on hidden lines (consider adding a section view)",
+  "前視圖": "Front view",
+  "俯視圖": "Top view",
+  "側視圖": "Side view",
+  "{axis} 方向有 {n} 個特徵（例如陣列孔），未自動標註細部尺寸": "{n} features along {axis} (e.g. a hole pattern), so detail dimensions were not added automatically",
+  "{axis} 方向 {list} 只出現在隱藏線（例如凹穴、槽的深度），未標註；建議加剖視圖": "Along {axis}, sizes {list} appear only on hidden lines (e.g. pocket or slot depths), so they are not dimensioned (consider adding a section view)",
+  "列舉|、": ", ",
+  "{sc} 放不下（尺寸會超出圖框或壓到標題欄），放得下的最大比例是 {auto}": "{sc} doesn't fit (dimensions would go past the border or overlap the title block). The largest scale that fits is {auto}",
+  "自動（目前 {sc}）": "Auto (currently {sc})",
+  "自動（最大可容納比例）": "Auto (largest that fits)",
+  "已隱藏 {n} 個尺寸（淡色顯示、不會匯出）": "Hidden dimensions: {n} (shown faded, not exported)",
+  "句子分隔|；": "; ",
+  "點一下顯示這個尺寸": "Click to show this dimension",
+  "點一下隱藏這個尺寸": "Click to hide this dimension",
+  "匯入 3D 模型或點選左側範例": "Import a 3D model or choose an example on the left",
+  "預覽|右": "Right",
+  "預覽|左": "Left",
+  "預覽|前": "Front",
+  "預覽|俯": "Top",
+  "STL 未記錄單位，預設 mm": "STL has no unit info; mm assumed",
+  "依 OBJ 檔頭判定": "read from the OBJ header",
+  "OBJ 未記錄單位，預設 mm": "OBJ has no unit info; mm assumed",
+  "無法讀取 .gltf（通常還需要另外的 .bin 檔），請改匯出成單一檔案的 .glb": "Can't read .gltf (it usually needs a separate .bin file). Export a single-file .glb instead",
+  "glTF 規範單位為公尺": "glTF is always in meters",
+  "不支援的格式：.{ext}": "Unsupported format: .{ext}",
+  "載入失敗：{msg}": "Failed to load: {msg}",
+  "檔案中找不到三角網格。": "No triangle mesh found in the file.",
+  "處理失敗：{msg}": "Processing failed: {msg}",
+  "檔案單位：{unit}": "File units: {unit}",
+  "（{note}）": " ({note})",
+  "已自動接合 {n} 處面與面接縫不對齊的點": "Points auto-joined at misaligned face seams: {n}",
+  "已移除 {n} 個重複／重疊的面": "Duplicate/overlapping faces removed: {n}",
+  "{n} 個三角面": "{n} triangles",
+  "外形尺寸：寬 {w} × 高 {h} × 深 {d} mm": "Overall size: W {w} × H {h} × D {d} mm",
+  "偵測到 {n} 條圓形中心軸": "Center axes of round features: {n}",
+  "有 {n} 條邊只連到一個面（3D 預覽中的紅線）：模型可能有破洞，或某些面沒有和其他面接合。三視圖仍可產生，但紅線附近可能多出或缺少線條。": "Edges connected to only one face: {n} (red lines in the 3D preview). The model may have holes, or some faces aren't joined to the faces next to them. The three views can still be generated, but lines near the red edges may be extra or missing.",
+  "三角面很多，計算會比較久；可先在 CAD 降低匯出精度。": "The model has many triangles, so calculation will take longer. You can lower the export resolution in your CAD software first.",
+  "產生視圖失敗：{msg}": "Failed to generate views: {msg}",
+  "計算 {ms} ms": "Calculated in {ms} ms",
+  "手動設定": "set manually",
+  "思考深度|快": "Fast",
+  "思考深度|一般": "Normal",
+  "思考深度|仔細": "Thorough",
+  "右側視圖": "Right side view",
+  "左側視圖": "Left side view",
+  "仰視圖": "Bottom view",
+  "後視圖": "Rear view",
+  "等角圖": "Isometric view",
+  "視圖配置": "View layout",
+  "尺寸": "Dimensions",
+  "整體": "Overall",
+  "「{name}」無法讀取，請改用 JPG 或 PNG（iPhone 可在「設定 → 相機 → 格式」選「最相容」）。": "\"{name}\" can't be read. Use JPG or PNG instead (on iPhone, go to Settings → Camera → Formats and choose \"Most Compatible\").",
+  "最多 4 張照片。": "Up to 4 photos.",
+  "移除": "Remove",
+  "AI 正在寫結果…（{s} 秒）": "AI is writing the result… ({s} s)",
+  "AI 判讀中…（{s} 秒）": "AI is reading the photos… ({s} s)",
+  "無法載入 Claude SDK（需要網路連線）。連上網路後再按一次；還是不行請重新整理頁面。": "Could not load the Claude SDK (internet connection required). Connect to the internet and click again; if it still fails, reload the page.",
+  "金鑰裡有不正確的字元（全形字、引號或看不見的空白），請重新複製貼上。": "The key contains invalid characters (full-width characters, quotation marks, or invisible spaces). Copy and paste it again.",
+  "AI 拒絕處理這次的圖片。": "The AI declined to process these images.",
+  "AI 的回答太長被截斷了，請改用較少張照片、縮短補充說明再試。": "The AI's response was too long and got cut off. Try again with fewer photos or shorter notes.",
+  "AI 回傳的格式無法解析，請再試一次。": "Could not parse the AI's response. Please try again.",
+  "已取消。": "Canceled.",
+  "Anthropic 說這把金鑰不正確或已經撤銷。請重新複製貼上，或到 Anthropic 後台建立新的金鑰。": "Anthropic says this key is invalid or has been revoked. Copy and paste it again, or create a new key in the Anthropic Console.",
+  "你的 Anthropic 帳戶額度不足或已達花費上限，請到後台儲值或調整上限。": "Your Anthropic account is out of credit or has reached its spending limit. Add credit or raise the limit in the Console.",
+  "Anthropic 拒絕了這個地區的連線，請換個網路（例如手機熱點）再試。": "Anthropic refused the connection from this region. Switch to another network (e.g. a phone hotspot) and try again.",
+  "這把金鑰沒有權限使用這個模型，請到 Anthropic 後台確認。": "This key doesn't have access to this model. Check the Anthropic Console.",
+  "Anthropic 說請求太頻繁或超過你帳戶的速率上限，請稍後再試。": "Anthropic says there were too many requests or your account's rate limit was exceeded. Try again later.",
+  "這次的請求被 Anthropic 拒絕：{msg}": "Anthropic rejected this request: {msg}",
+  "連不上 Anthropic，請確認網路連線。": "Can't reach Anthropic. Check your internet connection.",
+  "Anthropic 暫時忙碌，請稍後再試。": "Anthropic is busy right now. Try again later.",
+  "上傳中…": "Uploading…",
+  "辨識完成（{s} 秒，用自己的金鑰）": "Recognition done ({s} s, using your own key)",
+  "辨識完成（{s} 秒，用課程額度，剩 {n} 次）": "Recognition done ({s} s, course quota: {n} left)",
+  "已取消。AI 如果已經開始判讀，這一次仍會算進次數。": "Canceled. If the AI had already started reading, this still counts as one use.",
+  "照片裡找不到工件的三視圖。": "No three views of a part were found in the photos.",
+  "「{q}」的選項無法套用（AI 給的路徑或值格式不對），這一項維持原本的判讀": "Couldn't apply the choice for \"{q}\" (the AI returned an invalid path or value); this item keeps the original reading",
+  "辨識結果的格式不對：{msg}": "The recognition result has an invalid format: {msg}",
+  "建立 3D 模型…": "Building 3D model…",
+  "幾何建立失敗：{msg}（右邊的圖面仍是上一個結果）": "Geometry build failed: {msg} (the drawing on the right still shows the previous result)",
+  "幾何核心內部錯誤": "Internal geometry kernel error",
+  "AI 辨識結果": "from AI recognition",
+  "辨識結果": "Recognition result",
+  "料塊 {w}×{d}×{h} mm（寬×深×高）": "Stock {w}×{d}×{h} mm (W×D×H)",
+  "找到：{views}": "Found: {views}",
+  "AI 不確定的地方": "What the AI isn't sure about",
+  "你的手繪圖面可以改進的地方": "What to improve in your hand drawing",
+  "手繪圖面檢查": "Hand drawing check",
+  "AI 沒有發現明顯的問題。": "The AI found no obvious problems.",
+  "AI 的假設": "AI assumptions",
+  "下載辨識結果（JSON）": "Download result (JSON)",
+  "辨識結果是 AI 的判讀，請和自己的手繪對照確認；有疑問的地方可以在上面改選。": "The recognition result is the AI's interpretation. Check it against your own drawing; if anything looks wrong, change the choice above.",
+  "{view}：{where}": "{view}: {where}",
+  "{what}應大於 0（讀到 {x}），暫用 100": "{what} should be greater than 0 (got {x}); using 100 for now",
+  "料塊寬": "Stock width",
+  "料塊高": "Stock height",
+  "料塊深": "Stock depth",
+  "料塊尺寸 {v} mm 太大，請確認單位": "Stock size {v} mm is too large; check the units",
+  "步驟 {n}": "Step {n}",
+  "{where}：格式不對，已略過": "{where}: invalid format; skipped",
+  "{where}：第 {n} 個特徵格式不對，已略過": "{where}: feature {n} has an invalid format; skipped",
+  "{where}：矩形範圍是空的或讀不到，已略過這個矩形": "{where}: rectangle range is empty or unreadable; skipped this rectangle",
+  "特徵|孔": "Hole",
+  "矩形切除": "Rectangular cut",
+  "凸柱": "Boss",
+  "輪廓切除": "Profile cut",
+  "圓角": "Fillet",
+  "倒角": "Chamfer",
+  "{where}：{name}深度應大於 0（讀到 {v}），暫用 10": "{where}: {name} depth should be greater than 0 (got {v}); using 10 for now",
+  "{where}：不認得的面「{face}」，已略過": "{where}: unrecognized face \"{face}\"; skipped",
+  "{where}：孔徑應大於 0（讀到 {v}），暫用 Ø10": "{where}: hole diameter should be greater than 0 (got {v}); using Ø10 for now",
+  "{where}：矩形切除沒有有效的範圍，已略過": "{where}: rectangular cut has no valid range; skipped",
+  "{where}：凸柱的第 {n} 個形狀讀不到，已略過": "{where}: boss shape {n} is unreadable; skipped",
+  "{where}：凸柱直徑應大於 0（讀到 {v}），暫用 Ø10": "{where}: boss diameter should be greater than 0 (got {v}); using Ø10 for now",
+  "{where}：凸柱沒有指定形狀，已略過": "{where}: boss has no shape specified; skipped",
+  "{where}：輪廓裡有格式不對的線段，已略過這個輪廓切除": "{where}: the profile has invalid segments; skipped this profile cut",
+  "{where}：輪廓切除沒有輪廓，已略過": "{where}: profile cut has no profile; skipped",
+  "{where}：輪廓的座標讀不到或離料塊太遠，已略過": "{where}: profile coordinates are unreadable or too far from the stock; skipped",
+  "{where}：輪廓第 {n} 段圓弧的起點和終點離圓心不一樣遠（R{a} 和 R{b}），請確認圓心": "{where}: in profile segment {n}, the arc's start and end points are at different distances from the center (R{a} and R{b}); check the center",
+  "{where}：{name}沒有指定稜邊，已略過": "{where}: {name} has no edges specified; skipped",
+  "{where}：圓角半徑應大於 0（讀到 {v}），暫用 5": "{where}: fillet radius should be greater than 0 (got {v}); using 5 for now",
+  "{where}：倒角應大於 0（讀到 {v}），暫用 5": "{where}: chamfer size should be greater than 0 (got {v}); using 5 for now",
+  "{where}：{name} {size} 比稜邊「{edge}」旁的料塊（{lim} mm）還大，已略過這條稜邊": "{where}: {name} {size} is larger than the stock next to edge \"{edge}\" ({lim} mm); skipped this edge",
+  "{where}：不認得的特徵「{type}」，已略過": "{where}: unrecognized feature \"{type}\"; skipped",
+  "無法載入幾何核心（需要網路連線）": "Could not load the geometry kernel (internet connection required)",
+  "未知的面：{face}": "Unknown face: {face}",
+  "輪廓少於 3 個點": "Profile has fewer than 3 points",
+  "輪廓自己交叉或沒有面積": "Profile intersects itself or has no area",
+  "未知的特徵類型：{type}": "Unknown feature type: {type}",
+  "這個特徵的尺寸或位置不合理，已略過": "This feature's size or position doesn't make sense; skipped",
+  "步驟 {n}「{label}」：{msg}": "Step {n} \"{label}\": {msg}",
+  "幾何核心內部錯誤，這個特徵已略過": "Internal geometry kernel error; this feature was skipped",
+  "步驟 {n}「{label}」沒有切到材料": "Step {n} \"{label}\" removes no material",
+  "加工後沒有剩下材料": "No material left after machining",
+  "加工後分成 {n} 塊，請檢查切削範圍": "The part splits into {n} pieces after machining; check the cut ranges",
+  "手繪原圖": "Original drawing",
+  "重新建立失敗：{msg}": "Rebuild failed: {msg}",
+  "無法讀取這個辨識結果：{msg}": "Can't read this recognition result: {msg}",
+  "三視圖產生器": "Three-View Studio",
+  "目前在嵌入的框框裡，下載 SVG／DXF 與列印可能被瀏覽器擋下。": "This page is embedded in a frame, so the browser may block SVG/DXF downloads and printing.",
+  "在新分頁開啟 ↗": "Open in new tab ↗",
+  "匯入 3D 模型 → 自動產生符合圖學規範的正投影視圖": "Import a 3D model → automatically get orthographic views that follow drawing standards",
+  "1 · 匯入模型": "1 · Import model",
+  "拖曳檔案到這裡，或點擊選擇": "Drag a file here, or click to choose",
+  "支援 STL / OBJ / GLB（單位預設 mm）": "Supports STL / OBJ / GLB (default unit: mm)",
+  "範例模型": "Examples",
+  "L 型支架": "L-bracket",
+  "階梯軸": "Stepped shaft",
+  "U 型槽塊": "U-channel block",
+  "尚未載入模型": "No model loaded yet",
+  "或 · 拍照辨識手繪三視圖（AI）": "Or · Recognize hand-drawn three views (AI)",
+  "直接用檔案開啟時只能「使用自己的 API 金鑰」；要用課程額度請開線上版。": "When the tool is opened directly as a file, only \"Use your own API key\" is available. To use the course quota, open the online version.",
+  "選擇手繪三視圖的照片（最多 4 張）": "Choose photos of your hand-drawn three views (up to 4)",
+  "拍正、光線均勻；有畫等角圖也一起拍進來": "Shoot straight on in even light; if you drew an isometric view, include it too",
+  "草圖單位": "Sketch units",
+  "依圖上標示": "As marked on sketch",
+  "思考深度": "Thinking depth",
+  "開始辨識": "Start recognition",
+  "取消": "Cancel",
+  "載入辨識結果（JSON）": "Load result (JSON)",
+  "投影法依下方「圖面設定」。學號姓名只以雜湊送出；照片與補充說明會送到 AI 服務辨識（課程額度經課程伺服器轉送、不保存；自己的金鑰直接送到 Anthropic），拍照時請避開寫有姓名學號的地方。辨識完成後會自動建立 3D 模型並產生正式的三視圖。": "The projection method follows \"Drawing settings\" below. Your student ID and name are sent only as a hash. Photos and notes are sent to the AI service for recognition (with the course quota they pass through the course server and are not stored; with your own key they go directly to Anthropic), so keep your name and student ID out of the photos. When recognition is done, the tool builds a 3D model and generates proper three views automatically.",
+  "2 · 擺放方向（決定哪一面是前視）": "2 · Orientation (which side is the front view)",
+  "拖曳旋轉 · 滾輪縮放　橘＝前視　藍＝俯視　綠＝側視": "Drag to rotate · Scroll to zoom · Orange = front, blue = top, green = side",
+  "旋轉模型": "Rotate model",
+  "繞 X 90°": "90° about X",
+  "繞 Y 90°": "90° about Y",
+  "繞 Z 90°": "90° about Z",
+  "重設": "Reset",
+  "來源檔為 Z 軸朝上（CAD 匯出的 STL 常見）": "Source file is Z-up (common for STL from CAD)",
+  "檔案單位": "File units",
+  "稜線角度": "Edge angle",
+  "兩面夾角大於此值才畫成輪廓線；網格曲面若出現多餘的折線，請調大。": "An edge is drawn as a visible line only if the angle between its two faces is larger than this. If curved surfaces show extra crease lines, increase it.",
+  "3 · 圖面設定": "3 · Drawing settings",
+  "投影法": "Projection",
+  "第三角法": "Third-angle projection",
+  "第一角法": "First-angle projection",
+  "圖紙": "Sheet",
+  "A4 橫式（297×210）": "A4 landscape (297×210)",
+  "A3 橫式（420×297）": "A3 landscape (420×297)",
+  "A4 直式（210×297）": "A4 portrait (210×297)",
+  "比例": "Scale",
+  "隱藏線": "Hidden lines",
+  "中心線": "Center lines",
+  "總尺寸": "Overall dimensions",
+  "細部尺寸": "Detail dimensions",
+  "孔徑與孔位": "Hole sizes & positions",
+  "視圖名稱": "View names",
+  "細部尺寸採並聯（基準）尺寸；圓柱與凸台標直徑（Ø），孔以引線標 Ø。X 由左、Y 由下、Z 由前面量起。點圖面上的尺寸可隱藏，再點一下復原。": "Detail dimensions use parallel (baseline) dimensioning. Cylinders and bosses are dimensioned by diameter (Ø); holes get Ø on a leader. X is measured from the left, Y from the bottom, Z from the front. Click a dimension on the drawing to hide it; click again to bring it back.",
+  "顯示全部尺寸": "Show all dimensions",
+  "4 · 標題欄": "4 · Title block",
+  "標題欄|圖名": "Title",
+  "標題欄|單位": "Organization",
+  "標題欄|繪圖": "Drawn by",
+  "標題欄|學號": "Student ID",
+  "標題欄|日期": "Date",
+  "標題欄|圖號": "Drawing No.",
+  "圖面上的標題欄固定用中文（CNS），這裡只翻輸入欄的名稱。": "The title block on the drawing always stays in Chinese (CNS); only these field labels are translated.",
+  "5 · 匯出": "5 · Export",
+  "下載 SVG": "Download SVG",
+  "下載 DXF": "Download DXF",
+  "列印 / PDF": "Print / PDF",
+  "SVG／列印為 1:1 圖紙尺寸（mm）。DXF 為 R12 格式，依線型分圖層（OUTLINE、HIDDEN、CENTER、DIM…）。": "SVG and print are at 1:1 sheet size (mm). DXF is in R12 format, with one layer per line type (OUTLINE, HIDDEN, CENTER, DIM…).",
+  "本工具套用的圖學規範": "Drawing standards used by this tool",
+  "可見輪廓線：粗實線 0.6 mm": "Visible lines: thick continuous line, 0.6 mm",
+  "隱藏線：中虛線 0.35 mm，線段 3、間隔 1": "Hidden lines: medium dashed line, 0.35 mm; dash 3, gap 1",
+  "中心線：細鏈線 0.25 mm（長劃 12、間隔 1、短劃 1.5），超出輪廓 3 mm；圓孔於交點處以長劃相交": "Center lines: thin chain line, 0.25 mm (long dash 12, gap 1, short dash 1.5), extending 3 mm beyond the outline; at holes, the long dashes cross at the center",
+  "線條重疊時優先順序：輪廓線 > 隱藏線 > 中心線": "Priority where lines overlap: visible line > hidden line > center line",
+  "尺寸：細實線，尺寸線距輪廓 10 mm，延伸線留 1 mm 空隙、超出尺寸線 2 mm；箭頭長寬比 3:1 塗黑；數字高 3 mm，採對齊式（垂直尺寸由右側閱讀）": "Dimensions: thin continuous lines; dimension lines 10 mm from the outline; extension lines start 1 mm from the object and extend 2 mm past the dimension line; filled arrowheads, length to width 3:1; text 3 mm high, aligned system (vertical dimensions read from the right)",
+  "直徑：圓柱與凸台的 Ø 標在非圓視圖，孔的 Ø 以引線標在圓視圖；外形是圓柱（圓盤、軸）時外徑標 Ø、另一個方向不重複標": "Diameters: for cylinders and bosses, Ø goes in the view where they don't appear as circles; for holes, Ø goes on a leader in the circular view; if the whole part is cylindrical (disc, shaft), the outer diameter is marked Ø and not repeated in the other direction",
+  "視圖對齊：前視與俯視等寬、前視與側視等高、俯視與側視等深": "View alignment: front and top views share the width, front and side views share the height, top and side views share the depth",
+  "第三角法：俯視在前視上方、右側視在右方；第一角法：俯視在前視下方、左側視在右方": "Third-angle projection: top view above the front view, right side view on the right; first-angle projection: top view below the front view, left side view on the right",
+  "比例可選 10:1、5:1、2:1、1:1、1:2、1:3、1:4、1:5、1:10…，「自動」挑放得下的最大比例；尺寸一律標註實際大小": "Available scales: 10:1, 5:1, 2:1, 1:1, 1:2, 1:3, 1:4, 1:5, 1:10…; \"Auto\" picks the largest scale that fits; dimensions always show actual sizes",
+  "圖框距紙邊 10 mm，標題欄在右下角並附投影法符號": "Border 10 mm from the sheet edge; title block in the lower-right corner with the projection symbol",
+  "輪廓線": "Visible lines",
+  "對照原圖": "Compare with original",
+  "符合視窗": "Fit to window",
+  "計算視圖中…": "Calculating views…",
+  "關閉": "Close",
+  "補充說明（選填），例如：右下角是等角圖、孔是貫穿的": "Notes (optional), e.g. \"The isometric view is at the bottom right\", \"The holes go all the way through\"",
+  "例：L 型支架": "e.g. L-bracket",
+  "學校／系所": "School / Department",
+};
+return { EN };
+})();
+// ---- Teaching_Tools/3 side view generator/i18n/vi.js
+const I18N_VI = (() => {
+// 介面翻譯（VI）：中文原文 → 譯文。用詞照 翻譯用語對照表.md；新增介面文字時三份字典都要補（tests/i18n-check.mjs 會檢查）。
+const VI = {
+  "{view}的 Ø{d} 孔從看不到的那一面加工，只有虛線，孔徑與孔位標在隱藏線上（建議加剖視圖）": "{view}: lỗ Ø{d} được gia công từ phía bị khuất nên chỉ thấy nét đứt; đường kính và vị trí lỗ đang ghi trên nét khuất (nên thêm hình cắt)",
+  "前視圖": "Hình chiếu đứng",
+  "俯視圖": "Hình chiếu bằng",
+  "側視圖": "Hình chiếu cạnh",
+  "{axis} 方向有 {n} 個特徵（例如陣列孔），未自動標註細部尺寸": "Theo phương {axis} có {n} đặc trưng (ví dụ dãy lỗ), chưa tự động ghi kích thước từng phần",
+  "{axis} 方向 {list} 只出現在隱藏線（例如凹穴、槽的深度），未標註；建議加剖視圖": "Theo phương {axis}, các kích thước {list} chỉ có trên nét khuất (ví dụ độ sâu của hốc, rãnh) nên chưa được ghi; nên thêm hình cắt",
+  "列舉|、": ", ",
+  "{sc} 放不下（尺寸會超出圖框或壓到標題欄），放得下的最大比例是 {auto}": "Tỉ lệ {sc} không đủ chỗ (kích thước sẽ vượt ra ngoài khung bản vẽ hoặc đè lên khung tên); tỉ lệ lớn nhất vừa khổ giấy là {auto}",
+  "自動（目前 {sc}）": "Tự động (hiện là {sc})",
+  "自動（最大可容納比例）": "Tự động (tỉ lệ lớn nhất vừa khổ giấy)",
+  "已隱藏 {n} 個尺寸（淡色顯示、不會匯出）": "Đã ẩn {n} kích thước (hiện màu nhạt, không xuất ra)",
+  "句子分隔|；": "; ",
+  "點一下顯示這個尺寸": "Bấm để hiện kích thước này",
+  "點一下隱藏這個尺寸": "Bấm để ẩn kích thước này",
+  "匯入 3D 模型或點選左側範例": "Nhập mô hình 3D hoặc chọn mô hình mẫu bên trái",
+  "預覽|右": "C",
+  "預覽|左": "C",
+  "預覽|前": "Đ",
+  "預覽|俯": "B",
+  "STL 未記錄單位，預設 mm": "STL không ghi đơn vị, mặc định mm",
+  "依 OBJ 檔頭判定": "theo phần đầu tệp OBJ",
+  "OBJ 未記錄單位，預設 mm": "OBJ không ghi đơn vị, mặc định mm",
+  "無法讀取 .gltf（通常還需要另外的 .bin 檔），請改匯出成單一檔案的 .glb": "Không đọc được tệp .gltf (thường cần thêm một tệp .bin riêng); hãy xuất lại thành một tệp .glb duy nhất",
+  "glTF 規範單位為公尺": "glTF quy định đơn vị là mét",
+  "不支援的格式：.{ext}": "Không hỗ trợ định dạng .{ext}",
+  "載入失敗：{msg}": "Không tải được mô hình: {msg}",
+  "檔案中找不到三角網格。": "Không tìm thấy lưới tam giác trong tệp.",
+  "處理失敗：{msg}": "Xử lý thất bại: {msg}",
+  "檔案單位：{unit}": "Đơn vị tệp: {unit}",
+  "（{note}）": " ({note})",
+  "已自動接合 {n} 處面與面接縫不對齊的點": "Đã tự động nối {n} điểm tại những chỗ đường ghép giữa các mặt bị lệch",
+  "已移除 {n} 個重複／重疊的面": "Đã xóa {n} mặt bị trùng hoặc chồng lên nhau",
+  "{n} 個三角面": "{n} mặt tam giác",
+  "外形尺寸：寬 {w} × 高 {h} × 深 {d} mm": "Kích thước bao: rộng {w} × cao {h} × sâu {d} mm",
+  "偵測到 {n} 條圓形中心軸": "Phát hiện {n} trục tâm của các mặt tròn",
+  "有 {n} 條邊只連到一個面（3D 預覽中的紅線）：模型可能有破洞，或某些面沒有和其他面接合。三視圖仍可產生，但紅線附近可能多出或缺少線條。": "Có {n} cạnh chỉ nối với một mặt (đường màu đỏ trong bản xem trước 3D): mô hình có thể bị thủng, hoặc một số mặt không liền với các mặt khác. Vẫn tạo được ba hình chiếu, nhưng gần các đường đỏ có thể bị thừa hoặc thiếu nét.",
+  "三角面很多，計算會比較久；可先在 CAD 降低匯出精度。": "Mô hình có rất nhiều mặt tam giác nên sẽ tính lâu hơn; bạn có thể giảm độ chính xác khi xuất từ CAD.",
+  "產生視圖失敗：{msg}": "Không tạo được hình chiếu: {msg}",
+  "計算 {ms} ms": "Đã tính trong {ms} ms",
+  "手動設定": "đặt thủ công",
+  "思考深度|快": "Nhanh",
+  "思考深度|一般": "Vừa",
+  "思考深度|仔細": "Kỹ",
+  "右側視圖": "Hình chiếu cạnh phải",
+  "左側視圖": "Hình chiếu cạnh trái",
+  "仰視圖": "Hình chiếu từ dưới",
+  "後視圖": "Hình chiếu từ sau",
+  "等角圖": "Hình chiếu trục đo",
+  "視圖配置": "Bố trí hình chiếu",
+  "尺寸": "Kích thước",
+  "整體": "Tổng thể",
+  "「{name}」無法讀取，請改用 JPG 或 PNG（iPhone 可在「設定 → 相機 → 格式」選「最相容」）。": "Không đọc được “{name}”. Hãy dùng JPG hoặc PNG (trên iPhone: vào “Cài đặt → Camera → Định dạng”, chọn “Tương thích nhất”).",
+  "最多 4 張照片。": "Tối đa 4 ảnh.",
+  "移除": "Bỏ ảnh này",
+  "AI 正在寫結果…（{s} 秒）": "AI đang viết kết quả… ({s} giây)",
+  "AI 判讀中…（{s} 秒）": "AI đang phân tích ảnh… ({s} giây)",
+  "無法載入 Claude SDK（需要網路連線）。連上網路後再按一次；還是不行請重新整理頁面。": "Không tải được Claude SDK (cần kết nối mạng). Hãy kết nối mạng rồi bấm lại; nếu vẫn không được, hãy tải lại trang.",
+  "金鑰裡有不正確的字元（全形字、引號或看不見的空白），請重新複製貼上。": "Khóa có ký tự không hợp lệ (ký tự toàn chiều rộng, chữ có dấu, dấu ngoặc kép hoặc khoảng trắng ẩn); hãy sao chép và dán lại.",
+  "AI 拒絕處理這次的圖片。": "AI từ chối xử lý ảnh lần này.",
+  "AI 的回答太長被截斷了，請改用較少張照片、縮短補充說明再試。": "Câu trả lời của AI quá dài nên bị cắt; hãy thử lại với ít ảnh hơn và ghi chú ngắn hơn.",
+  "AI 回傳的格式無法解析，請再試一次。": "Không đọc được định dạng AI trả về, hãy thử lại.",
+  "已取消。": "Đã hủy.",
+  "Anthropic 說這把金鑰不正確或已經撤銷。請重新複製貼上，或到 Anthropic 後台建立新的金鑰。": "Anthropic báo khóa này không đúng hoặc đã bị thu hồi. Hãy sao chép và dán lại, hoặc tạo khóa mới trong Anthropic Console.",
+  "你的 Anthropic 帳戶額度不足或已達花費上限，請到後台儲值或調整上限。": "Tài khoản Anthropic của bạn không đủ số dư hoặc đã chạm giới hạn chi tiêu; hãy vào Console để nạp tiền hoặc điều chỉnh giới hạn.",
+  "Anthropic 拒絕了這個地區的連線，請換個網路（例如手機熱點）再試。": "Anthropic từ chối kết nối từ khu vực này; hãy đổi sang mạng khác (ví dụ phát Wi-Fi từ điện thoại) rồi thử lại.",
+  "這把金鑰沒有權限使用這個模型，請到 Anthropic 後台確認。": "Khóa này không có quyền dùng mô hình này, hãy kiểm tra trong Anthropic Console.",
+  "Anthropic 說請求太頻繁或超過你帳戶的速率上限，請稍後再試。": "Anthropic báo có quá nhiều yêu cầu hoặc đã vượt giới hạn tốc độ của tài khoản bạn; hãy thử lại sau.",
+  "這次的請求被 Anthropic 拒絕：{msg}": "Anthropic từ chối yêu cầu lần này: {msg}",
+  "連不上 Anthropic，請確認網路連線。": "Không kết nối được Anthropic, hãy kiểm tra kết nối mạng.",
+  "Anthropic 暫時忙碌，請稍後再試。": "Anthropic đang bận, hãy thử lại sau.",
+  "上傳中…": "Đang tải lên…",
+  "辨識完成（{s} 秒，用自己的金鑰）": "Nhận dạng xong ({s} giây, dùng khóa của bạn)",
+  "辨識完成（{s} 秒，用課程額度，剩 {n} 次）": "Nhận dạng xong ({s} giây, dùng hạn mức của lớp, còn {n} lượt)",
+  "已取消。AI 如果已經開始判讀，這一次仍會算進次數。": "Đã hủy. Nếu AI đã bắt đầu phân tích thì lần này vẫn bị tính một lượt.",
+  "照片裡找不到工件的三視圖。": "Không tìm thấy ba hình chiếu của chi tiết trong ảnh.",
+  "「{q}」的選項無法套用（AI 給的路徑或值格式不對），這一項維持原本的判讀": "Không áp dụng được lựa chọn cho “{q}” (đường dẫn hoặc giá trị AI đưa ra sai định dạng); mục này giữ nguyên kết quả đọc ban đầu của AI",
+  "辨識結果的格式不對：{msg}": "Kết quả nhận dạng sai định dạng: {msg}",
+  "建立 3D 模型…": "Đang dựng mô hình 3D…",
+  "幾何建立失敗：{msg}（右邊的圖面仍是上一個結果）": "Không dựng được hình học: {msg} (bản vẽ bên phải vẫn là kết quả trước đó)",
+  "幾何核心內部錯誤": "Lỗi bên trong lõi hình học",
+  "AI 辨識結果": "theo kết quả nhận dạng bằng AI",
+  "辨識結果": "Kết quả nhận dạng",
+  "料塊 {w}×{d}×{h} mm（寬×深×高）": "Phôi {w}×{d}×{h} mm (rộng × sâu × cao)",
+  "找到：{views}": "Tìm thấy: {views}",
+  "AI 不確定的地方": "Những chỗ AI chưa chắc chắn",
+  "你的手繪圖面可以改進的地方": "Những điểm có thể cải thiện trong bản vẽ tay của bạn",
+  "手繪圖面檢查": "Kiểm tra bản vẽ tay",
+  "AI 沒有發現明顯的問題。": "AI không phát hiện lỗi rõ ràng nào.",
+  "AI 的假設": "Giả định của AI",
+  "下載辨識結果（JSON）": "Tải về kết quả nhận dạng (JSON)",
+  "辨識結果是 AI 的判讀，請和自己的手繪對照確認；有疑問的地方可以在上面改選。": "Kết quả nhận dạng là cách AI hiểu bản vẽ; hãy đối chiếu với bản vẽ tay của bạn. Chỗ nào còn nghi ngờ, bạn có thể chọn lại ở phía trên.",
+  "{view}：{where}": "{view}: {where}",
+  "{what}應大於 0（讀到 {x}），暫用 100": "{what} phải lớn hơn 0 (đọc được {x}), tạm dùng 100",
+  "料塊寬": "Chiều rộng phôi",
+  "料塊高": "Chiều cao phôi",
+  "料塊深": "Chiều sâu phôi",
+  "料塊尺寸 {v} mm 太大，請確認單位": "Kích thước phôi {v} mm quá lớn, hãy kiểm tra đơn vị",
+  "步驟 {n}": "Bước {n}",
+  "{where}：格式不對，已略過": "{where}: sai định dạng, đã bỏ qua",
+  "{where}：第 {n} 個特徵格式不對，已略過": "{where}: đặc trưng thứ {n} sai định dạng, đã bỏ qua",
+  "{where}：矩形範圍是空的或讀不到，已略過這個矩形": "{where}: vùng chữ nhật trống hoặc không đọc được, đã bỏ qua hình chữ nhật này",
+  "特徵|孔": "lỗ",
+  "矩形切除": "cắt hốc chữ nhật",
+  "凸柱": "trụ lồi",
+  "輪廓切除": "cắt theo biên dạng",
+  "圓角": "bo tròn",
+  "倒角": "vát mép",
+  "{where}：{name}深度應大於 0（讀到 {v}），暫用 10": "{where}: độ sâu của {name} phải lớn hơn 0 (đọc được {v}), tạm dùng 10",
+  "{where}：不認得的面「{face}」，已略過": "{where}: không nhận ra mặt “{face}”, đã bỏ qua",
+  "{where}：孔徑應大於 0（讀到 {v}），暫用 Ø10": "{where}: đường kính lỗ phải lớn hơn 0 (đọc được {v}), tạm dùng Ø10",
+  "{where}：矩形切除沒有有效的範圍，已略過": "{where}: cắt hốc chữ nhật không có vùng cắt hợp lệ, đã bỏ qua",
+  "{where}：凸柱的第 {n} 個形狀讀不到，已略過": "{where}: không đọc được hình dạng thứ {n} của trụ lồi, đã bỏ qua",
+  "{where}：凸柱直徑應大於 0（讀到 {v}），暫用 Ø10": "{where}: đường kính trụ lồi phải lớn hơn 0 (đọc được {v}), tạm dùng Ø10",
+  "{where}：凸柱沒有指定形狀，已略過": "{where}: trụ lồi chưa có hình dạng, đã bỏ qua",
+  "{where}：輪廓裡有格式不對的線段，已略過這個輪廓切除": "{where}: biên dạng có đoạn sai định dạng, đã bỏ qua lần cắt theo biên dạng này",
+  "{where}：輪廓切除沒有輪廓，已略過": "{where}: cắt theo biên dạng nhưng không có biên dạng, đã bỏ qua",
+  "{where}：輪廓的座標讀不到或離料塊太遠，已略過": "{where}: không đọc được tọa độ biên dạng hoặc tọa độ nằm quá xa phôi, đã bỏ qua",
+  "{where}：輪廓第 {n} 段圓弧的起點和終點離圓心不一樣遠（R{a} 和 R{b}），請確認圓心": "{where}: cung tròn thứ {n} của biên dạng có điểm đầu và điểm cuối cách tâm không bằng nhau (R{a} và R{b}), hãy kiểm tra lại tâm",
+  "{where}：{name}沒有指定稜邊，已略過": "{where}: {name} chưa chọn cạnh, đã bỏ qua",
+  "{where}：圓角半徑應大於 0（讀到 {v}），暫用 5": "{where}: bán kính bo tròn phải lớn hơn 0 (đọc được {v}), tạm dùng 5",
+  "{where}：倒角應大於 0（讀到 {v}），暫用 5": "{where}: kích thước vát mép phải lớn hơn 0 (đọc được {v}), tạm dùng 5",
+  "{where}：{name} {size} 比稜邊「{edge}」旁的料塊（{lim} mm）還大，已略過這條稜邊": "{where}: {name} {size} lớn hơn phần phôi tại cạnh “{edge}” ({lim} mm), đã bỏ qua cạnh này",
+  "{where}：不認得的特徵「{type}」，已略過": "{where}: không nhận ra đặc trưng “{type}”, đã bỏ qua",
+  "無法載入幾何核心（需要網路連線）": "Không tải được lõi hình học (cần kết nối mạng)",
+  "未知的面：{face}": "Mặt không xác định: {face}",
+  "輪廓少於 3 個點": "Biên dạng có ít hơn 3 điểm",
+  "輪廓自己交叉或沒有面積": "Biên dạng tự cắt nhau hoặc không có diện tích",
+  "未知的特徵類型：{type}": "Loại đặc trưng không xác định: {type}",
+  "這個特徵的尺寸或位置不合理，已略過": "Kích thước hoặc vị trí của đặc trưng này không hợp lý, đã bỏ qua",
+  "步驟 {n}「{label}」：{msg}": "Bước {n} “{label}”: {msg}",
+  "幾何核心內部錯誤，這個特徵已略過": "Lỗi bên trong lõi hình học, đã bỏ qua đặc trưng này",
+  "步驟 {n}「{label}」沒有切到材料": "Bước {n} “{label}”: không cắt vào vật liệu",
+  "加工後沒有剩下材料": "Sau gia công không còn lại vật liệu",
+  "加工後分成 {n} 塊，請檢查切削範圍": "Sau gia công bị tách thành {n} khối, hãy kiểm tra vùng cắt",
+  "手繪原圖": "Bản vẽ tay gốc",
+  "重新建立失敗：{msg}": "Không dựng lại được: {msg}",
+  "無法讀取這個辨識結果：{msg}": "Không đọc được kết quả nhận dạng này: {msg}",
+  "三視圖產生器": "Trình tạo ba hình chiếu",
+  "目前在嵌入的框框裡，下載 SVG／DXF 與列印可能被瀏覽器擋下。": "Công cụ đang nằm trong khung nhúng; trình duyệt có thể chặn việc tải SVG/DXF và in.",
+  "在新分頁開啟 ↗": "Mở trong tab mới ↗",
+  "匯入 3D 模型 → 自動產生符合圖學規範的正投影視圖": "Nhập mô hình 3D → tự động tạo các hình chiếu vuông góc đúng quy chuẩn vẽ kỹ thuật",
+  "1 · 匯入模型": "1 · Nhập mô hình",
+  "拖曳檔案到這裡，或點擊選擇": "Kéo thả tệp vào đây, hoặc bấm để chọn",
+  "支援 STL / OBJ / GLB（單位預設 mm）": "Hỗ trợ STL / OBJ / GLB (đơn vị mặc định là mm)",
+  "範例模型": "Mô hình mẫu",
+  "L 型支架": "Giá đỡ chữ L",
+  "階梯軸": "Trục bậc",
+  "U 型槽塊": "Khối rãnh chữ U",
+  "尚未載入模型": "Chưa có mô hình nào",
+  "或 · 拍照辨識手繪三視圖（AI）": "Hoặc · Chụp ba hình chiếu vẽ tay để AI nhận dạng",
+  "直接用檔案開啟時只能「使用自己的 API 金鑰」；要用課程額度請開線上版。": "Khi mở trực tiếp từ tệp, chỉ dùng được “Dùng khóa API của bạn”; muốn dùng hạn mức của lớp, hãy mở bản trực tuyến.",
+  "選擇手繪三視圖的照片（最多 4 張）": "Chọn ảnh ba hình chiếu vẽ tay (tối đa 4 ảnh)",
+  "拍正、光線均勻；有畫等角圖也一起拍進來": "Chụp thẳng, ánh sáng đều; nếu có vẽ hình chiếu trục đo thì chụp cả vào",
+  "草圖單位": "Đơn vị bản phác",
+  "依圖上標示": "Theo bản vẽ",
+  "思考深度": "Mức suy nghĩ",
+  "開始辨識": "Bắt đầu nhận dạng",
+  "取消": "Hủy",
+  "載入辨識結果（JSON）": "Mở kết quả nhận dạng (JSON)",
+  "投影法依下方「圖面設定」。學號姓名只以雜湊送出；照片與補充說明會送到 AI 服務辨識（課程額度經課程伺服器轉送、不保存；自己的金鑰直接送到 Anthropic），拍照時請避開寫有姓名學號的地方。辨識完成後會自動建立 3D 模型並產生正式的三視圖。": "Phép chiếu theo mục “Thiết lập bản vẽ” bên dưới. Mã số sinh viên và họ tên chỉ được gửi dưới dạng mã băm; ảnh và ghi chú sẽ được gửi đến dịch vụ AI để nhận dạng (dùng hạn mức của lớp: chuyển qua máy chủ của lớp, không lưu lại; dùng khóa của bạn: gửi thẳng đến Anthropic). Khi chụp, hãy tránh phần có ghi họ tên và mã số sinh viên. Nhận dạng xong, công cụ sẽ tự dựng mô hình 3D và tạo ba hình chiếu chính thức.",
+  "2 · 擺放方向（決定哪一面是前視）": "2 · Hướng đặt (chọn mặt làm hình chiếu đứng)",
+  "拖曳旋轉 · 滾輪縮放　橘＝前視　藍＝俯視　綠＝側視": "Kéo để xoay · Cuộn để thu phóng · Cam (Đ) = hình chiếu đứng · Xanh dương (B) = bằng · Xanh lá (C) = cạnh",
+  "旋轉模型": "Xoay mô hình",
+  "繞 X 90°": "Quanh X 90°",
+  "繞 Y 90°": "Quanh Y 90°",
+  "繞 Z 90°": "Quanh Z 90°",
+  "重設": "Đặt lại",
+  "來源檔為 Z 軸朝上（CAD 匯出的 STL 常見）": "Tệp gốc có trục Z hướng lên (thường gặp ở STL xuất từ CAD)",
+  "檔案單位": "Đơn vị tệp",
+  "稜線角度": "Ngưỡng góc cạnh",
+  "兩面夾角大於此值才畫成輪廓線；網格曲面若出現多餘的折線，請調大。": "Chỉ vẽ thành nét cơ bản khi góc giữa hai mặt lớn hơn giá trị này; nếu mặt cong dạng lưới xuất hiện đường gãy khúc thừa, hãy tăng giá trị này.",
+  "3 · 圖面設定": "3 · Thiết lập bản vẽ",
+  "投影法": "Phép chiếu",
+  "第三角法": "Góc thứ ba",
+  "第一角法": "Góc thứ nhất",
+  "圖紙": "Khổ giấy",
+  "A4 橫式（297×210）": "A4 ngang (297×210)",
+  "A3 橫式（420×297）": "A3 ngang (420×297)",
+  "A4 直式（210×297）": "A4 dọc (210×297)",
+  "比例": "Tỉ lệ",
+  "隱藏線": "Nét khuất",
+  "中心線": "Đường tâm",
+  "總尺寸": "Kích thước bao",
+  "細部尺寸": "Kích thước từng phần",
+  "孔徑與孔位": "Ø và vị trí lỗ",
+  "視圖名稱": "Tên hình chiếu",
+  "細部尺寸採並聯（基準）尺寸；圓柱與凸台標直徑（Ø），孔以引線標 Ø。X 由左、Y 由下、Z 由前面量起。點圖面上的尺寸可隱藏，再點一下復原。": "Kích thước từng phần được ghi song song (theo chuẩn); trụ tròn và trụ lồi ghi đường kính (Ø), lỗ ghi Ø bằng đường dẫn. X đo từ trái, Y đo từ dưới, Z đo từ mặt trước. Bấm vào một kích thước trên bản vẽ để ẩn, bấm lần nữa để hiện lại.",
+  "顯示全部尺寸": "Hiện tất cả kích thước",
+  "4 · 標題欄": "4 · Khung tên",
+  "標題欄|圖名": "Tên bản vẽ",
+  "標題欄|單位": "Đơn vị",
+  "標題欄|繪圖": "Người vẽ",
+  "標題欄|學號": "Mã số SV",
+  "標題欄|日期": "Ngày",
+  "標題欄|圖號": "Số bản vẽ",
+  "圖面上的標題欄固定用中文（CNS），這裡只翻輸入欄的名稱。": "Khung tên trên bản vẽ luôn dùng tiếng Trung (theo CNS); ở đây chỉ dịch tên các ô nhập liệu.",
+  "5 · 匯出": "5 · Xuất",
+  "下載 SVG": "Tải SVG",
+  "下載 DXF": "Tải DXF",
+  "列印 / PDF": "In / PDF",
+  "SVG／列印為 1:1 圖紙尺寸（mm）。DXF 為 R12 格式，依線型分圖層（OUTLINE、HIDDEN、CENTER、DIM…）。": "SVG và bản in có kích thước đúng 1:1 theo khổ giấy (mm). DXF ở định dạng R12, chia lớp (layer) theo loại nét (OUTLINE, HIDDEN, CENTER, DIM…).",
+  "本工具套用的圖學規範": "Quy chuẩn vẽ kỹ thuật dùng trong công cụ này",
+  "可見輪廓線：粗實線 0.6 mm": "Nét cơ bản (đường bao thấy): nét liền đậm 0.6 mm",
+  "隱藏線：中虛線 0.35 mm，線段 3、間隔 1": "Nét khuất: nét đứt 0.35 mm, gạch dài 3, khoảng hở 1",
+  "中心線：細鏈線 0.25 mm（長劃 12、間隔 1、短劃 1.5），超出輪廓 3 mm；圓孔於交點處以長劃相交": "Đường tâm: nét gạch chấm mảnh 0.25 mm (gạch dài 12, khoảng hở 1, gạch ngắn 1.5), vượt quá đường bao 3 mm; ở lỗ tròn, các đường tâm cắt nhau tại nét gạch dài",
+  "線條重疊時優先順序：輪廓線 > 隱藏線 > 中心線": "Thứ tự ưu tiên khi các nét trùng nhau: nét cơ bản > nét khuất > đường tâm",
+  "尺寸：細實線，尺寸線距輪廓 10 mm，延伸線留 1 mm 空隙、超出尺寸線 2 mm；箭頭長寬比 3:1 塗黑；數字高 3 mm，採對齊式（垂直尺寸由右側閱讀）": "Kích thước: nét liền mảnh; đường kích thước cách đường bao 10 mm; đường gióng chừa khe hở 1 mm và vượt quá đường kích thước 2 mm; mũi tên tô đen, tỉ lệ dài:rộng 3:1; chữ số cao 3 mm, ghi dọc theo đường kích thước (kích thước thẳng đứng đọc từ bên phải)",
+  "直徑：圓柱與凸台的 Ø 標在非圓視圖，孔的 Ø 以引線標在圓視圖；外形是圓柱（圓盤、軸）時外徑標 Ø、另一個方向不重複標": "Đường kính: Ø của trụ tròn và trụ lồi ghi ở hình chiếu không thể hiện dạng tròn, Ø của lỗ ghi bằng đường dẫn ở hình chiếu thể hiện dạng tròn; nếu hình dạng ngoài là trụ tròn (đĩa, trục) thì ghi Ø cho đường kính ngoài và không ghi lặp theo phương còn lại",
+  "視圖對齊：前視與俯視等寬、前視與側視等高、俯視與側視等深": "Liên hệ giữa các hình chiếu: hình chiếu đứng và hình chiếu bằng cùng chiều rộng, hình chiếu đứng và hình chiếu cạnh cùng chiều cao, hình chiếu bằng và hình chiếu cạnh cùng chiều sâu",
+  "第三角法：俯視在前視上方、右側視在右方；第一角法：俯視在前視下方、左側視在右方": "Phép chiếu góc thứ ba: hình chiếu bằng đặt trên hình chiếu đứng, hình chiếu cạnh phải đặt bên phải; phép chiếu góc thứ nhất: hình chiếu bằng đặt dưới hình chiếu đứng, hình chiếu cạnh trái đặt bên phải",
+  "比例可選 10:1、5:1、2:1、1:1、1:2、1:3、1:4、1:5、1:10…，「自動」挑放得下的最大比例；尺寸一律標註實際大小": "Tỉ lệ có thể chọn: 10:1, 5:1, 2:1, 1:1, 1:2, 1:3, 1:4, 1:5, 1:10…; “Tự động” chọn tỉ lệ lớn nhất còn vừa khổ giấy; kích thước luôn ghi theo trị số thật",
+  "圖框距紙邊 10 mm，標題欄在右下角並附投影法符號": "Khung bản vẽ cách mép giấy 10 mm; khung tên đặt ở góc dưới bên phải, kèm ký hiệu phép chiếu",
+  "輪廓線": "Nét cơ bản",
+  "對照原圖": "Đối chiếu bản gốc",
+  "符合視窗": "Vừa cửa sổ",
+  "計算視圖中…": "Đang tính hình chiếu…",
+  "關閉": "Đóng",
+  "補充說明（選填），例如：右下角是等角圖、孔是貫穿的": "Ghi chú thêm (không bắt buộc), ví dụ: góc dưới bên phải là hình chiếu trục đo, các lỗ đều xuyên suốt",
+  "例：L 型支架": "VD: Giá đỡ chữ L",
+  "學校／系所": "Trường / Khoa",
+};
+return { VI };
+})();
+// ---- Teaching_Tools/3 side view generator/i18n/id.js
+const I18N_ID = (() => {
+// 介面翻譯（ID）：中文原文 → 譯文。用詞照 翻譯用語對照表.md；新增介面文字時三份字典都要補（tests/i18n-check.mjs 會檢查）。
+const ID = {
+  "{view}的 Ø{d} 孔從看不到的那一面加工，只有虛線，孔徑與孔位標在隱藏線上（建議加剖視圖）": "{view}: lubang Ø{d} dikerjakan dari sisi yang tidak terlihat sehingga hanya tampak garis putus-putus; diameter dan posisi lubang diberi ukuran pada garis tersembunyi (sebaiknya tambahkan gambar potongan)",
+  "前視圖": "Pandangan depan",
+  "俯視圖": "Pandangan atas",
+  "側視圖": "Pandangan samping",
+  "{axis} 方向有 {n} 個特徵（例如陣列孔），未自動標註細部尺寸": "Ada {n} fitur pada arah {axis} (misalnya pola lubang); ukuran detailnya tidak diberikan otomatis",
+  "{axis} 方向 {list} 只出現在隱藏線（例如凹穴、槽的深度），未標註；建議加剖視圖": "Nilai {list} pada arah {axis} hanya tampak di garis tersembunyi (misalnya kedalaman ceruk atau alur) sehingga tidak diberi ukuran; sebaiknya tambahkan gambar potongan",
+  "列舉|、": ", ",
+  "{sc} 放不下（尺寸會超出圖框或壓到標題欄），放得下的最大比例是 {auto}": "Skala {sc} tidak muat (ukuran akan keluar dari bingkai gambar atau menimpa kepala gambar); skala terbesar yang muat adalah {auto}",
+  "自動（目前 {sc}）": "Otomatis (saat ini {sc})",
+  "自動（最大可容納比例）": "Otomatis (skala terbesar yang muat)",
+  "已隱藏 {n} 個尺寸（淡色顯示、不會匯出）": "{n} ukuran disembunyikan (tampil pudar, tidak ikut diekspor)",
+  "句子分隔|；": "; ",
+  "點一下顯示這個尺寸": "Klik untuk menampilkan ukuran ini",
+  "點一下隱藏這個尺寸": "Klik untuk menyembunyikan ukuran ini",
+  "匯入 3D 模型或點選左側範例": "Impor model 3D atau klik contoh di sebelah kiri",
+  "預覽|右": "Kanan",
+  "預覽|左": "Kiri",
+  "預覽|前": "Depan",
+  "預覽|俯": "Atas",
+  "STL 未記錄單位，預設 mm": "STL tidak menyimpan satuan, dianggap mm",
+  "依 OBJ 檔頭判定": "dari header berkas OBJ",
+  "OBJ 未記錄單位，預設 mm": "OBJ tidak menyimpan satuan, dianggap mm",
+  "無法讀取 .gltf（通常還需要另外的 .bin 檔），請改匯出成單一檔案的 .glb": "Berkas .gltf tidak dapat dibaca (biasanya butuh berkas .bin terpisah); ekspor ulang sebagai satu berkas .glb",
+  "glTF 規範單位為公尺": "satuan baku glTF adalah meter",
+  "不支援的格式：.{ext}": "Format tidak didukung: .{ext}",
+  "載入失敗：{msg}": "Gagal memuat: {msg}",
+  "檔案中找不到三角網格。": "Tidak ada mesh segitiga di dalam berkas.",
+  "處理失敗：{msg}": "Gagal memproses: {msg}",
+  "檔案單位：{unit}": "Satuan berkas: {unit}",
+  "（{note}）": " ({note})",
+  "已自動接合 {n} 處面與面接縫不對齊的點": "{n} titik pada sambungan antarbidang yang tidak pas telah disatukan otomatis",
+  "已移除 {n} 個重複／重疊的面": "{n} bidang ganda/bertumpuk telah dihapus",
+  "{n} 個三角面": "{n} segitiga",
+  "外形尺寸：寬 {w} × 高 {h} × 深 {d} mm": "Ukuran luar: lebar {w} × tinggi {h} × kedalaman {d} mm",
+  "偵測到 {n} 條圓形中心軸": "Terdeteksi {n} sumbu lingkaran",
+  "有 {n} 條邊只連到一個面（3D 預覽中的紅線）：模型可能有破洞，或某些面沒有和其他面接合。三視圖仍可產生，但紅線附近可能多出或缺少線條。": "Ada {n} tepi yang hanya terhubung ke satu bidang (garis merah di pratinjau 3D): model mungkin bercelah, atau ada bidang yang tidak tersambung dengan bidang lain. Tiga pandangan tetap bisa dibuat, tetapi di sekitar garis merah mungkin ada garis yang berlebih atau hilang.",
+  "三角面很多，計算會比較久；可先在 CAD 降低匯出精度。": "Jumlah segitiganya sangat banyak, jadi perhitungan akan lebih lama; Anda bisa menurunkan presisi ekspor di CAD terlebih dahulu.",
+  "產生視圖失敗：{msg}": "Gagal membuat pandangan: {msg}",
+  "計算 {ms} ms": "Dihitung dalam {ms} ms",
+  "手動設定": "diatur manual",
+  "思考深度|快": "Cepat",
+  "思考深度|一般": "Normal",
+  "思考深度|仔細": "Teliti",
+  "右側視圖": "Pandangan samping kanan",
+  "左側視圖": "Pandangan samping kiri",
+  "仰視圖": "Pandangan bawah",
+  "後視圖": "Pandangan belakang",
+  "等角圖": "Gambar isometrik",
+  "視圖配置": "Tata letak pandangan",
+  "尺寸": "Ukuran",
+  "整體": "Keseluruhan",
+  "「{name}」無法讀取，請改用 JPG 或 PNG（iPhone 可在「設定 → 相機 → 格式」選「最相容」）。": "\"{name}\" tidak dapat dibaca. Gunakan JPG atau PNG (di iPhone: \"Pengaturan → Kamera → Format\", pilih \"Paling Kompatibel\").",
+  "最多 4 張照片。": "Maksimal 4 foto.",
+  "移除": "Hapus",
+  "AI 正在寫結果…（{s} 秒）": "AI sedang menulis hasil… ({s} detik)",
+  "AI 判讀中…（{s} 秒）": "AI sedang membaca gambar… ({s} detik)",
+  "無法載入 Claude SDK（需要網路連線）。連上網路後再按一次；還是不行請重新整理頁面。": "Tidak dapat memuat Claude SDK (perlu koneksi internet). Sambungkan ke internet lalu klik lagi; jika masih gagal, muat ulang halaman.",
+  "金鑰裡有不正確的字元（全形字、引號或看不見的空白），請重新複製貼上。": "Kunci berisi karakter yang tidak valid (karakter lebar penuh, tanda kutip, atau spasi tak terlihat). Salin dan tempel ulang.",
+  "AI 拒絕處理這次的圖片。": "AI menolak memproses foto ini.",
+  "AI 的回答太長被截斷了，請改用較少張照片、縮短補充說明再試。": "Jawaban AI terlalu panjang dan terpotong. Coba lagi dengan lebih sedikit foto dan keterangan tambahan yang lebih singkat.",
+  "AI 回傳的格式無法解析，請再試一次。": "Format balasan AI tidak dapat dibaca. Silakan coba lagi.",
+  "已取消。": "Dibatalkan.",
+  "Anthropic 說這把金鑰不正確或已經撤銷。請重新複製貼上，或到 Anthropic 後台建立新的金鑰。": "Menurut Anthropic, kunci ini salah atau sudah dicabut. Salin dan tempel ulang, atau buat kunci baru di Anthropic Console.",
+  "你的 Anthropic 帳戶額度不足或已達花費上限，請到後台儲值或調整上限。": "Saldo akun Anthropic Anda tidak cukup atau batas pengeluaran sudah tercapai. Isi saldo atau ubah batasnya di Console.",
+  "Anthropic 拒絕了這個地區的連線，請換個網路（例如手機熱點）再試。": "Anthropic menolak koneksi dari wilayah ini. Coba lagi dengan jaringan lain (misalnya hotspot ponsel).",
+  "這把金鑰沒有權限使用這個模型，請到 Anthropic 後台確認。": "Kunci ini tidak memiliki izin untuk model ini. Periksa di Anthropic Console.",
+  "Anthropic 說請求太頻繁或超過你帳戶的速率上限，請稍後再試。": "Menurut Anthropic, permintaan terlalu sering atau melebihi batas laju akun Anda. Coba lagi nanti.",
+  "這次的請求被 Anthropic 拒絕：{msg}": "Permintaan ini ditolak Anthropic: {msg}",
+  "連不上 Anthropic，請確認網路連線。": "Tidak dapat terhubung ke Anthropic. Periksa koneksi internet.",
+  "Anthropic 暫時忙碌，請稍後再試。": "Anthropic sedang sibuk. Coba lagi nanti.",
+  "上傳中…": "Mengunggah…",
+  "辨識完成（{s} 秒，用自己的金鑰）": "Pengenalan selesai ({s} detik, kunci sendiri)",
+  "辨識完成（{s} 秒，用課程額度，剩 {n} 次）": "Pengenalan selesai ({s} detik, kuota kelas, sisa {n} kali)",
+  "已取消。AI 如果已經開始判讀，這一次仍會算進次數。": "Dibatalkan. Jika AI sudah mulai membaca gambar, permintaan ini tetap dihitung satu kali.",
+  "照片裡找不到工件的三視圖。": "Tidak ditemukan tiga pandangan komponen di foto.",
+  "「{q}」的選項無法套用（AI 給的路徑或值格式不對），這一項維持原本的判讀": "Pilihan untuk \"{q}\" tidak dapat diterapkan (format jalur atau nilai dari AI salah); butir ini tetap memakai hasil pembacaan semula",
+  "辨識結果的格式不對：{msg}": "Format hasil pengenalan salah: {msg}",
+  "建立 3D 模型…": "Membuat model 3D…",
+  "幾何建立失敗：{msg}（右邊的圖面仍是上一個結果）": "Gagal membuat geometri: {msg} (gambar di kanan masih hasil sebelumnya)",
+  "幾何核心內部錯誤": "Kesalahan internal inti geometri",
+  "AI 辨識結果": "hasil pengenalan AI",
+  "辨識結果": "Hasil pengenalan",
+  "料塊 {w}×{d}×{h} mm（寬×深×高）": "Bahan awal {w}×{d}×{h} mm (lebar × kedalaman × tinggi)",
+  "找到：{views}": "Ditemukan: {views}",
+  "AI 不確定的地方": "Bagian yang diragukan AI",
+  "你的手繪圖面可以改進的地方": "Yang bisa diperbaiki pada gambar tangan Anda",
+  "手繪圖面檢查": "Pemeriksaan gambar tangan",
+  "AI 沒有發現明顯的問題。": "AI tidak menemukan masalah yang jelas.",
+  "AI 的假設": "Asumsi AI",
+  "下載辨識結果（JSON）": "Unduh hasil pengenalan (JSON)",
+  "辨識結果是 AI 的判讀，請和自己的手繪對照確認；有疑問的地方可以在上面改選。": "Hasil pengenalan adalah tafsiran AI. Bandingkan dengan gambar tangan Anda; bagian yang meragukan bisa diubah pilihannya di atas.",
+  "{view}：{where}": "{view}: {where}",
+  "{what}應大於 0（讀到 {x}），暫用 100": "{what} harus lebih dari 0 (terbaca {x}), untuk sementara dipakai 100",
+  "料塊寬": "Lebar bahan awal",
+  "料塊高": "Tinggi bahan awal",
+  "料塊深": "Kedalaman bahan awal",
+  "料塊尺寸 {v} mm 太大，請確認單位": "Ukuran bahan awal {v} mm terlalu besar, periksa satuannya",
+  "步驟 {n}": "Langkah {n}",
+  "{where}：格式不對，已略過": "{where}: format salah, dilewati",
+  "{where}：第 {n} 個特徵格式不對，已略過": "{where}: format fitur ke-{n} salah, dilewati",
+  "{where}：矩形範圍是空的或讀不到，已略過這個矩形": "{where}: area persegi kosong atau tidak terbaca, persegi ini dilewati",
+  "特徵|孔": "Lubang",
+  "矩形切除": "Potongan persegi",
+  "凸柱": "Tonjolan",
+  "輪廓切除": "Potongan profil",
+  "圓角": "Fillet",
+  "倒角": "Chamfer",
+  "{where}：{name}深度應大於 0（讀到 {v}），暫用 10": "{where} ({name}): kedalaman harus lebih dari 0 (terbaca {v}), untuk sementara dipakai 10",
+  "{where}：不認得的面「{face}」，已略過": "{where}: sisi \"{face}\" tidak dikenal, dilewati",
+  "{where}：孔徑應大於 0（讀到 {v}），暫用 Ø10": "{where}: diameter lubang harus lebih dari 0 (terbaca {v}), untuk sementara dipakai Ø10",
+  "{where}：矩形切除沒有有效的範圍，已略過": "{where}: potongan persegi tidak memiliki area yang valid, dilewati",
+  "{where}：凸柱的第 {n} 個形狀讀不到，已略過": "{where}: bentuk tonjolan ke-{n} tidak terbaca, dilewati",
+  "{where}：凸柱直徑應大於 0（讀到 {v}），暫用 Ø10": "{where}: diameter tonjolan harus lebih dari 0 (terbaca {v}), untuk sementara dipakai Ø10",
+  "{where}：凸柱沒有指定形狀，已略過": "{where}: bentuk tonjolan tidak ditentukan, dilewati",
+  "{where}：輪廓裡有格式不對的線段，已略過這個輪廓切除": "{where}: profil berisi segmen garis dengan format salah, potongan profil ini dilewati",
+  "{where}：輪廓切除沒有輪廓，已略過": "{where}: potongan profil tidak memiliki profil, dilewati",
+  "{where}：輪廓的座標讀不到或離料塊太遠，已略過": "{where}: koordinat profil tidak terbaca atau terlalu jauh dari bahan awal, dilewati",
+  "{where}：輪廓第 {n} 段圓弧的起點和終點離圓心不一樣遠（R{a} 和 R{b}），請確認圓心": "{where}: titik awal dan titik akhir busur ke-{n} pada profil tidak berjarak sama dari titik pusat (R{a} dan R{b}), periksa titik pusatnya",
+  "{where}：{name}沒有指定稜邊，已略過": "{where} ({name}): rusuk tidak ditentukan, dilewati",
+  "{where}：圓角半徑應大於 0（讀到 {v}），暫用 5": "{where}: radius fillet harus lebih dari 0 (terbaca {v}), untuk sementara dipakai 5",
+  "{where}：倒角應大於 0（讀到 {v}），暫用 5": "{where}: ukuran chamfer harus lebih dari 0 (terbaca {v}), untuk sementara dipakai 5",
+  "{where}：{name} {size} 比稜邊「{edge}」旁的料塊（{lim} mm）還大，已略過這條稜邊": "{where}: {name} {size} lebih besar daripada bahan awal di samping rusuk \"{edge}\" ({lim} mm), rusuk ini dilewati",
+  "{where}：不認得的特徵「{type}」，已略過": "{where}: fitur \"{type}\" tidak dikenal, dilewati",
+  "無法載入幾何核心（需要網路連線）": "Tidak dapat memuat inti geometri (perlu koneksi internet)",
+  "未知的面：{face}": "Sisi tidak dikenal: {face}",
+  "輪廓少於 3 個點": "Profil kurang dari 3 titik",
+  "輪廓自己交叉或沒有面積": "Profil berpotongan dengan dirinya sendiri atau tidak memiliki luas",
+  "未知的特徵類型：{type}": "Jenis fitur tidak dikenal: {type}",
+  "這個特徵的尺寸或位置不合理，已略過": "Ukuran atau posisi fitur ini tidak masuk akal, dilewati",
+  "步驟 {n}「{label}」：{msg}": "Langkah {n} \"{label}\": {msg}",
+  "幾何核心內部錯誤，這個特徵已略過": "Kesalahan internal inti geometri, fitur ini dilewati",
+  "步驟 {n}「{label}」沒有切到材料": "Langkah {n} \"{label}\" tidak memotong material",
+  "加工後沒有剩下材料": "Tidak ada material tersisa setelah pemesinan",
+  "加工後分成 {n} 塊，請檢查切削範圍": "Komponen terpecah menjadi {n} bagian setelah pemesinan, periksa area pemotongan",
+  "手繪原圖": "Gambar tangan asli",
+  "重新建立失敗：{msg}": "Gagal membuat ulang: {msg}",
+  "無法讀取這個辨識結果：{msg}": "Hasil pengenalan ini tidak dapat dibaca: {msg}",
+  "三視圖產生器": "Studio Tiga Pandangan",
+  "目前在嵌入的框框裡，下載 SVG／DXF 與列印可能被瀏覽器擋下。": "Alat ini sedang tersemat di halaman lain; unduhan SVG/DXF dan pencetakan mungkin diblokir browser.",
+  "在新分頁開啟 ↗": "Buka di tab baru ↗",
+  "匯入 3D 模型 → 自動產生符合圖學規範的正投影視圖": "Impor model 3D → otomatis membuat pandangan proyeksi ortogonal sesuai standar gambar teknik",
+  "1 · 匯入模型": "1 · Impor model",
+  "拖曳檔案到這裡，或點擊選擇": "Seret berkas ke sini, atau klik untuk memilih",
+  "支援 STL / OBJ / GLB（單位預設 mm）": "Mendukung STL / OBJ / GLB (satuan bawaan mm)",
+  "範例模型": "Model contoh",
+  "L 型支架": "Braket L",
+  "階梯軸": "Poros bertingkat",
+  "U 型槽塊": "Blok alur U",
+  "尚未載入模型": "Belum ada model yang dimuat",
+  "或 · 拍照辨識手繪三視圖（AI）": "Atau · Kenali foto tiga pandangan gambar tangan (AI)",
+  "直接用檔案開啟時只能「使用自己的 API 金鑰」；要用課程額度請開線上版。": "Jika alat dibuka langsung dari berkas, hanya \"Gunakan kunci API sendiri\" yang bisa dipakai; untuk memakai kuota kelas, buka versi online.",
+  "選擇手繪三視圖的照片（最多 4 張）": "Pilih foto tiga pandangan gambar tangan (maks. 4)",
+  "拍正、光線均勻；有畫等角圖也一起拍進來": "Foto lurus dari atas dengan cahaya merata; jika ada gambar isometrik, ikut difoto",
+  "草圖單位": "Satuan sketsa",
+  "依圖上標示": "Sesuai sketsa",
+  "思考深度": "Penalaran",
+  "開始辨識": "Mulai pengenalan",
+  "取消": "Batal",
+  "載入辨識結果（JSON）": "Muat hasil pengenalan (JSON)",
+  "投影法依下方「圖面設定」。學號姓名只以雜湊送出；照片與補充說明會送到 AI 服務辨識（課程額度經課程伺服器轉送、不保存；自己的金鑰直接送到 Anthropic），拍照時請避開寫有姓名學號的地方。辨識完成後會自動建立 3D 模型並產生正式的三視圖。": "Metode proyeksi mengikuti \"Pengaturan gambar\" di bawah. NIM dan nama hanya dikirim sebagai hash; foto dan keterangan tambahan dikirim ke layanan AI untuk dikenali (kuota kelas: diteruskan lewat server kelas dan tidak disimpan; kunci sendiri: langsung dikirim ke Anthropic). Saat memotret, hindari bagian yang memuat nama dan NIM Anda. Setelah pengenalan selesai, model 3D dibuat otomatis lalu tiga pandangan resminya dihasilkan.",
+  "2 · 擺放方向（決定哪一面是前視）": "2 · Orientasi (tentukan sisi mana yang menjadi pandangan depan)",
+  "拖曳旋轉 · 滾輪縮放　橘＝前視　藍＝俯視　綠＝側視": "Seret: putar · Gulir: zoom · Oranye = depan · Biru = atas · Hijau = samping",
+  "旋轉模型": "Putar model",
+  "繞 X 90°": "Sumbu X 90°",
+  "繞 Y 90°": "Sumbu Y 90°",
+  "繞 Z 90°": "Sumbu Z 90°",
+  "重設": "Reset",
+  "來源檔為 Z 軸朝上（CAD 匯出的 STL 常見）": "Sumbu Z berkas sumber mengarah ke atas (umum pada STL dari CAD)",
+  "檔案單位": "Satuan berkas",
+  "稜線角度": "Sudut rusuk",
+  "兩面夾角大於此值才畫成輪廓線；網格曲面若出現多餘的折線，請調大。": "Rusuk digambar sebagai garis tepi hanya jika sudut antara dua bidang lebih besar dari nilai ini; jika permukaan lengkung mesh memunculkan garis lipatan berlebih, perbesar nilainya.",
+  "3 · 圖面設定": "3 · Pengaturan gambar",
+  "投影法": "Metode proyeksi",
+  "第三角法": "Proyeksi sudut ketiga",
+  "第一角法": "Proyeksi sudut pertama",
+  "圖紙": "Kertas",
+  "A4 橫式（297×210）": "A4 mendatar (297×210)",
+  "A3 橫式（420×297）": "A3 mendatar (420×297)",
+  "A4 直式（210×297）": "A4 tegak (210×297)",
+  "比例": "Skala",
+  "隱藏線": "Garis tersembunyi",
+  "中心線": "Garis sumbu",
+  "總尺寸": "Ukuran total",
+  "細部尺寸": "Ukuran detail",
+  "孔徑與孔位": "Diameter & posisi lubang",
+  "視圖名稱": "Nama pandangan",
+  "細部尺寸採並聯（基準）尺寸；圓柱與凸台標直徑（Ø），孔以引線標 Ø。X 由左、Y 由下、Z 由前面量起。點圖面上的尺寸可隱藏，再點一下復原。": "Ukuran detail memakai pemberian ukuran sejajar (dari bidang acuan); silinder dan tonjolan diberi ukuran diameter (Ø), lubang diberi Ø dengan garis penunjuk. X diukur dari kiri, Y dari bawah, Z dari depan. Klik ukuran pada gambar untuk menyembunyikannya, klik lagi untuk menampilkannya kembali.",
+  "顯示全部尺寸": "Tampilkan semua ukuran",
+  "4 · 標題欄": "4 · Kepala gambar",
+  "標題欄|圖名": "Judul gambar",
+  "標題欄|單位": "Instansi",
+  "標題欄|繪圖": "Digambar",
+  "標題欄|學號": "NIM",
+  "標題欄|日期": "Tanggal",
+  "標題欄|圖號": "No. gambar",
+  "圖面上的標題欄固定用中文（CNS），這裡只翻輸入欄的名稱。": "Kepala gambar pada lembar gambar tetap berbahasa Mandarin (CNS); yang diterjemahkan di sini hanya nama kolom isian.",
+  "5 · 匯出": "5 · Ekspor",
+  "下載 SVG": "Unduh SVG",
+  "下載 DXF": "Unduh DXF",
+  "列印 / PDF": "Cetak / PDF",
+  "SVG／列印為 1:1 圖紙尺寸（mm）。DXF 為 R12 格式，依線型分圖層（OUTLINE、HIDDEN、CENTER、DIM…）。": "SVG dan hasil cetak berukuran kertas asli 1:1 (mm). DXF berformat R12, dengan layer terpisah per jenis garis (OUTLINE, HIDDEN, CENTER, DIM…).",
+  "本工具套用的圖學規範": "Standar gambar teknik yang dipakai alat ini",
+  "可見輪廓線：粗實線 0.6 mm": "Garis tepi tampak: garis kontinu tebal 0.6 mm",
+  "隱藏線：中虛線 0.35 mm，線段 3、間隔 1": "Garis tersembunyi: garis putus-putus sedang 0.35 mm, panjang strip 3, jarak 1",
+  "中心線：細鏈線 0.25 mm（長劃 12、間隔 1、短劃 1.5），超出輪廓 3 mm；圓孔於交點處以長劃相交": "Garis sumbu: garis strip-titik tipis 0.25 mm (strip panjang 12, jarak 1, strip pendek 1.5), melewati garis tepi 3 mm; pada lubang, garis sumbu berpotongan di bagian strip panjang",
+  "線條重疊時優先順序：輪廓線 > 隱藏線 > 中心線": "Prioritas saat garis bertumpuk: garis tepi > garis tersembunyi > garis sumbu",
+  "尺寸：細實線，尺寸線距輪廓 10 mm，延伸線留 1 mm 空隙、超出尺寸線 2 mm；箭頭長寬比 3:1 塗黑；數字高 3 mm，採對齊式（垂直尺寸由右側閱讀）": "Ukuran: garis kontinu tipis; garis ukur berjarak 10 mm dari garis tepi; garis bantu diberi celah 1 mm dan melewati garis ukur 2 mm; mata panah 3:1 (panjang:lebar), dihitamkan; tinggi angka 3 mm, ditulis sejajar garis ukur (ukuran vertikal dibaca dari kanan)",
+  "直徑：圓柱與凸台的 Ø 標在非圓視圖，孔的 Ø 以引線標在圓視圖；外形是圓柱（圓盤、軸）時外徑標 Ø、另一個方向不重複標": "Diameter: Ø silinder dan tonjolan ditulis pada pandangan yang tidak berbentuk lingkaran; Ø lubang ditulis dengan garis penunjuk pada pandangan yang berbentuk lingkaran; jika bentuk luarnya silinder (piringan, poros), diameter luar diberi Ø dan tidak diulang pada arah lain",
+  "視圖對齊：前視與俯視等寬、前視與側視等高、俯視與側視等深": "Kesejajaran pandangan: pandangan depan dan atas sama lebar, pandangan depan dan samping sama tinggi, pandangan atas dan samping sama kedalamannya",
+  "第三角法：俯視在前視上方、右側視在右方；第一角法：俯視在前視下方、左側視在右方": "Proyeksi sudut ketiga: pandangan atas di atas pandangan depan, pandangan samping kanan di sebelah kanan; proyeksi sudut pertama: pandangan atas di bawah pandangan depan, pandangan samping kiri di sebelah kanan",
+  "比例可選 10:1、5:1、2:1、1:1、1:2、1:3、1:4、1:5、1:10…，「自動」挑放得下的最大比例；尺寸一律標註實際大小": "Pilihan skala: 10:1, 5:1, 2:1, 1:1, 1:2, 1:3, 1:4, 1:5, 1:10…; \"Otomatis\" memilih skala terbesar yang muat; angka ukuran selalu menunjukkan ukuran sebenarnya",
+  "圖框距紙邊 10 mm，標題欄在右下角並附投影法符號": "Bingkai gambar berjarak 10 mm dari tepi kertas; kepala gambar di kanan bawah, dilengkapi simbol proyeksi",
+  "輪廓線": "Garis tepi",
+  "對照原圖": "Bandingkan dengan asli",
+  "符合視窗": "Paskan ke layar",
+  "計算視圖中…": "Menghitung pandangan…",
+  "關閉": "Tutup",
+  "補充說明（選填），例如：右下角是等角圖、孔是貫穿的": "Keterangan tambahan (opsional), misalnya: kanan bawah adalah gambar isometrik, lubangnya tembus",
+  "例：L 型支架": "Contoh: Braket L",
+  "學校／系所": "Universitas / jurusan",
+};
+return { ID };
+})();
+// ---- Teaching_Tools/3 side view generator/i18n/i18n.js
+const I18N = (() => {
+// 介面語言：繁體中文（原文）、English、Tiếng Việt、Bahasa Indonesia
+// 沿用組合單元工作室的 js/i18n/i18n.js（2026-10-13），改成三視圖用的儲存鍵；由 tests/sync-ai.mjs 嵌進 index.html。
+//
+// 用法（像 gettext：中文原文就是 key，找不到翻譯時顯示中文）
+//   t('開始辨識')                                 一般文字
+//   t('已隱藏 {n} 個尺寸', { n })                 有變數：用 {名稱}，不要用 ${}
+//   t('面|上')                                    同一個字在不同地方意思不同：前面加「情境|」，中文顯示 | 後面的字
+//   N('孔')                                       放在載入時就建立的表格裡：只做標記、不翻譯，用的地方再寫 t(表格[k])
+// 只翻介面：圖面上的字（標題欄、視圖名稱、尺寸、孔的標註）維持中文，不要用 t()。
+const { EN } = I18N_EN;
+const { VI } = I18N_VI;
+const { ID } = I18N_ID;
+
+const LANGS = [['zh-TW', '繁體中文'], ['en', 'English'], ['vi', 'Tiếng Việt'], ['id', 'Bahasa Indonesia']];
+const LANG_KEY = 'three-view-studio:lang';
+const DICTS = { en: EN, vi: VI, id: ID };
+let lang = 'zh-TW';
+
+const getLang = () => lang;
+function setLang(l) {
+  lang = LANGS.some(x => x[0] === l) ? l : 'zh-TW';
+  if (typeof document !== 'undefined') document.documentElement.lang = lang === 'zh-TW' ? 'zh-Hant' : lang;
+  return lang;
+}
+// 第一次打開：跟著瀏覽器的語言（中文 → 繁中，越南文、印尼文、英文各自；其他語言 → 英文）
+function detectLang(saved) {
+  if (saved && LANGS.some(x => x[0] === saved)) return saved;
+  const list = typeof navigator !== 'undefined' ? [...(navigator.languages || []), navigator.language || ''] : [];
+  for (const raw of list) {
+    const l = String(raw).toLowerCase();
+    if (l.startsWith('zh')) return 'zh-TW';
+    if (l.startsWith('vi')) return 'vi';
+    if (l.startsWith('id') || l.startsWith('in')) return 'id';
+    if (l.startsWith('en')) return 'en';
+  }
+  return list.length ? 'en' : 'zh-TW';
+}
+
+const strip = s => { const i = s.indexOf('|'); return i >= 0 ? s.slice(i + 1) : s; };
+function t(s, vars) {
+  const d = DICTS[lang];
+  let out = (d && d[s]) || strip(s);
+  if (vars) out = out.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
+  return out;
+}
+const N = s => s;
+
+// index.html 裡固定的字：data-i18n（內文）、data-i18n-title、data-i18n-placeholder、data-i18n-aria-label；原文記在 data-i18n-src
+function applyStatic(root = typeof document !== 'undefined' ? document : null) {
+  if (!root) return;
+  for (const el of root.querySelectorAll('[data-i18n]')) {
+    if (!el.dataset.i18nSrc) el.dataset.i18nSrc = el.textContent.trim();
+    el.textContent = t(el.dataset.i18nSrc);
+  }
+  for (const [attr, key] of [['title', 'i18nTitle'], ['placeholder', 'i18nPlaceholder'], ['aria-label', 'i18nAriaLabel']]) {
+    for (const el of root.querySelectorAll(`[data-i18n-${attr}]`)) {
+      const src = el.dataset[key] || el.getAttribute(attr) || '';
+      el.dataset[key] = src;
+      el.setAttribute(attr, t(src));
+    }
+  }
+}
+return { LANGS, LANG_KEY, getLang, setLang, detectLang, t, N, applyStatic };
+})();
+/* ==== END 介面語言 ==== */
+const { t, N, LANGS, LANG_KEY, getLang, setLang, detectLang, applyStatic } = I18N;
+try { setLang(detectLang(localStorage.getItem(LANG_KEY))); } catch { setLang(detectLang(null)); }
 
 // ====================================================================
 // 圖學規範常數（單位：圖紙 mm）
@@ -364,7 +1120,7 @@ const BASES = {
     return { u: [1 / s2, 0, -1 / s2], v: [-1 / s6, 2 / s6, -1 / s6], d: [1 / s3, 1 / s3, 1 / s3] };
   })(),
 };
-const VIEW_NAMES = { front: '前視圖', top: '俯視圖', right: '右側視圖', left: '左側視圖' };
+const VIEW_NAMES = { front: '前視圖', top: '俯視圖', right: '右側視圖', left: '左側視圖' };   // 圖面上的視圖名稱：維持中文 i18n-skip
 
 // ====================================================================
 // 狀態
@@ -1179,7 +1935,7 @@ function planDims(views, proj, excludeHidden) {
       flush();
     }
     if (state.showHoles) for (const h of v.holes) {
-      const hn = `${v.name === 'front' ? '前' : v.name === 'top' ? '俯' : '側'}視圖的 Ø${Math.round(h.r * 20) / 10} 孔從看不到的那一面加工，只有虛線，孔徑與孔位標在隱藏線上（建議加剖視圖）`;
+      const hn = t('{view}的 Ø{d} 孔從看不到的那一面加工，只有虛線，孔徑與孔位標在隱藏線上（建議加剖視圖）', { view: t({ front: N('前視圖'), top: N('俯視圖') }[v.name] || N('側視圖')), d: Math.round(h.r * 20) / 10 });
       if (h.hidden && !notes.includes(hn)) notes.push(hn);
       if (h.outer) continue;   // 在外形圓柱的軸上（例：圓盤中心孔）：位置由外徑決定，不另標
       add('x', h.x, h.y - h.r, h.y + h.r, true);
@@ -1217,7 +1973,7 @@ function planDims(views, proj, excludeHidden) {
     for (const f of list) { const g = groups[groups.length - 1]; if (g && Math.abs(f.m - g[0].m) < tolC) g.push(f); else groups.push([f]); }
     const inner_ = groups.filter(g => g[0].m > tolC && g[0].m < mx - tolC);   // 去掉基準邊與另一端（總尺寸）
     if (inner_.length > STD.maxRowsPerAxis) {
-      notes.push(`${axis} 方向有 ${inner_.length} 個特徵（例如陣列孔），未自動標註細部尺寸`);
+      notes.push(t('{axis} 方向有 {n} 個特徵（例如陣列孔），未自動標註細部尺寸', { axis, n: inner_.length }));
     } else for (const g of inner_) {
       const hasCenter = g.some(f => f.center);
       let best = null;
@@ -1291,7 +2047,8 @@ function planDims(views, proj, excludeHidden) {
         if (![...hiddenOnly[ax].keys()].some(q => Math.abs(q - m) < tolC * 4)) hiddenOnly[ax].set(m, val);
       }
     }
-    for (const ax of ['X', 'Y', 'Z']) if (hiddenOnly[ax].size) notes.push(`${ax} 方向 ${[...hiddenOnly[ax].values()].map(x => Math.round(x * 10) / 10).sort((p, q) => p - q).slice(0, 6).join('、')}${hiddenOnly[ax].size > 6 ? '…' : ''} 只出現在隱藏線（例如凹穴、槽的深度），未標註；建議加剖視圖`);
+    for (const ax of ['X', 'Y', 'Z']) if (hiddenOnly[ax].size) notes.push(t('{axis} 方向 {list} 只出現在隱藏線（例如凹穴、槽的深度），未標註；建議加剖視圖', { axis: ax,
+      list: [...hiddenOnly[ax].values()].map(x => Math.round(x * 10) / 10).sort((p, q) => p - q).slice(0, 6).join(t('列舉|、')) + (hiddenOnly[ax].size > 6 ? '…' : '') }));
   }
   // 3. 依（視圖, 邊）分組：近的在內、總尺寸在最外
   const slots = {}, margins = { front: {}, top: {}, side: {} };
@@ -1374,7 +2131,7 @@ function buildDrawing(mode) {
       lastScale = sc;
       state.autoScale = autoSc;
       const fitsManual = state.scale === 'auto' || sc[0] / sc[1] <= autoSc[0] / autoSc[1] + 1e-9;
-      if (!fitsManual) notes.push(`${sc[0]}:${sc[1]} 放不下（尺寸會超出圖框或壓到標題欄），放得下的最大比例是 ${autoSc[0]}:${autoSc[1]}`);
+      if (!fitsManual) notes.push(t('{sc} 放不下（尺寸會超出圖框或壓到標題欄），放得下的最大比例是 {auto}', { sc: sc[0] + ':' + sc[1], auto: autoSc[0] + ':' + autoSc[1] }));
     }
     const s = sc[0] / sc[1];
     scaleLabel = sc[0] + ':' + sc[1];
@@ -1406,9 +2163,9 @@ function draw() {
   lastDrawing = buildDrawing('screen');
   // 比例選單：「自動」顯示目前實際用的比例
   const autoOpt = $('scale').querySelector('option[value="auto"]');
-  if (autoOpt) autoOpt.textContent = state.autoScale ? `自動（目前 ${state.autoScale[0]}:${state.autoScale[1]}）` : '自動（最大可容納比例）';
+  if (autoOpt) autoOpt.textContent = state.autoScale ? t('自動（目前 {sc}）', { sc: state.autoScale[0] + ':' + state.autoScale[1] }) : t('自動（最大可容納比例）');
   const n = state.hiddenDims.size;
-  $('dimNote').textContent = [...lastDrawing.notes, n ? `已隱藏 ${n} 個尺寸（淡色顯示、不會匯出）` : ''].filter(Boolean).join('；');
+  $('dimNote').textContent = [...lastDrawing.notes, n ? t('已隱藏 {n} 個尺寸（淡色顯示、不會匯出）', { n }) : ''].filter(Boolean).join(t('句子分隔|；'));
   $('dimsReset').hidden = !n;
   renderSheet();
 }
@@ -1476,7 +2233,7 @@ function drawHoleLeaders(prims, view, pl, s, boxes, area, mode) {
   for (const [, hs] of groups) {
     const h = hs[0], [cx, cy] = map(h.x, h.y);
     h.radii.forEach((r, ri) => {
-      const label = (hs.length > 1 ? `${hs.length}×` : '') + `Ø${fmtNum(2 * r)}` + (h.depth && ri === 0 ? ` 深${fmtNum(h.depth)}` : '');
+      const label = (hs.length > 1 ? `${hs.length}×` : '') + `Ø${fmtNum(2 * r)}` + (h.depth && ri === 0 ? ` 深${fmtNum(h.depth)}` : '');   // 圖面：中文 i18n-skip
       const id = `h:${view.name}:${fmtNum(h.x)}:${fmtNum(h.y)}:${fmtNum(r)}`;
       if (mode === 'export' && state.hiddenDims.has(id)) return;
       const R = r * s, th = textWidth(label, STD.textH);
@@ -1616,7 +2373,7 @@ function drawIso(prims, R, sMain) {
   const left = R.x + (R.w - v.bw * k) / 2, bottom = R.y + (R.h - 8 + v.bh * k) / 2;
   drawView(prims, v, { left, bottom }, k, 'ISO', false);
   const same = Math.abs(sIso - sMain) < 1e-9;
-  prims.push({ k: 'text', layer: 'TEXT', x: left + v.bw * k / 2, y: bottom + 7, h: 3, str: same ? '等角圖' : '等角圖（不依比例）', anchor: 'middle' });
+  prims.push({ k: 'text', layer: 'TEXT', x: left + v.bw * k / 2, y: bottom + 7, h: 3, str: same ? '等角圖' : '等角圖（不依比例）', anchor: 'middle' });   // 圖面 i18n-skip
 }
 
 function projSymbol(prims, x, cy, first) {
@@ -1644,20 +2401,20 @@ function drawFrame(prims, fr, scaleLabel) {
   line(x0, y0 + 18, x0 + 56, y0 + 18);
   line(x0 + 28, y0 + 18, x0 + 28, y0 + TB_H);
   projSymbol(prims, x0 + 6, y0 + 8, state.proj === 'first');
-  text(x0 + 28, y0 + 16.2, state.proj === 'third' ? '第三角法' : '第一角法', 2.5, 'middle');
-  text(x0 + 2, y0 + 21.5, '比例', 2);
+  text(x0 + 28, y0 + 16.2, state.proj === 'third' ? '第三角法' : '第一角法', 2.5, 'middle');   // 標題欄：中文 i18n-skip
+  text(x0 + 2, y0 + 21.5, '比例', 2);   // i18n-skip
   text(x0 + 14, y0 + 26, scaleLabel, 3.5, 'middle', true);
-  text(x0 + 30, y0 + 21.5, '單位', 2);
+  text(x0 + 30, y0 + 21.5, '單位', 2);   // i18n-skip
   text(x0 + 42, y0 + 26, 'mm', 3.5, 'middle', true);
   // 中欄：圖名、單位
   line(x0 + 56, y0 + 17, x0 + 126, y0 + 17);
-  text(x0 + 58, y0 + 4, '圖名', 2);
+  text(x0 + 58, y0 + 4, '圖名', 2);   // i18n-skip
   text(x0 + 91, y0 + 13, tb.title, 5, 'middle', true);
   text(x0 + 91, y0 + 24, tb.org, 3.5, 'middle');
   // 右欄：繪圖、學號、日期、圖號
   line(x0 + 126, y0, x0 + 126, y0 + TB_H);
   line(x0 + 138, y0, x0 + 138, y0 + TB_H);
-  const rows = [['繪圖', tb.author], ['學號', tb.sid], ['日期', tb.date], ['圖號', tb.no]];
+  const rows = [['繪圖', tb.author], ['學號', tb.sid], ['日期', tb.date], ['圖號', tb.no]];   // i18n-skip
   rows.forEach(([k, v], i) => {
     if (i) line(x0 + 126, y0 + i * 7, x0 + TB_W, y0 + i * 7);
     text(x0 + 132, y0 + i * 7 + 4.9, k, 2.5, 'middle');
@@ -1716,10 +2473,10 @@ function toSVG({ prims, sheet }, screen = false) {
     out.push('<g id="dim-hits" fill="transparent" stroke="transparent" stroke-width="2.4">');
     for (const p of prims) {
       if (!p.dim) continue;
-      if (p.k === 'pl' && p.hit) out.push(`<polyline class="dimhit" data-dim="${esc(p.dim)}" fill="none" points="${p.pts.map(q => f3(q[0]) + ',' + f3(q[1])).join(' ')}"><title>點一下${p.ghost ? '顯示' : '隱藏'}這個尺寸</title></polyline>`);
+      if (p.k === 'pl' && p.hit) out.push(`<polyline class="dimhit" data-dim="${esc(p.dim)}" fill="none" points="${p.pts.map(q => f3(q[0]) + ',' + f3(q[1])).join(' ')}"><title>${esc(p.ghost ? t('點一下顯示這個尺寸') : t('點一下隱藏這個尺寸'))}</title></polyline>`);
       if (p.k === 'text') {
         const b = textBox(p);
-        out.push(`<rect class="dimhit" data-dim="${esc(p.dim)}" x="${f3(b.x0 - 0.5)}" y="${f3(b.y0 - 0.5)}" width="${f3(b.x1 - b.x0 + 1)}" height="${f3(b.y1 - b.y0 + 1)}" stroke="none"><title>點一下${p.ghost ? '顯示' : '隱藏'}這個尺寸</title></rect>`);
+        out.push(`<rect class="dimhit" data-dim="${esc(p.dim)}" x="${f3(b.x0 - 0.5)}" y="${f3(b.y0 - 0.5)}" width="${f3(b.x1 - b.x0 + 1)}" height="${f3(b.y1 - b.y0 + 1)}" stroke="none"><title>${esc(p.ghost ? t('點一下顯示這個尺寸') : t('點一下隱藏這個尺寸'))}</title></rect>`);
       }
     }
     out.push('</g>');
@@ -1796,7 +2553,7 @@ function download(name, text, type) {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
-const baseName = () => (readTB().title || state.name || '三視圖').replace(/[\\/:*?"<>|]/g, '_');
+const baseName = () => (readTB().title || state.name || '三視圖').replace(/[\\/:*?"<>|]/g, '_');   // 檔名 i18n-skip
 
 function printSheet() {
   if (!lastDrawing) return;
@@ -1820,7 +2577,7 @@ function renderSheet() {
   if (!model) {
     const svg = wrap.querySelector('svg');
     const { sheet } = lastDrawing;
-    svg.insertAdjacentHTML('beforeend', `<text x="${sheet.w / 2}" y="${(sheet.h - TB_H) / 2}" font-size="6" fill="#9aa3b2" text-anchor="middle" font-family="sans-serif">匯入 3D 模型或點選左側範例</text>`);
+    svg.insertAdjacentHTML('beforeend', `<text x="${sheet.w / 2}" y="${(sheet.h - TB_H) / 2}" font-size="6" fill="#9aa3b2" text-anchor="middle" font-family="sans-serif">${esc(t('匯入 3D 模型或點選左側範例'))}</text>`);
   }
   applyZoom();
 }
@@ -1865,8 +2622,12 @@ function labelSprite(text, color) {
   const c = document.createElement('canvas'); c.width = c.height = 128;
   const g = c.getContext('2d');
   g.fillStyle = color; g.beginPath(); g.arc(64, 64, 56, 0, Math.PI * 2); g.fill();
-  g.fillStyle = '#fff'; g.font = 'bold 64px "PingFang TC","Microsoft JhengHei",sans-serif';
-  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 64, 68);
+  // 字太長（其他語言的「前」「俯」）就縮小到放得進圓裡
+  const font = px => `bold ${px}px "PingFang TC","Microsoft JhengHei",sans-serif`;
+  g.font = font(64);
+  const px = Math.max(22, Math.min(64, Math.floor(64 * 96 / Math.max(1, g.measureText(text).width))));
+  g.fillStyle = '#fff'; g.font = font(px);
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 64, 64 + px * 0.06);
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
   sp.renderOrder = 10;
   return sp;
@@ -1895,10 +2656,10 @@ function updatePreview(resetCam) {
   }
   // 觀看方向指示
   const R = diag * 0.62, len = diag * 0.22;
-  const side = state.proj === 'third' ? [1, '右'] : [-1, '左'];
+  const side = state.proj === 'third' ? [1, t('預覽|右')] : [-1, t('預覽|左')];
   const ind = [
-    [new THREE.Vector3(0, 0, 1), 0xe8590c, '前'],
-    [new THREE.Vector3(0, 1, 0), 0x1971c2, '俯'],
+    [new THREE.Vector3(0, 0, 1), 0xe8590c, t('預覽|前')],
+    [new THREE.Vector3(0, 1, 0), 0x1971c2, t('預覽|俯')],
     [new THREE.Vector3(side[0], 0, 0), 0x2f9e44, side[1]],
   ];
   for (const [dir, col, txt] of ind) {
@@ -2010,17 +2771,17 @@ function demoGeometry(kind) {
     s.moveTo(0, 0); s.lineTo(60, 0); s.lineTo(60, 12); s.lineTo(16, 12); s.lineTo(16, 45); s.lineTo(0, 45); s.closePath();
     const h1 = new THREE.Path(); h1.absarc(8, 33, 4, 0, Math.PI * 2, true); s.holes.push(h1);
     const h2 = new THREE.Path(); h2.absarc(44, 6, 3.5, 0, Math.PI * 2, true); s.holes.push(h2);
-    return { g: new THREE.ExtrudeGeometry(s, { depth: 36, bevelEnabled: false, curveSegments: 18 }), name: 'L 型支架' };
+    return { g: new THREE.ExtrudeGeometry(s, { depth: 36, bevelEnabled: false, curveSegments: 18 }), name: 'L 型支架' };   // 範例名稱會進標題欄：維持中文 i18n-skip
   }
   if (kind === 'shaft') {
     const pts = [[0, 0], [15, 0], [15, 20], [10, 20], [10, 50], [6, 50], [6, 58], [4, 60], [0, 60]].map(p => new THREE.Vector2(p[0], p[1]));
     const g = new THREE.LatheGeometry(pts, 48); g.rotateZ(-Math.PI / 2);
-    return { g, name: '階梯軸' };
+    return { g, name: '階梯軸' };   // i18n-skip
   }
   const s = new THREE.Shape();
   s.moveTo(0, 0); s.lineTo(56, 0); s.lineTo(56, 30); s.lineTo(40, 30); s.lineTo(40, 14); s.lineTo(16, 14); s.lineTo(16, 30); s.lineTo(0, 30); s.closePath();
   const g = new THREE.ExtrudeGeometry(s, { depth: 40, bevelEnabled: false }); g.rotateY(Math.PI / 2);
-  return { g, name: 'U 型槽塊' };
+  return { g, name: 'U 型槽塊' };   // i18n-skip
 }
 
 async function loadFile(file) {
@@ -2028,26 +2789,26 @@ async function loadFile(file) {
   const name = file.name.replace(/\.[^.]+$/, '');
   try {
     if (ext === 'stl') {
-      setSoup(geomToSoup(new STLLoader().parse(await file.arrayBuffer())), name, true, 1, 'STL 未記錄單位，預設 mm');
+      setSoup(geomToSoup(new STLLoader().parse(await file.arrayBuffer())), name, true, 1, N('STL 未記錄單位，預設 mm'));
     } else if (ext === 'obj') {
       const { soup, unit } = parseOBJ(await file.text());
-      setSoup(soup, name, false, unit ?? 1, unit ? '依 OBJ 檔頭判定' : 'OBJ 未記錄單位，預設 mm');
+      setSoup(soup, name, false, unit ?? 1, unit ? N('依 OBJ 檔頭判定') : N('OBJ 未記錄單位，預設 mm'));
     } else if (ext === 'glb' || ext === 'gltf') {
       const data = ext === 'glb' ? await file.arrayBuffer() : await file.text();
       const gltf = await new Promise((res, rej) => new GLTFLoader().parse(data, '', res, rej)).catch(err => {
-        throw ext === 'gltf' ? new Error('無法讀取 .gltf（通常還需要另外的 .bin 檔），請改匯出成單一檔案的 .glb') : err;
+        throw ext === 'gltf' ? new Error(t('無法讀取 .gltf（通常還需要另外的 .bin 檔），請改匯出成單一檔案的 .glb')) : err;
       });
-      setSoup(objectToSoup(gltf.scene), name, false, 1000, 'glTF 規範單位為公尺');
-    } else throw new Error('不支援的格式：.' + ext);
+      setSoup(objectToSoup(gltf.scene), name, false, 1000, N('glTF 規範單位為公尺'));
+    } else throw new Error(t('不支援的格式：.{ext}', { ext }));
   } catch (err) {
     console.error(err);
-    $('warn').textContent = '載入失敗：' + (err.message || err);
+    $('warn').textContent = t('載入失敗：{msg}', { msg: err.message || err });
   }
 }
 
 function setThr(t) { state.thr = t; $('thr').value = t; $('thrVal').textContent = t + '°'; }
 function setSoup(soup, name, zUp, unit, unitNote, exact = false) {
-  if (!soup.length) { $('warn').textContent = '檔案中找不到三角網格。'; return; }
+  if (!soup.length) { $('warn').textContent = t('檔案中找不到三角網格。'); return; }
   $('busy').classList.add('on');
   setTimeout(() => {
     try {
@@ -2067,7 +2828,7 @@ function setSoup(soup, name, zUp, unit, unitNote, exact = false) {
       else if (!exact && state.thrUser) { setThr(state.thrUser); state.thrUser = 0; }
       rebuildModel(true);
     } catch (err) {
-      console.error(err); $('warn').textContent = '處理失敗：' + err.message; $('busy').classList.remove('on');
+      console.error(err); $('warn').textContent = t('處理失敗：{msg}', { msg: err.message }); $('busy').classList.remove('on');
     }
   }, 20);
 }
@@ -2086,13 +2847,13 @@ function updateInfo() {
   if (!model) return;
   const [x, y, z] = model.size;
   const unitName = $('unit').selectedOptions[0]?.textContent || 'mm';
-  const notes = [`檔案單位：${unitName}${state.unitNote ? `（${state.unitNote}）` : ''}`];
-  if (model.tjFixed) notes.push(`已自動接合 ${model.tjFixed} 處面與面接縫不對齊的點`);
-  if (model.dupRemoved) notes.push(`已移除 ${model.dupRemoved} 個重複／重疊的面`);
-  $('info').innerHTML = `<b>${esc(state.name)}</b>　${model.nt.toLocaleString()} 個三角面<br>外形尺寸：寬 ${fmtNum(x)} × 高 ${fmtNum(y)} × 深 ${fmtNum(z)} mm　偵測到 ${model.axes.length} 條圓形中心軸<br>${notes.join('；')}`;
+  const notes = [t('檔案單位：{unit}', { unit: unitName }) + (state.unitNote ? t('（{note}）', { note: t(state.unitNote) }) : '')];
+  if (model.tjFixed) notes.push(t('已自動接合 {n} 處面與面接縫不對齊的點', { n: model.tjFixed }));
+  if (model.dupRemoved) notes.push(t('已移除 {n} 個重複／重疊的面', { n: model.dupRemoved }));
+  $('info').innerHTML = `<b>${esc(state.name)}</b>　${esc(t('{n} 個三角面', { n: model.nt.toLocaleString() }))}<br>${esc(t('外形尺寸：寬 {w} × 高 {h} × 深 {d} mm', { w: fmtNum(x), h: fmtNum(y), d: fmtNum(z) }))}　${esc(t('偵測到 {n} 條圓形中心軸', { n: model.axes.length }))}<br>${esc(notes.join(t('句子分隔|；')))}`;
   const w = [];
-  if (model.stats.open) w.push(`有 ${model.stats.open} 條邊只連到一個面（3D 預覽中的紅線）：模型可能有破洞，或某些面沒有和其他面接合。三視圖仍可產生，但紅線附近可能多出或缺少線條。`);
-  if (model.nt > 300000) w.push('三角面很多，計算會比較久；可先在 CAD 降低匯出精度。');
+  if (model.stats.open) w.push(t('有 {n} 條邊只連到一個面（3D 預覽中的紅線）：模型可能有破洞，或某些面沒有和其他面接合。三視圖仍可產生，但紅線附近可能多出或缺少線條。', { n: model.stats.open }));
+  if (model.nt > 300000) w.push(t('三角面很多，計算會比較久；可先在 CAD 降低匯出精度。'));
   $('warn').textContent = w.join(' ');
 }
 
@@ -2103,9 +2864,9 @@ function scheduleDraw() {
   drawTimer = setTimeout(() => {
     const t0 = performance.now();
     try { draw(); }
-    catch (err) { console.error(err); $('warn').textContent = '產生視圖失敗：' + err.message; }
+    catch (err) { console.error(err); $('warn').textContent = t('產生視圖失敗：{msg}', { msg: err.message }); }
     $('busy').classList.remove('on');
-    $('status').textContent = model ? `計算 ${Math.round(performance.now() - t0)} ms` : '';
+    $('status').textContent = model ? t('計算 {ms} ms', { ms: Math.round(performance.now() - t0) }) : '';
   }, 30);
 }
 
@@ -2118,7 +2879,7 @@ function readTB() {
 }
 function initUI() {
   const sel = $('scale');
-  sel.innerHTML = '<option value="auto">自動（最大可容納比例）</option>' + SCALES.map(([n, d]) => `<option value="${n}:${d}">${n}:${d}</option>`).join('');
+  sel.innerHTML = `<option value="auto">${esc(t('自動（最大可容納比例）'))}</option>` + SCALES.map(([n, d]) => `<option value="${n}:${d}">${n}:${d}</option>`).join('');
   try {
     const saved = JSON.parse(localStorage.getItem('tsv-tb') || '{}');
     for (const [k, id] of Object.entries(TB_FIELDS)) if (saved[k] && k !== 'title') $(id).value = saved[k];
@@ -2142,7 +2903,7 @@ function initUI() {
   }));
   $('rotReset').addEventListener('click', () => { state.rot.identity(); rebuildModel(false); });
   $('zup').addEventListener('change', e => { state.zUp = e.target.checked; rebuildModel(false); });
-  $('unit').addEventListener('change', e => { state.unit = +e.target.value; state.unitNote = '手動設定'; rebuildModel(false); });
+  $('unit').addEventListener('change', e => { state.unit = +e.target.value; state.unitNote = N('手動設定'); rebuildModel(false); });
   $('thr').addEventListener('input', e => { $('thrVal').textContent = e.target.value + '°'; });
   $('thr').addEventListener('change', e => { state.thr = +e.target.value; rebuildModel(false); });
   document.querySelectorAll('input[name=proj]').forEach(r => r.addEventListener('change', e => {
@@ -2436,6 +3197,290 @@ async function openaiPost(key, path, body, { baseUrl, signal } = {}) {
 }
 return { PROVIDERS, OwnKeyError, keyStore, looksLikeKey, anthropicMessages, openaiPost };
 })();
+// ---- Shared_Services/ai-gateway/client/ai-access-i18n.js
+const AI_I18N_MOD = (() => {
+// AI 雙入口元件（ai-access.js）的介面翻譯：中文原文 → 譯文（English、Tiếng Việt、Bahasa Indonesia）
+// 也包含閘道（worker/）與 gateway-client.js 送給學生的中文訊息：元件在瀏覽器端整句對照翻譯（閘道本身只送中文）。
+// 新增或修改元件、閘道給學生看的文字時：KEYS 與三種語言都要補（worker 的 npm test 會檢查）。
+// 用詞和三視圖產生器、組合單元工作室的「翻譯用語對照表」一致。
+
+// 所有原文（{名稱} 是變數，譯文要保留同樣的變數）
+const AI_ACCESS_KEYS = [
+  // ---- 元件介面
+  '使用課程額度', '老師提供，課程結束後失效', '學號', '學號（老師填教師密碼）', '老師請填教師密碼', '姓名', '登入', '登出',
+  '使用自己的 API 金鑰', '費用自己付，課程結束後也能繼續使用',
+  'Anthropic（Claude） 金鑰（sk-ant-…）', 'OpenAI 金鑰（sk-…）', 'Anthropic（Claude）', 'OpenAI',
+  '記住的金鑰，同一個網站上的其他課程工具也會自動帶入', '在這台電腦記住（公用電腦請勿勾選）', '清除金鑰', '如何申請自己的 API 金鑰？',
+  '{tool} 剩 {n}／{q} 次', '　·　額度至 {date} 止', '：', '、', '沒有開放這個工具', '手繪辨識', '草圖辨識',
+  // ---- 元件訊息
+  '這門課的 AI 額度已於 {date} 結束。（已切換到「使用自己的 API 金鑰」）', '這門課的 AI 額度已於 {date} 結束。貼上你自己的金鑰就能繼續使用。',
+  '請輸入學號與姓名。', '這組學號姓名剛才查過不在名單上（或課程還沒開放這個工具）。請確認學號與姓名（異體字也要一致）；如果老師剛更新，請過兩分鐘再按登入。',
+  '登入中…', '你在多門課的名單上，請選擇課程後再按登入。', '已清除這台電腦上的金鑰。', '{names} 的金鑰看起來不完整，請確認有整串複製。',
+  '這個功能還不能用自己的金鑰。', '請先貼上 {names} 的金鑰。', '請先貼上自己的 API 金鑰。', '請先用學號與姓名登入。', '請先登入課程額度，或改用自己的 API 金鑰。',
+  // ---- gateway-client.js
+  '已取消。', '連不上 AI 伺服器，請確認網路連線。', 'AI 伺服器回應 {n}', 'AI 伺服器回傳了無法辨認的內容。', 'AI 功能失敗。',
+  '和 AI 伺服器的連線中斷了，請再試一次（沒有拿到結果就不會扣次數）。',
+  // ---- 閘道：登入
+  '格式錯誤', '請提供學號與姓名。', '課程代碼不正確。', '沒有這個工具。', '這個工具還沒有在課程閘道登記，請通知老師。',
+  '名單上找不到這組學號與姓名，或你修的課沒有開放這個工具。請確認與選課系統相同。', '名單上找不到這組學號與姓名，請確認與選課系統相同。',
+  '嘗試太多次，請 10 分鐘後再試。', '請從課程網站開啟工具。', 'AI 伺服器尚未設定完成，請通知老師。', '伺服器發生錯誤，請稍後再試。',
+  '這門課的 AI 額度已於 {n} 結束。想繼續使用，可以改用自己的 API 金鑰。',
+  // ---- 閘道：執行
+  '登入已過期，請重新登入。', '這門課已經不存在，請重新登入。', '你已經不在這門課的名單上，請洽老師。', '這門課目前沒有開放這個工具。',
+  '送出的內容太大了。', '請上傳 1–{n} 張照片。', '照片格式不正確。', '老師目前暫停了 AI 功能。', '這門課沒有開放這個 AI 功能。',
+  '這個 AI 功能的金鑰尚未設定，請通知老師。', '今天全部課程的 AI 使用量已達上限，請明天再試或通知老師。', '這個 AI 功能本學期的次數已用完（{n} 次）。',
+  '老師的 AI 帳戶額度不足或已達花費上限，請通知老師。這次不扣次數。',
+  'AI 服務拒絕了這個地區的連線（代碼 403），請稍後再試；一直不行請換個網路（例如手機熱點）。這次不扣次數。',
+  'AI 服務目前太忙，請稍後再試，這次不扣次數。', 'AI 服務暫時忙碌，請稍後再試，這次不扣次數。', '這次的請求被 AI 服務拒絕，請換個內容再試，這次不扣次數。',
+  'AI 伺服器的金鑰設定有問題（代碼 {n}），請通知老師。這次不扣次數。', 'AI 功能暫時失敗，請稍後再試，這次不扣次數。',
+  'AI 拒絕處理這次的圖片，這次不扣次數。', 'AI 的回答太長被截斷了，請改用較少張照片、縮短補充說明再試（這次會算一次）。',
+  'AI 回傳的格式無法解析，請再試一次，這次不扣次數。',
+];
+
+const AI_ACCESS_I18N = {
+  en: {
+    "Anthropic（Claude）": "Anthropic (Claude)",
+    "OpenAI": "OpenAI",
+    "使用課程額度": "Use course quota",
+    "老師提供，課程結束後失效": "Provided by the teacher; expires when the course ends",
+    "學號": "Student ID",
+    "學號（老師填教師密碼）": "Student ID (teachers: enter the teacher password)",
+    "老師請填教師密碼": "Teachers: enter the teacher password here",
+    "姓名": "Name",
+    "登入": "Log in",
+    "登出": "Log out",
+    "使用自己的 API 金鑰": "Use your own API key",
+    "費用自己付，課程結束後也能繼續使用": "Paid by you; keeps working after the course ends",
+    "Anthropic（Claude） 金鑰（sk-ant-…）": "Anthropic (Claude) key (sk-ant-…)",
+    "OpenAI 金鑰（sk-…）": "OpenAI key (sk-…)",
+    "記住的金鑰，同一個網站上的其他課程工具也會自動帶入": "A remembered key is also filled in automatically in other course tools on the same site",
+    "在這台電腦記住（公用電腦請勿勾選）": "Remember on this computer (not on shared computers)",
+    "清除金鑰": "Clear key",
+    "如何申請自己的 API 金鑰？": "How do I get my own API key?",
+    "{tool} 剩 {n}／{q} 次": "{tool} ({n}/{q} left)",
+    "　·　額度至 {date} 止": " · Quota valid until {date}",
+    "：": ": ",
+    "、": ", ",
+    "沒有開放這個工具": "this tool is not enabled",
+    "手繪辨識": "Hand-drawing recognition",
+    "草圖辨識": "Sketch recognition",
+    "這門課的 AI 額度已於 {date} 結束。（已切換到「使用自己的 API 金鑰」）": "This course's AI quota ended on {date}. (Switched to \"Use your own API key\".)",
+    "這門課的 AI 額度已於 {date} 結束。貼上你自己的金鑰就能繼續使用。": "This course's AI quota ended on {date}. Paste your own key to keep going.",
+    "請輸入學號與姓名。": "Enter your student ID and name.",
+    "這組學號姓名剛才查過不在名單上（或課程還沒開放這個工具）。請確認學號與姓名（異體字也要一致）；如果老師剛更新，請過兩分鐘再按登入。": "This student ID and name were just checked and aren't on the class list (or the course hasn't enabled this tool yet). Check your student ID and name (they must match exactly, including character variants). If your teacher just updated the list, wait two minutes and click \"Log in\" again.",
+    "登入中…": "Logging in…",
+    "你在多門課的名單上，請選擇課程後再按登入。": "You're on the class list for more than one course. Choose a course, then click \"Log in\" again.",
+    "已清除這台電腦上的金鑰。": "Key cleared from this computer.",
+    "{names} 的金鑰看起來不完整，請確認有整串複製。": "The {names} key looks incomplete. Make sure you copied the whole key.",
+    "這個功能還不能用自己的金鑰。": "This feature can't be used with your own key yet.",
+    "請先貼上 {names} 的金鑰。": "Paste your {names} key first.",
+    "請先貼上自己的 API 金鑰。": "Paste your own API key first.",
+    "請先用學號與姓名登入。": "Log in with your student ID and name first.",
+    "請先登入課程額度，或改用自己的 API 金鑰。": "Log in to use the course quota first, or switch to your own API key.",
+    "已取消。": "Canceled.",
+    "連不上 AI 伺服器，請確認網路連線。": "Can't reach the AI server. Check your internet connection.",
+    "AI 伺服器回應 {n}": "AI server responded with status {n}",
+    "AI 伺服器回傳了無法辨認的內容。": "The AI server sent back a response that couldn't be read.",
+    "AI 功能失敗。": "The AI feature failed.",
+    "和 AI 伺服器的連線中斷了，請再試一次（沒有拿到結果就不會扣次數）。": "The connection to the AI server was interrupted. Please try again (if you didn't get a result, it isn't counted).",
+    "格式錯誤": "Invalid format",
+    "請提供學號與姓名。": "Student ID and name are required.",
+    "課程代碼不正確。": "Invalid course code.",
+    "沒有這個工具。": "Unknown tool.",
+    "這個工具還沒有在課程閘道登記，請通知老師。": "This tool isn't registered with the course gateway yet. Please tell your teacher.",
+    "名單上找不到這組學號與姓名，或你修的課沒有開放這個工具。請確認與選課系統相同。": "This student ID and name aren't on the class list, or your course hasn't enabled this tool. Make sure they match the course registration system exactly.",
+    "名單上找不到這組學號與姓名，請確認與選課系統相同。": "This student ID and name aren't on the class list. Make sure they match the course registration system exactly.",
+    "嘗試太多次，請 10 分鐘後再試。": "Too many attempts. Try again in 10 minutes.",
+    "請從課程網站開啟工具。": "Open the tool from the course website.",
+    "AI 伺服器尚未設定完成，請通知老師。": "The AI server isn't fully set up yet. Please tell your teacher.",
+    "伺服器發生錯誤，請稍後再試。": "Server error. Try again later.",
+    "這門課的 AI 額度已於 {n} 結束。想繼續使用，可以改用自己的 API 金鑰。": "This course's AI quota ended on {n}. To keep going, switch to your own API key.",
+    "登入已過期，請重新登入。": "Your login has expired. Please log in again.",
+    "這門課已經不存在，請重新登入。": "This course no longer exists. Please log in again.",
+    "你已經不在這門課的名單上，請洽老師。": "You're no longer on this course's class list. Please contact your teacher.",
+    "這門課目前沒有開放這個工具。": "This tool isn't currently enabled for this course.",
+    "送出的內容太大了。": "The upload is too large.",
+    "請上傳 1–{n} 張照片。": "Upload 1–{n} photos.",
+    "照片格式不正確。": "Invalid photo format.",
+    "老師目前暫停了 AI 功能。": "Your teacher has paused the AI features for now.",
+    "這門課沒有開放這個 AI 功能。": "This AI feature isn't enabled for this course.",
+    "這個 AI 功能的金鑰尚未設定，請通知老師。": "The key for this AI feature hasn't been set up yet. Please tell your teacher.",
+    "今天全部課程的 AI 使用量已達上限，請明天再試或通知老師。": "Today's AI usage limit for all courses has been reached. Try again tomorrow or tell your teacher.",
+    "這個 AI 功能本學期的次數已用完（{n} 次）。": "This AI feature's quota for this semester is used up ({n} uses).",
+    "老師的 AI 帳戶額度不足或已達花費上限，請通知老師。這次不扣次數。": "The teacher's AI account is out of credit or has reached its spending limit. Please tell your teacher. This attempt wasn't counted.",
+    "AI 服務拒絕了這個地區的連線（代碼 403），請稍後再試；一直不行請換個網路（例如手機熱點）。這次不扣次數。": "The AI service refused the connection from this region (code 403). Try again later; if it keeps failing, switch to another network (e.g. a phone hotspot). This attempt wasn't counted.",
+    "AI 服務目前太忙，請稍後再試，這次不扣次數。": "The AI service is too busy right now. Try again later. This attempt wasn't counted.",
+    "AI 服務暫時忙碌，請稍後再試，這次不扣次數。": "The AI service is temporarily busy. Try again later. This attempt wasn't counted.",
+    "這次的請求被 AI 服務拒絕，請換個內容再試，這次不扣次數。": "The AI service rejected this request. Try again with different content. This attempt wasn't counted.",
+    "AI 伺服器的金鑰設定有問題（代碼 {n}），請通知老師。這次不扣次數。": "There's a problem with the AI server's key setup (code {n}). Please tell your teacher. This attempt wasn't counted.",
+    "AI 功能暫時失敗，請稍後再試，這次不扣次數。": "The AI feature failed temporarily. Try again later. This attempt wasn't counted.",
+    "AI 拒絕處理這次的圖片，這次不扣次數。": "The AI declined to process these images. This attempt wasn't counted.",
+    "AI 的回答太長被截斷了，請改用較少張照片、縮短補充說明再試（這次會算一次）。": "The AI's response was too long and got cut off. Try again with fewer photos or shorter notes (this attempt counts as one use).",
+    "AI 回傳的格式無法解析，請再試一次，這次不扣次數。": "Could not parse the AI's response. Please try again. This attempt wasn't counted.",
+  },
+  vi: {
+    "Anthropic（Claude）": "Anthropic (Claude)",
+    "OpenAI": "OpenAI",
+    "使用課程額度": "Dùng hạn mức của lớp",
+    "老師提供，課程結束後失效": "Do giáo viên cấp, hết hiệu lực khi khóa học kết thúc",
+    "學號": "MSSV",
+    "學號（老師填教師密碼）": "Mã số sinh viên (giáo viên nhập mật khẩu giáo viên)",
+    "老師請填教師密碼": "Giáo viên: hãy nhập mật khẩu giáo viên",
+    "姓名": "Họ tên",
+    "登入": "Đăng nhập",
+    "登出": "Đăng xuất",
+    "使用自己的 API 金鑰": "Dùng khóa API của bạn",
+    "費用自己付，課程結束後也能繼續使用": "Bạn tự trả phí, vẫn dùng được sau khi khóa học kết thúc",
+    "Anthropic（Claude） 金鑰（sk-ant-…）": "Khóa Anthropic (Claude), dạng sk-ant-…",
+    "OpenAI 金鑰（sk-…）": "Khóa OpenAI, dạng sk-…",
+    "記住的金鑰，同一個網站上的其他課程工具也會自動帶入": "Khóa đã ghi nhớ cũng sẽ tự điền vào các công cụ khác của lớp trên cùng trang web",
+    "在這台電腦記住（公用電腦請勿勾選）": "Ghi nhớ trên máy này (không chọn nếu dùng máy chung)",
+    "清除金鑰": "Xóa khóa",
+    "如何申請自己的 API 金鑰？": "Làm sao để có khóa API của bạn?",
+    "{tool} 剩 {n}／{q} 次": "{tool} còn {n}/{q} lượt",
+    "　·　額度至 {date} 止": " · Hạn mức đến {date}",
+    "：": ": ",
+    "、": ", ",
+    "沒有開放這個工具": "chưa mở công cụ này",
+    "手繪辨識": "Nhận dạng bản vẽ tay",
+    "草圖辨識": "Nhận dạng bản phác",
+    "這門課的 AI 額度已於 {date} 結束。（已切換到「使用自己的 API 金鑰」）": "Hạn mức AI của lớp này đã kết thúc vào {date}. (Đã chuyển sang “Dùng khóa API của bạn”)",
+    "這門課的 AI 額度已於 {date} 結束。貼上你自己的金鑰就能繼續使用。": "Hạn mức AI của lớp này đã kết thúc vào {date}. Hãy dán khóa của bạn để tiếp tục sử dụng.",
+    "請輸入學號與姓名。": "Hãy nhập mã số sinh viên và họ tên.",
+    "這組學號姓名剛才查過不在名單上（或課程還沒開放這個工具）。請確認學號與姓名（異體字也要一致）；如果老師剛更新，請過兩分鐘再按登入。": "Mã số sinh viên và họ tên này vừa được kiểm tra và không có trong danh sách lớp (hoặc lớp chưa mở công cụ này). Hãy kiểm tra lại mã số sinh viên và họ tên (phải viết giống hệt từng ký tự); nếu giáo viên vừa cập nhật danh sách, hãy đợi 2 phút rồi bấm Đăng nhập lại.",
+    "登入中…": "Đang đăng nhập…",
+    "你在多門課的名單上，請選擇課程後再按登入。": "Bạn có tên trong danh sách của nhiều lớp; hãy chọn lớp rồi bấm Đăng nhập.",
+    "已清除這台電腦上的金鑰。": "Đã xóa khóa trên máy này.",
+    "{names} 的金鑰看起來不完整，請確認有整串複製。": "Khóa {names} có vẻ chưa đầy đủ, hãy kiểm tra xem bạn đã sao chép trọn cả chuỗi chưa.",
+    "這個功能還不能用自己的金鑰。": "Chức năng này chưa hỗ trợ dùng khóa của bạn.",
+    "請先貼上 {names} 的金鑰。": "Hãy dán khóa {names} trước.",
+    "請先貼上自己的 API 金鑰。": "Hãy dán khóa API của bạn trước.",
+    "請先用學號與姓名登入。": "Hãy đăng nhập bằng mã số sinh viên và họ tên trước.",
+    "請先登入課程額度，或改用自己的 API 金鑰。": "Hãy đăng nhập để dùng hạn mức của lớp, hoặc chuyển sang dùng khóa API của bạn.",
+    "已取消。": "Đã hủy.",
+    "連不上 AI 伺服器，請確認網路連線。": "Không kết nối được máy chủ AI, hãy kiểm tra kết nối mạng.",
+    "AI 伺服器回應 {n}": "Máy chủ AI phản hồi mã {n}",
+    "AI 伺服器回傳了無法辨認的內容。": "Máy chủ AI trả về nội dung không đọc được.",
+    "AI 功能失敗。": "Chức năng AI bị lỗi.",
+    "和 AI 伺服器的連線中斷了，請再試一次（沒有拿到結果就不會扣次數）。": "Mất kết nối với máy chủ AI, hãy thử lại (nếu chưa nhận được kết quả thì không bị trừ lượt).",
+    "格式錯誤": "Sai định dạng",
+    "請提供學號與姓名。": "Hãy cung cấp mã số sinh viên và họ tên.",
+    "課程代碼不正確。": "Mã lớp không đúng.",
+    "沒有這個工具。": "Không có công cụ này.",
+    "這個工具還沒有在課程閘道登記，請通知老師。": "Công cụ này chưa được đăng ký trên cổng AI của lớp, hãy báo giáo viên.",
+    "名單上找不到這組學號與姓名，或你修的課沒有開放這個工具。請確認與選課系統相同。": "Không tìm thấy mã số sinh viên và họ tên này trong danh sách lớp, hoặc lớp bạn học chưa mở công cụ này. Hãy nhập đúng như trên hệ thống đăng ký môn học.",
+    "名單上找不到這組學號與姓名，請確認與選課系統相同。": "Không tìm thấy mã số sinh viên và họ tên này trong danh sách lớp; hãy nhập đúng như trên hệ thống đăng ký môn học.",
+    "嘗試太多次，請 10 分鐘後再試。": "Thử quá nhiều lần, hãy thử lại sau 10 phút.",
+    "請從課程網站開啟工具。": "Hãy mở công cụ từ trang web của lớp.",
+    "AI 伺服器尚未設定完成，請通知老師。": "Máy chủ AI chưa được thiết lập xong, hãy báo giáo viên.",
+    "伺服器發生錯誤，請稍後再試。": "Máy chủ gặp lỗi, hãy thử lại sau.",
+    "這門課的 AI 額度已於 {n} 結束。想繼續使用，可以改用自己的 API 金鑰。": "Hạn mức AI của lớp này đã kết thúc vào {n}. Muốn dùng tiếp, hãy chuyển sang khóa API của bạn.",
+    "登入已過期，請重新登入。": "Phiên đăng nhập đã hết hạn, hãy đăng nhập lại.",
+    "這門課已經不存在，請重新登入。": "Lớp này không còn tồn tại, hãy đăng nhập lại.",
+    "你已經不在這門課的名單上，請洽老師。": "Bạn không còn trong danh sách lớp này, hãy liên hệ giáo viên.",
+    "這門課目前沒有開放這個工具。": "Lớp này hiện không mở công cụ này.",
+    "送出的內容太大了。": "Nội dung gửi đi quá lớn.",
+    "請上傳 1–{n} 張照片。": "Hãy tải lên từ 1 đến {n} ảnh.",
+    "照片格式不正確。": "Định dạng ảnh không đúng.",
+    "老師目前暫停了 AI 功能。": "Giáo viên đang tạm dừng chức năng AI.",
+    "這門課沒有開放這個 AI 功能。": "Lớp này không mở chức năng AI này.",
+    "這個 AI 功能的金鑰尚未設定，請通知老師。": "Chức năng AI này chưa được cài khóa, hãy báo giáo viên.",
+    "今天全部課程的 AI 使用量已達上限，請明天再試或通知老師。": "Lượt dùng AI hôm nay của tất cả các lớp đã đạt giới hạn; hãy thử lại vào ngày mai hoặc báo giáo viên.",
+    "這個 AI 功能本學期的次數已用完（{n} 次）。": "Bạn đã dùng hết số lượt của chức năng AI này trong học kỳ ({n} lượt).",
+    "老師的 AI 帳戶額度不足或已達花費上限，請通知老師。這次不扣次數。": "Tài khoản AI của giáo viên không đủ số dư hoặc đã chạm giới hạn chi tiêu, hãy báo giáo viên. Lần này không bị trừ lượt.",
+    "AI 服務拒絕了這個地區的連線（代碼 403），請稍後再試；一直不行請換個網路（例如手機熱點）。這次不扣次數。": "Dịch vụ AI từ chối kết nối từ khu vực này (mã 403); hãy thử lại sau, nếu vẫn không được thì đổi sang mạng khác (ví dụ phát Wi-Fi từ điện thoại). Lần này không bị trừ lượt.",
+    "AI 服務目前太忙，請稍後再試，這次不扣次數。": "Dịch vụ AI hiện đang quá tải, hãy thử lại sau. Lần này không bị trừ lượt.",
+    "AI 服務暫時忙碌，請稍後再試，這次不扣次數。": "Dịch vụ AI đang tạm thời bận, hãy thử lại sau. Lần này không bị trừ lượt.",
+    "這次的請求被 AI 服務拒絕，請換個內容再試，這次不扣次數。": "Dịch vụ AI đã từ chối yêu cầu này, hãy thử lại với nội dung khác. Lần này không bị trừ lượt.",
+    "AI 伺服器的金鑰設定有問題（代碼 {n}），請通知老師。這次不扣次數。": "Khóa của máy chủ AI được thiết lập chưa đúng (mã {n}), hãy báo giáo viên. Lần này không bị trừ lượt.",
+    "AI 功能暫時失敗，請稍後再試，這次不扣次數。": "Chức năng AI tạm thời bị lỗi, hãy thử lại sau. Lần này không bị trừ lượt.",
+    "AI 拒絕處理這次的圖片，這次不扣次數。": "AI từ chối xử lý ảnh này. Lần này không bị trừ lượt.",
+    "AI 的回答太長被截斷了，請改用較少張照片、縮短補充說明再試（這次會算一次）。": "Câu trả lời của AI quá dài nên bị cắt; hãy thử lại với ít ảnh hơn và ghi chú ngắn hơn (lần này vẫn bị tính một lượt).",
+    "AI 回傳的格式無法解析，請再試一次，這次不扣次數。": "Không đọc được định dạng AI trả về, hãy thử lại. Lần này không bị trừ lượt.",
+  },
+  id: {
+    "Anthropic（Claude）": "Anthropic (Claude)",
+    "OpenAI": "OpenAI",
+    "使用課程額度": "Gunakan kuota kelas",
+    "老師提供，課程結束後失效": "Disediakan dosen, berakhir saat kuliah selesai",
+    "學號": "NIM",
+    "學號（老師填教師密碼）": "NIM (dosen: isi kata sandi dosen)",
+    "老師請填教師密碼": "Dosen: isi dengan kata sandi dosen",
+    "姓名": "Nama",
+    "登入": "Masuk",
+    "登出": "Keluar",
+    "使用自己的 API 金鑰": "Gunakan kunci API sendiri",
+    "費用自己付，課程結束後也能繼續使用": "Biaya ditanggung sendiri, tetap bisa dipakai setelah kuliah selesai",
+    "Anthropic（Claude） 金鑰（sk-ant-…）": "Kunci Anthropic (Claude) (sk-ant-…)",
+    "OpenAI 金鑰（sk-…）": "Kunci OpenAI (sk-…)",
+    "記住的金鑰，同一個網站上的其他課程工具也會自動帶入": "Kunci yang diingat juga otomatis terisi di alat kuliah lain pada situs yang sama",
+    "在這台電腦記住（公用電腦請勿勾選）": "Ingat di komputer ini (jangan dicentang di komputer umum)",
+    "清除金鑰": "Hapus kunci",
+    "如何申請自己的 API 金鑰？": "Bagaimana cara mendapatkan kunci API sendiri?",
+    "{tool} 剩 {n}／{q} 次": "{tool} tersisa {n}/{q} kali",
+    "　·　額度至 {date} 止": " · kuota berlaku hingga {date}",
+    "：": ": ",
+    "、": ", ",
+    "沒有開放這個工具": "Alat ini tidak tersedia",
+    "手繪辨識": "Pengenalan gambar tangan",
+    "草圖辨識": "Pengenalan sketsa",
+    "這門課的 AI 額度已於 {date} 結束。（已切換到「使用自己的 API 金鑰」）": "Kuota AI kelas ini sudah berakhir pada {date}. (Sudah dialihkan ke \"Gunakan kunci API sendiri\")",
+    "這門課的 AI 額度已於 {date} 結束。貼上你自己的金鑰就能繼續使用。": "Kuota AI kelas ini sudah berakhir pada {date}. Tempel kunci Anda sendiri untuk melanjutkan.",
+    "請輸入學號與姓名。": "Masukkan NIM dan nama.",
+    "這組學號姓名剛才查過不在名單上（或課程還沒開放這個工具）。請確認學號與姓名（異體字也要一致）；如果老師剛更新，請過兩分鐘再按登入。": "NIM dan nama ini baru saja dicek dan tidak ada di daftar peserta (atau alat ini belum dibuka untuk kelas). Periksa NIM dan nama Anda (ejaannya harus persis sama); jika dosen baru saja memperbarui daftar, tunggu dua menit lalu klik \"Masuk\" lagi.",
+    "登入中…": "Sedang masuk…",
+    "你在多門課的名單上，請選擇課程後再按登入。": "Anda terdaftar di beberapa kelas. Pilih kelasnya, lalu klik \"Masuk\" lagi.",
+    "已清除這台電腦上的金鑰。": "Kunci di komputer ini sudah dihapus.",
+    "{names} 的金鑰看起來不完整，請確認有整串複製。": "Kunci {names} tampaknya tidak lengkap. Pastikan Anda menyalin seluruhnya.",
+    "這個功能還不能用自己的金鑰。": "Fitur ini belum bisa memakai kunci sendiri.",
+    "請先貼上 {names} 的金鑰。": "Tempel kunci {names} terlebih dahulu.",
+    "請先貼上自己的 API 金鑰。": "Tempel kunci API Anda sendiri terlebih dahulu.",
+    "請先用學號與姓名登入。": "Masuk dulu dengan NIM dan nama.",
+    "請先登入課程額度，或改用自己的 API 金鑰。": "Masuk ke kuota kelas dulu, atau beralih ke kunci API sendiri.",
+    "已取消。": "Dibatalkan.",
+    "連不上 AI 伺服器，請確認網路連線。": "Tidak dapat terhubung ke server AI. Periksa koneksi internet.",
+    "AI 伺服器回應 {n}": "Server AI membalas dengan kode {n}",
+    "AI 伺服器回傳了無法辨認的內容。": "Server AI mengirim balasan yang tidak dapat dibaca.",
+    "AI 功能失敗。": "Fitur AI gagal.",
+    "和 AI 伺服器的連線中斷了，請再試一次（沒有拿到結果就不會扣次數）。": "Koneksi ke server AI terputus. Coba lagi (jika tidak ada hasil, kuota tidak dikurangi).",
+    "格式錯誤": "Format salah",
+    "請提供學號與姓名。": "NIM dan nama wajib diisi.",
+    "課程代碼不正確。": "Kode kelas salah.",
+    "沒有這個工具。": "Alat ini tidak ada.",
+    "這個工具還沒有在課程閘道登記，請通知老師。": "Alat ini belum terdaftar di gateway kelas. Beri tahu dosen.",
+    "名單上找不到這組學號與姓名，或你修的課沒有開放這個工具。請確認與選課系統相同。": "NIM dan nama ini tidak ditemukan di daftar peserta, atau alat ini tidak dibuka untuk kelas Anda. Pastikan sama persis dengan data di sistem pendaftaran mata kuliah.",
+    "名單上找不到這組學號與姓名，請確認與選課系統相同。": "NIM dan nama ini tidak ditemukan di daftar peserta. Pastikan sama persis dengan data di sistem pendaftaran mata kuliah.",
+    "嘗試太多次，請 10 分鐘後再試。": "Terlalu banyak percobaan. Coba lagi setelah 10 menit.",
+    "請從課程網站開啟工具。": "Buka alat ini dari situs mata kuliah.",
+    "AI 伺服器尚未設定完成，請通知老師。": "Server AI belum selesai diatur. Beri tahu dosen.",
+    "伺服器發生錯誤，請稍後再試。": "Terjadi kesalahan di server. Coba lagi nanti.",
+    "這門課的 AI 額度已於 {n} 結束。想繼續使用，可以改用自己的 API 金鑰。": "Kuota AI kelas ini sudah berakhir pada {n}. Untuk melanjutkan, gunakan kunci API sendiri.",
+    "登入已過期，請重新登入。": "Sesi login kedaluwarsa, silakan masuk lagi.",
+    "這門課已經不存在，請重新登入。": "Kelas ini sudah tidak ada. Silakan masuk lagi.",
+    "你已經不在這門課的名單上，請洽老師。": "Anda sudah tidak ada di daftar peserta kelas ini. Hubungi dosen.",
+    "這門課目前沒有開放這個工具。": "Alat ini sedang tidak dibuka untuk kelas ini.",
+    "送出的內容太大了。": "Data yang dikirim terlalu besar.",
+    "請上傳 1–{n} 張照片。": "Unggah 1–{n} foto.",
+    "照片格式不正確。": "Format foto tidak valid.",
+    "老師目前暫停了 AI 功能。": "Dosen sedang menonaktifkan fitur AI untuk sementara.",
+    "這門課沒有開放這個 AI 功能。": "Fitur AI ini tidak dibuka untuk kelas ini.",
+    "這個 AI 功能的金鑰尚未設定，請通知老師。": "Kunci untuk fitur AI ini belum diatur. Beri tahu dosen.",
+    "今天全部課程的 AI 使用量已達上限，請明天再試或通知老師。": "Batas penggunaan AI untuk semua kelas hari ini sudah tercapai. Coba lagi besok atau beri tahu dosen.",
+    "這個 AI 功能本學期的次數已用完（{n} 次）。": "Kuota fitur AI ini untuk semester ini sudah habis ({n} kali).",
+    "老師的 AI 帳戶額度不足或已達花費上限，請通知老師。這次不扣次數。": "Saldo akun AI dosen tidak cukup atau batas pengeluarannya sudah tercapai. Beri tahu dosen. Permintaan ini tidak mengurangi kuota.",
+    "AI 服務拒絕了這個地區的連線（代碼 403），請稍後再試；一直不行請換個網路（例如手機熱點）。這次不扣次數。": "Layanan AI menolak koneksi dari wilayah ini (kode 403). Coba lagi nanti; jika terus gagal, ganti jaringan (misalnya hotspot ponsel). Permintaan ini tidak mengurangi kuota.",
+    "AI 服務目前太忙，請稍後再試，這次不扣次數。": "Layanan AI sedang terlalu sibuk. Coba lagi nanti; permintaan ini tidak mengurangi kuota.",
+    "AI 服務暫時忙碌，請稍後再試，這次不扣次數。": "Layanan AI sedang sibuk. Coba lagi nanti; permintaan ini tidak mengurangi kuota.",
+    "這次的請求被 AI 服務拒絕，請換個內容再試，這次不扣次數。": "Permintaan ini ditolak oleh layanan AI. Coba lagi dengan isi yang berbeda; permintaan ini tidak mengurangi kuota.",
+    "AI 伺服器的金鑰設定有問題（代碼 {n}），請通知老師。這次不扣次數。": "Ada masalah pada pengaturan kunci server AI (kode {n}). Beri tahu dosen. Permintaan ini tidak mengurangi kuota.",
+    "AI 功能暫時失敗，請稍後再試，這次不扣次數。": "Fitur AI gagal untuk sementara. Coba lagi nanti; permintaan ini tidak mengurangi kuota.",
+    "AI 拒絕處理這次的圖片，這次不扣次數。": "AI menolak memproses foto ini; permintaan ini tidak mengurangi kuota.",
+    "AI 的回答太長被截斷了，請改用較少張照片、縮短補充說明再試（這次會算一次）。": "Jawaban AI terlalu panjang dan terpotong. Coba lagi dengan lebih sedikit foto dan keterangan tambahan yang lebih singkat (permintaan ini tetap dihitung satu kali).",
+    "AI 回傳的格式無法解析，請再試一次，這次不扣次數。": "Format balasan AI tidak dapat dibaca. Silakan coba lagi; permintaan ini tidak mengurangi kuota.",
+  },
+};
+return { AI_ACCESS_KEYS, AI_ACCESS_I18N };
+})();
 // ---- Shared_Services/ai-gateway/client/ai-access.js
 const AI_ACCESS = (() => {
 // AI 雙入口 · 工具網頁共用的介面元件
@@ -2466,9 +3511,36 @@ const AI_ACCESS = (() => {
 //   - 中文輸入法選字時按的 Enter 不會送出登入（否則只打了一半的姓名會被送出去、算一次失敗）
 //   - 學號欄是密碼欄：老師帳號在這一欄填教師密碼，不會顯示在畫面上；登入成功後清空
 //
+// 介面語言（2026-10-14）：createAiAccess({ …, lang: 'en' | 'vi' | 'id' | 'zh-TW' })，之後 ai.setLang(語言) 切換；
+// 不傳 lang 就是中文、和以前一樣。閘道送來的中文訊息（名單、次數、錯誤）在瀏覽器端翻譯（ai-access-i18n.js）。
+//
 // 課程額度的執行被取消（按取消、登出、關掉分頁）時，閘道已經開始的那一次仍會算；元件會向閘道重新讀取剩餘次數。
 const { createGateway, loginKey } = AI_GW;
 const { PROVIDERS, keyStore, looksLikeKey } = AI_KEY;
+const { AI_ACCESS_I18N } = AI_I18N_MOD;
+
+// 介面語言：中文原文就是 key（和工具的 t() 同樣的寫法），字典在 ai-access-i18n.js；查不到就顯示中文
+function translate(lang, s, vars) {
+  const d = AI_ACCESS_I18N[lang];
+  let out = (d && d[s]) || s;
+  if (vars) out = out.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
+  return out;
+}
+// 閘道與 gateway-client.js 送來的訊息是中文：整句查字典；帶數字的幾句用樣式比對
+const MESSAGE_PATTERNS = [
+  [/^這個 AI 功能本學期的次數已用完（(\d+) 次）。$/, '這個 AI 功能本學期的次數已用完（{n} 次）。'],
+  [/^這門課的 AI 額度已於 (\S+) 結束。想繼續使用，可以改用自己的 API 金鑰。$/, '這門課的 AI 額度已於 {n} 結束。想繼續使用，可以改用自己的 API 金鑰。'],
+  [/^AI 伺服器的金鑰設定有問題（代碼 (\d+)），請通知老師。這次不扣次數。$/, 'AI 伺服器的金鑰設定有問題（代碼 {n}），請通知老師。這次不扣次數。'],
+  [/^AI 伺服器回應 (\d+)$/, 'AI 伺服器回應 {n}'],
+  [/^請上傳 1–(\d+) 張照片。$/, '請上傳 1–{n} 張照片。'],
+];
+function localizeMessage(lang, text) {
+  if (!text || lang === 'zh-TW' || !AI_ACCESS_I18N[lang]) return text;
+  const d = AI_ACCESS_I18N[lang];
+  if (d[text]) return d[text];
+  for (const [re, key] of MESSAGE_PATTERNS) { const m = re.exec(text); if (m && d[key]) return translate(lang, key, { n: m[1] }); }
+  return text;
+}
 
 const CSS = `
 .aia{border:1px solid #d9dde3;border-radius:10px;padding:12px 14px;font-size:14px;line-height:1.5;background:#fff;color:#1d2330}
@@ -2489,7 +3561,7 @@ const CSS = `
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-function createAiAccess({ mount, gatewayUrl, tools = [], providers = [], guideUrl = '', onChange = null }) {
+function createAiAccess({ mount, gatewayUrl, tools = [], providers = [], guideUrl = '', onChange = null, lang: lang0 = 'zh-TW' }) {
   if (!document.getElementById('aia-style')) {
     const st = document.createElement('style'); st.id = 'aia-style'; st.textContent = CSS; document.head.appendChild(st);
   }
@@ -2501,40 +3573,57 @@ function createAiAccess({ mount, gatewayUrl, tools = [], providers = [], guideUr
   const rejected = new Map();   // 名單上找不到的「登入雜湊｜課程」→ 時間：短時間內不再送出
   const REJECT_MS = 2 * 60 * 1000;
   const FILE_MODE = typeof location !== 'undefined' && location.protocol === 'file:';
+  let lang = lang0;
+  const tr = (s, v) => translate(lang, s, v);
   const notify = () => { try { onChange?.({ mode, loggedIn: !!(gw && info && gw.loggedIn), info }); } catch (err) { console.error(err); } };
   let mode = (() => { try { return localStorage.getItem(MODE_KEY); } catch { return null; } })() || (gw ? 'course' : 'own');
   if (!gw) mode = 'own';
 
+  // 介面上的字：data-t（內文）、data-tp（placeholder）、data-ta（aria-label 與 title）放中文原文，paint() 依語言填入
   const root = document.createElement('div');
   root.className = 'aia';
   root.innerHTML = `
-    ${gw ? `<label class="aia-opt"><input type="radio" name="aia-mode" value="course"> <span>使用課程額度<br><span class="aia-sub">老師提供，課程結束後失效</span></span></label>
+    ${gw ? `<label class="aia-opt"><input type="radio" name="aia-mode" value="course"> <span><span data-t="使用課程額度"></span><br><span class="aia-sub" data-t="老師提供，課程結束後失效"></span></span></label>
     <div class="aia-body" data-part="course">
       <div class="aia-row" data-part="login">
-        <input type="password" data-f="sid" placeholder="學號" aria-label="學號（老師填教師密碼）" title="老師請填教師密碼" autocomplete="off" spellcheck="false" style="max-width:9em">
-        <input type="text" data-f="name" placeholder="姓名" autocomplete="off" style="max-width:8em">
+        <input type="password" data-f="sid" data-tp="學號" data-ta="學號（老師填教師密碼）" autocomplete="off" spellcheck="false" style="max-width:9em">
+        <input type="text" data-f="name" data-tp="姓名" autocomplete="off" style="max-width:8em">
         <select data-f="course" hidden></select>
-        <button type="button" data-act="login">登入</button>
+        <button type="button" data-act="login" data-t="登入"></button>
       </div>
-      <div class="aia-row" data-part="who" hidden><span data-f="who"></span><button type="button" data-act="logout">登出</button></div>
+      <div class="aia-row" data-part="who" hidden><span data-f="who"></span><button type="button" data-act="logout" data-t="登出"></button></div>
       <div class="aia-msg" data-f="cmsg"></div>
     </div>` : ''}
-    ${providers.length ? `<label class="aia-opt"><input type="radio" name="aia-mode" value="own"> <span>使用自己的 API 金鑰<br><span class="aia-sub">費用自己付，課程結束後也能繼續使用</span></span></label>
+    ${providers.length ? `<label class="aia-opt"><input type="radio" name="aia-mode" value="own"> <span><span data-t="使用自己的 API 金鑰"></span><br><span class="aia-sub" data-t="費用自己付，課程結束後也能繼續使用"></span></span></label>
     <div class="aia-body" data-part="own">
       ${providers.map(p => `<div class="aia-row">
-        <input type="password" data-key="${p}" placeholder="${esc(PROVIDERS[p].name)} 金鑰（${esc(PROVIDERS[p].prefix)}…）" autocomplete="off" spellcheck="false">
+        <input type="password" data-key="${p}" data-tp="${esc(PROVIDERS[p].name)} 金鑰（${esc(PROVIDERS[p].prefix)}…）" autocomplete="off" spellcheck="false">
       </div>`).join('')}
       <div class="aia-row">
-        ${FILE_MODE ? '' : '<label class="aia-sub" title="記住的金鑰，同一個網站上的其他課程工具也會自動帶入"><input type="checkbox" data-f="remember"> 在這台電腦記住（公用電腦請勿勾選）</label>'}
-        <button type="button" data-act="clear">清除金鑰</button>
+        ${FILE_MODE ? '' : '<label class="aia-sub" data-ta="記住的金鑰，同一個網站上的其他課程工具也會自動帶入"><input type="checkbox" data-f="remember"> <span data-t="在這台電腦記住（公用電腦請勿勾選）"></span></label>'}
+        <button type="button" data-act="clear" data-t="清除金鑰"></button>
       </div>
-      ${guideUrl ? `<a href="${esc(guideUrl)}" target="_blank" rel="noopener">如何申請自己的 API 金鑰？</a>` : ''}
+      ${guideUrl ? `<a data-f="guide" target="_blank" rel="noopener" data-t="如何申請自己的 API 金鑰？"></a>` : ''}
       <div class="aia-msg" data-f="omsg"></div>
     </div>` : ''}`;
   mount.appendChild(root);
 
   const $ = sel => root.querySelector(sel);
-  const msg = (f, text, cls = '') => { const el = $(`[data-f="${f}"]`); if (el) { el.textContent = text; el.className = 'aia-msg ' + cls; } };
+  // 訊息：記住原文與變數，換語言時重新翻譯；閘道送來的中文訊息經 localize() 對照翻譯
+  const shown = {};
+  const paintMsg = f => { const el = $(`[data-f="${f}"]`), m = shown[f]; if (el && m) { el.textContent = m.raw ? localize(m.text) : tr(m.text, m.vars); el.className = 'aia-msg ' + m.cls; } };
+  const msg = (f, text, cls = '', vars = null) => { shown[f] = { text, cls, vars, raw: false }; paintMsg(f); };
+  const msgRaw = (f, text, cls = '') => { shown[f] = { text, cls, raw: true }; paintMsg(f); };
+  const localize = text => localizeMessage(lang, text);
+  function paint() {
+    root.querySelectorAll('[data-t]').forEach(el => { el.textContent = tr(el.dataset.t); });
+    root.querySelectorAll('[data-tp]').forEach(el => { el.placeholder = tr(el.dataset.tp); });
+    root.querySelectorAll('[data-ta]').forEach(el => { const v = tr(el.dataset.ta); el.setAttribute('aria-label', v); el.title = v; });
+    const sid = $('[data-f="sid"]'); if (sid) sid.title = tr('老師請填教師密碼');
+    const guide = $('[data-f="guide"]');
+    if (guide) guide.href = lang === 'zh-TW' ? guideUrl : guideUrl + (guideUrl.includes('?') ? '&' : '?') + 'lang=' + encodeURIComponent(lang);
+    paintMsg('cmsg'); paintMsg('omsg'); renderWho();
+  }
 
   function renderMode() {
     root.querySelectorAll('input[name="aia-mode"]').forEach(r => { r.checked = r.value === mode; });
@@ -2554,19 +3643,20 @@ function createAiAccess({ mount, gatewayUrl, tools = [], providers = [], guideUr
     $('[data-part="login"]').hidden = loggedIn;
     $('[data-part="who"]').hidden = !loggedIn;
     if (!loggedIn) return;
-    const rem = tools.filter(t => info.tools[t]).map(t => `${info.tools[t].name.replace(/^.*?：/, '')} 剩 ${info.tools[t].remaining}／${info.tools[t].quota} 次`);
-    const ends = info.course.endsAt ? `　·　額度至 ${info.course.endsAt} 止` : '';
-    $('[data-f="who"]').textContent = `${info.course.name}：${rem.join('、') || '沒有開放這個工具'}${ends}`;
+    const rem = tools.filter(t => info.tools[t]).map(t => tr('{tool} 剩 {n}／{q} 次', { tool: tr(info.tools[t].name.replace(/^.*?：/, '')), n: info.tools[t].remaining, q: info.tools[t].quota }));
+    const ends = info.course.endsAt ? tr('　·　額度至 {date} 止', { date: info.course.endsAt }) : '';
+    $('[data-f="who"]').textContent = `${info.course.name}${tr('：')}${rem.join(tr('、')) || tr('沒有開放這個工具')}${ends}`;
   }
   const renderWhoAndNotify = () => { renderWho(); notify(); };
   function courseError(err) {
     if (err.code === 'course_ended' && providers.length) {
-      msg('cmsg', err.message + '（已切換到「使用自己的 API 金鑰」）', 'err');
+      const date = (err.data && err.data.endsAt) || '';
+      msg('cmsg', '這門課的 AI 額度已於 {date} 結束。（已切換到「使用自己的 API 金鑰」）', 'err', { date });
       setMode('own');
-      msg('omsg', `${String(err.message).split('。')[0]}。貼上你自己的金鑰就能繼續使用。`, 'err');
+      msg('omsg', '這門課的 AI 額度已於 {date} 結束。貼上你自己的金鑰就能繼續使用。', 'err', { date });
       return;
     }
-    msg('cmsg', err.message, 'err');
+    msgRaw('cmsg', err.message, 'err');
   }
 
   async function login() {
@@ -2623,14 +3713,16 @@ function createAiAccess({ mount, gatewayUrl, tools = [], providers = [], guideUr
     root.querySelectorAll('[data-key]').forEach(i => {
       const p = i.dataset.key, v = i.value.trim();
       stores[p].set(v, remember);
-      if (v && !looksLikeKey(p, v)) bad.push(PROVIDERS[p].name);
+      if (v && !looksLikeKey(p, v)) bad.push(tr(PROVIDERS[p].name));
     });
-    msg('omsg', bad.length ? `${bad.join('、')} 的金鑰看起來不完整，請確認有整串複製。` : '', bad.length ? 'err' : '');
+    if (bad.length) msg('omsg', '{names} 的金鑰看起來不完整，請確認有整串複製。', 'err', { names: bad.join(tr('、')) });
+    else msg('omsg', '');
   }
 
   // 初始狀態：帶入已記住的金鑰；已登入的憑證還有效就直接顯示次數
   root.querySelectorAll('[data-key]').forEach(i => { i.value = stores[i.dataset.key].get(); });
   if ($('[data-f="remember"]')) $('[data-f="remember"]').checked = Object.values(stores).some(s => s.remembered);
+  paint();
   renderMode();
   // 輸入法選字中的 Enter（isComposing；Safari 在選字結束後才送出的 keyCode 229）不算登入
   if (gw) root.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229 && e.target.closest('[data-part="login"]')) { e.preventDefault(); login(); } });
@@ -2639,21 +3731,26 @@ function createAiAccess({ mount, gatewayUrl, tools = [], providers = [], guideUr
   return {
     get mode() { return mode; },
     get info() { return info; },              // 登入後閘道回來的課程與各工具次數、思考深度（未登入為 null）
+    get lang() { return lang; },
     setMode,
+    // 換介面語言（zh-TW、en、vi、id）：元件上的字、訊息、申請說明頁的連結都跟著換
+    setLang(l) { lang = l || 'zh-TW'; paint(); },
+    // 把閘道或元件送出的中文訊息翻成目前的語言（查不到就原文）；工具顯示 ai.run 丟出的錯誤時已經翻好，不用再呼叫
+    localize,
     gateway: gw,
     keys() { return Object.fromEntries(Object.entries(stores).map(([p, s]) => [p, s.get()])); },
 
     // 依目前選的入口執行。課程額度：閘道的 tool；自己的金鑰：呼叫 own(keys)
     async run(tool, body, { own, onProgress, signal } = {}) {
       if (mode === 'own') {
-        if (!own) throw new Error('這個功能還不能用自己的金鑰。');
+        if (!own) throw new Error(tr('這個功能還不能用自己的金鑰。'));
         const keys = this.keys();
         const missing = providers.filter(p => !keys[p]);
-        if (missing.length) { msg('omsg', `請先貼上 ${missing.map(p => PROVIDERS[p].name).join('、')} 的金鑰。`, 'err'); throw new Error('請先貼上自己的 API 金鑰。'); }
+        if (missing.length) { msg('omsg', '請先貼上 {names} 的金鑰。', 'err', { names: missing.map(p => tr(PROVIDERS[p].name)).join(tr('、')) }); throw new Error(tr('請先貼上自己的 API 金鑰。')); }
         const result = await own(keys, { signal });
         return { via: 'own', result };
       }
-      if (!gw || !gw.loggedIn) { msg('cmsg', '請先用學號與姓名登入。', 'err'); throw new Error('請先登入課程額度，或改用自己的 API 金鑰。'); }
+      if (!gw || !gw.loggedIn) { msg('cmsg', '請先用學號與姓名登入。', 'err'); throw new Error(tr('請先登入課程額度，或改用自己的 API 金鑰。')); }
       try {
         const out = await gw.run(body, { tool, onProgress, signal });
         if (info && info.tools[tool]) { info.tools[tool].remaining = out.remaining; info.tools[tool].used = out.used; renderWhoAndNotify(); }
@@ -2667,12 +3764,13 @@ function createAiAccess({ mount, gatewayUrl, tools = [], providers = [], guideUr
           const before = info;
           gw.me().then(d => { if (info === before && gw.loggedIn) { info = d; renderWhoAndNotify(); } }).catch(() => {});
         }
+        if (err.message) err.message = localize(err.message);
         throw err;
       }
     },
   };
 }
-return { createAiAccess };
+return { localizeMessage, createAiAccess };
 })();
 // ---- Teaching_Tools/3 side view generator/ai/threeview-prompt.js
 const TV_AI = (() => {
@@ -2714,8 +3812,8 @@ The part starts as a rectangular stock block of w × h × d mm and is then machi
 ## Uncertainty
 When something could reasonably be read two ways — which face, through versus blind, a total versus a segment, an unwritten size, the units — use the most likely reading in the draft and add an uncertain item:
 - path: the field inside that part, e.g. "steps[0].features[0].face", "steps[0].features[0].d", "steps[0].features[0]" for a whole feature, or "stock.h".
-- question: one short question in Traditional Chinese.
-- options: 2–4 alternatives; label is short Traditional Chinese, value_json is the JSON text of the value that replaces the field at path (e.g. "\\"front\\"", "50", or a whole feature object).
+- question: one short question in the reply language.
+- options: 2–4 alternatives; label is short text in the reply language, value_json is the JSON text of the value that replaces the field at path (e.g. "\\"front\\"", "50", or a whole feature object).
 - chosen: index of the option already used in the draft.
 When an alternative changes more than one field (a blind hole also needs its depth, a different notch needs other rects), use the whole feature as path (e.g. "steps[1].features[0]") and give the complete feature object in value_json, written the same way as in steps (rects and outline segments as lists of numbers).
 Don't ask about things the sketch shows clearly.
@@ -2727,22 +3825,25 @@ Compare the student's views with the part you rebuilt and with the drawing rules
 - missing center lines for holes and round features;
 - sizes that disagree between views or with the totals;
 - dimensioning problems such as R used on a full circle (should be Ø), missing key dimensions, dimensions placed on hidden lines, the same size dimensioned in more than one view, and sizes given only on the isometric sketch instead of the orthographic views.
-Write each issue as one short, specific, kind sentence in Traditional Chinese that says what to change. Do not invent problems; an empty review is fine.
+Write each issue as one short, specific, kind sentence in the reply language that says what to change. Do not invent problems; an empty review is fine.
 
 ## Output
-- Write all human-readable text (name, label, note, question, option labels, assumptions, review, views_found, message) in Traditional Chinese as used in Taiwanese drafting classes. Keep assumptions short: what you assumed, not how you worked it out.
-- Put exactly one entry in parts — the part shown. Name it as labeled on the sketch, or 工件 if unlabeled.
+- The reply language is Traditional Chinese as used in Taiwanese drafting classes, unless the request names another language (some students in the class read English, Vietnamese or Indonesian better). Write all human-readable text (name, label, note, question, option labels, assumptions, review, views_found, message) in the reply language, using the standard drafting terms of that language. Keep the view codes in square brackets in review ([front], [top] …) in English as specified. Keep assumptions short: what you assumed, not how you worked it out.
+- Put exactly one entry in parts — the part shown. Name it as labeled on the sketch, or 工件 (the word for "part" in the reply language) if unlabeled.
 - If the image is not a sketch of a part, set is_part_sketch to false, say why in message, and return an empty parts list. Otherwise use message for one short sentence to the student about anything important (or leave it empty).`;
 
 const UNIT_TEXT = { auto: '依草圖上寫的判斷', mm: 'mm', cm: 'cm' };
+// 回覆語言（介面語言）：繁體中文不加這一行（和以前的請求相同）
+const LANG_TEXT = { en: 'English（英文）', vi: 'Tiếng Việt（越南文）', id: 'Bahasa Indonesia（印尼文）' };
 const PROJ_TEXT = { third: '第三角法', first: '第一角法' };
 
-function threeviewUserText({ projection, units, note, count }) {
+function threeviewUserText({ projection, units, note, count, lang }) {
   return [
     `以上 ${count} 張照片是學生手繪的三視圖（可能附等角立體草圖）。`,
     `投影法：${PROJ_TEXT[projection] || PROJ_TEXT.third}。`,
     `草圖單位：${UNIT_TEXT[units] || UNIT_TEXT.auto}。`,
     note ? `補充說明：${note}` : '',
+    LANG_TEXT[lang] ? `回覆語言：${LANG_TEXT[lang]}——所有給學生看的文字都用這個語言寫。` : '',
     '請重建這個工件（料塊尺寸與加工步驟），並列出學生圖面的問題。',
   ].filter(Boolean).join('\n');
 }
@@ -2752,9 +3853,9 @@ return { THREEVIEW_SYSTEM_PROMPT, threeviewUserText, THREEVIEW_SCHEMA };
 })();
 /* ==== END 共用 AI 程式 ==== */
 
-const AI = { ai: null, images: [], draft: null, choices: [], ctrl: null, resultJson: null, gen: 0 };   // gen：登出時加一，進行中的辨識／建模就不再顯示結果
-const EFFORT_NAMES = { low: '快', medium: '一般', high: '仔細' };
-const VIEW_TAGS = { front: '前視圖', top: '俯視圖', right: '右側視圖', left: '左側視圖', bottom: '仰視圖', back: '後視圖', iso: '等角圖', layout: '視圖配置', dims: '尺寸', general: '整體' };
+const AI = { ai: null, images: [], draft: null, choices: [], ctrl: null, resultJson: null, gen: 0, shown: null };   // gen：登出時加一，進行中的辨識／建模就不再顯示結果
+const EFFORT_NAMES = { low: N('思考深度|快'), medium: N('思考深度|一般'), high: N('思考深度|仔細') };
+const VIEW_TAGS = { front: N('前視圖'), top: N('俯視圖'), right: N('右側視圖'), left: N('左側視圖'), bottom: N('仰視圖'), back: N('後視圖'), iso: N('等角圖'), layout: N('視圖配置'), dims: N('尺寸'), general: N('整體') };
 const hasName = e => Object.prototype.hasOwnProperty.call(EFFORT_NAMES, e);
 
 const aiWarn = t => { $('aiWarn').textContent = t || ''; };
@@ -2764,15 +3865,15 @@ const aiStatus = t => { $('aiStatus').textContent = t || ''; };
 // 入口、課程或選項換了就回到預設值；同一個來源下保留學生自己選的
 let effortSrc = '';
 function aiEfforts() {
-  const ai = AI.ai, t = ai && ai.mode === 'course' && ai.info && ai.info.tools && ai.info.tools[AI_TOOL];
+  const ai = AI.ai, ti = ai && ai.mode === 'course' && ai.info && ai.info.tools && ai.info.tools[AI_TOOL];
   let list = ['medium'], def = 'medium';
   if (ai && ai.mode === 'own') list = ['low', 'medium', 'high'];
-  else if (t) { list = (Array.isArray(t.efforts) ? t.efforts : []).filter(hasName); def = t.defaultEffort; }
+  else if (ti) { list = (Array.isArray(ti.efforts) ? ti.efforts : []).filter(hasName); def = ti.defaultEffort; }
   if (!list.length) list = ['medium'];
   const src = [ai && ai.mode, ai && ai.mode === 'course' && ai.info && ai.info.course && ai.info.course.id, list.join(), def].join('|');
   const sel = $('aiEffort'), cur = src === effortSrc ? sel.value : '';
   effortSrc = src;
-  sel.replaceChildren(...list.map(e => new Option(EFFORT_NAMES[e], e)));
+  sel.replaceChildren(...list.map(e => new Option(t(EFFORT_NAMES[e]), e)));
   sel.value = list.includes(cur) ? cur : list.includes(def) ? def : list[0];
 }
 function aiUpdateGo() { $('aiGo').disabled = !AI.images.length || !!AI.ctrl; }
@@ -2783,7 +3884,7 @@ async function prepareImage(file, maxEdge = 2000, quality = 0.85) {
   try {
     const img = new Image();
     img.src = url;
-    try { await img.decode(); } catch { throw new Error(`「${file.name}」無法讀取，請改用 JPG 或 PNG（iPhone 可在「設定 → 相機 → 格式」選「最相容」）。`); }
+    try { await img.decode(); } catch { throw new Error(t('「{name}」無法讀取，請改用 JPG 或 PNG（iPhone 可在「設定 → 相機 → 格式」選「最相容」）。', { name: file.name })); }
     const k = Math.min(1, maxEdge / Math.max(img.naturalWidth, img.naturalHeight));
     const cv = document.createElement('canvas');
     cv.width = Math.max(1, Math.round(img.naturalWidth * k)); cv.height = Math.max(1, Math.round(img.naturalHeight * k));
@@ -2798,26 +3899,26 @@ async function prepareImage(file, maxEdge = 2000, quality = 0.85) {
 async function aiAddFiles(files) {
   aiWarn('');
   for (const f of [...files]) {
-    if (AI.images.length >= 4) { aiWarn('最多 4 張照片。'); break; }
+    if (AI.images.length >= 4) { aiWarn(t('最多 4 張照片。')); break; }
     try { AI.images.push(await prepareImage(f)); } catch (err) { aiWarn(err.message); }
   }
   aiRenderThumbs(); aiUpdateGo(); renderCompare();
 }
 function aiRenderThumbs() {
-  $('aiThumbs').innerHTML = AI.images.map((im, i) => `<div class="thumb"><img src="${im.dataUrl}" alt=""><button class="x" data-i="${i}" title="移除">×</button></div>`).join('');
+  $('aiThumbs').innerHTML = AI.images.map((im, i) => `<div class="thumb"><img src="${im.dataUrl}" alt=""><button class="x" data-i="${i}" title="${esc(t('移除'))}">×</button></div>`).join('');
 }
 
 // 登出時清掉上一位的照片、說明與辨識結果（共用電腦）；右邊的圖面留著
 function aiClearWork() {
   AI.gen++;
   if (AI.ctrl) AI.ctrl.abort();
-  Object.assign(AI, { images: [], draft: null, choices: [], resultJson: null });
+  Object.assign(AI, { images: [], draft: null, choices: [], resultJson: null, shown: null });
   $('aiNote').value = '';
   $('aiResult').hidden = true; $('aiResult').innerHTML = ''; aiWarn(''); aiStatus('');
   aiRenderThumbs(); aiUpdateGo(); renderCompare();
 }
 
-const aiProgress = d => aiStatus(d.phase === 'writing' ? `AI 正在寫結果…（${d.seconds ?? 0} 秒）` : `AI 判讀中…（${d.seconds ?? 0} 秒）`);
+const aiProgress = d => aiStatus(d.phase === 'writing' ? t('AI 正在寫結果…（{s} 秒）', { s: d.seconds ?? 0 }) : t('AI 判讀中…（{s} 秒）', { s: d.seconds ?? 0 }));
 
 // 「自己的金鑰」：瀏覽器直接以串流呼叫 Anthropic（回答很長，不能用非串流）。
 // 請求內容和閘道的 threeview-recognize（worker/src/tools/assembly-recognize.js 的 recognize）逐項相同：
@@ -2826,11 +3927,11 @@ const aiProgress = d => aiStatus(d.phase === 'writing' ? `AI 正在寫結果…�
 let aiSdk = null, aiSdkTries = 0;
 const loadAiSdk = () => (aiSdk ||= import(AI_SDK_URL + (aiSdkTries++ ? `?retry=${aiSdkTries}` : '')).catch(() => {
   aiSdk = null;
-  throw new Error('無法載入 Claude SDK（需要網路連線）。連上網路後再按一次；還是不行請重新整理頁面。');
+  throw new Error(t('無法載入 Claude SDK（需要網路連線）。連上網路後再按一次；還是不行請重新整理頁面。'));
 }));
 async function ownRecognize(apiKey, o, signal) {
   // 從通訊軟體複製時常帶到全形引號或看不見的空白：瀏覽器會直接擋下，訊息是英文，所以先檢查
-  if (/[^\x21-\x7e]/.test(apiKey)) throw new Error('金鑰裡有不正確的字元（全形字、引號或看不見的空白），請重新複製貼上。');
+  if (/[^\x21-\x7e]/.test(apiKey)) throw new Error(t('金鑰裡有不正確的字元（全形字、引號或看不見的空白），請重新複製貼上。'));
   const mod = await loadAiSdk();
   const Anthropic = mod.default || mod.Anthropic;
   const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true, maxRetries: 2, ...(AI_OWN_BASE ? { baseURL: AI_OWN_BASE } : {}) });
@@ -2844,7 +3945,7 @@ async function ownRecognize(apiKey, o, signal) {
       role: 'user',
       content: [
         ...o.images.map(data => ({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data } })),
-        { type: 'text', text: TV_AI.threeviewUserText({ projection: o.projection, units: o.units, note: o.note, count: o.images.length }) },
+        { type: 'text', text: TV_AI.threeviewUserText({ projection: o.projection, units: o.units, note: o.note, count: o.images.length, lang: o.lang }) },
       ],
     }],
   });
@@ -2857,24 +3958,24 @@ async function ownRecognize(apiKey, o, signal) {
   catch (err) { throw ownError(mod, err); }
   finally { clearInterval(tick); if (signal) signal.removeEventListener('abort', stop); }
   // 訊息比照閘道（自己的金鑰沒有「次數」）
-  if (msg.stop_reason === 'refusal') throw new Error('AI 拒絕處理這次的圖片。');
-  if (msg.stop_reason === 'max_tokens') throw new Error('AI 的回答太長被截斷了，請改用較少張照片、縮短補充說明再試。');
+  if (msg.stop_reason === 'refusal') throw new Error(t('AI 拒絕處理這次的圖片。'));
+  if (msg.stop_reason === 'max_tokens') throw new Error(t('AI 的回答太長被截斷了，請改用較少張照片、縮短補充說明再試。'));
   const text = msg.content.filter(b => b.type === 'text').map(b => b.text).join('');
-  try { return JSON.parse(text); } catch { throw new Error('AI 回傳的格式無法解析，請再試一次。'); }
+  try { return JSON.parse(text); } catch { throw new Error(t('AI 回傳的格式無法解析，請再試一次。')); }
 }
 function ownError(mod, err) {
   const is = n => mod[n] && err instanceof mod[n];
   const inner = (err && err.error && err.error.error) || {};
   const detail = `${inner.type || ''} ${inner.message || err.message || ''}`;
   let m;
-  if (is('APIUserAbortError')) return Object.assign(new Error('已取消。'), { code: 'aborted' });
-  if (is('AuthenticationError')) m = 'Anthropic 說這把金鑰不正確或已經撤銷。請重新複製貼上，或到 Anthropic 後台建立新的金鑰。';
-  else if (/credit balance|billing|spend limit/i.test(detail)) m = '你的 Anthropic 帳戶額度不足或已達花費上限，請到後台儲值或調整上限。';
-  else if (is('PermissionDeniedError')) m = /request not allowed|region|country/i.test(detail) ? 'Anthropic 拒絕了這個地區的連線，請換個網路（例如手機熱點）再試。' : '這把金鑰沒有權限使用這個模型，請到 Anthropic 後台確認。';
-  else if (is('RateLimitError')) m = 'Anthropic 說請求太頻繁或超過你帳戶的速率上限，請稍後再試。';
-  else if (is('BadRequestError')) m = '這次的請求被 Anthropic 拒絕：' + (inner.message || err.message);
-  else if (is('APIConnectionError')) m = '連不上 Anthropic，請確認網路連線。';
-  else if (is('APIError') && err.status >= 500) m = 'Anthropic 暫時忙碌，請稍後再試。';
+  if (is('APIUserAbortError')) return Object.assign(new Error(t('已取消。')), { code: 'aborted' });
+  if (is('AuthenticationError')) m = t('Anthropic 說這把金鑰不正確或已經撤銷。請重新複製貼上，或到 Anthropic 後台建立新的金鑰。');
+  else if (/credit balance|billing|spend limit|usage limits/i.test(detail)) m = t('你的 Anthropic 帳戶額度不足或已達花費上限，請到後台儲值或調整上限。');
+  else if (is('PermissionDeniedError')) m = /request not allowed|region|country/i.test(detail) ? t('Anthropic 拒絕了這個地區的連線，請換個網路（例如手機熱點）再試。') : t('這把金鑰沒有權限使用這個模型，請到 Anthropic 後台確認。');
+  else if (is('RateLimitError')) m = t('Anthropic 說請求太頻繁或超過你帳戶的速率上限，請稍後再試。');
+  else if (is('BadRequestError')) m = t('這次的請求被 Anthropic 拒絕：{msg}', { msg: inner.message || err.message });
+  else if (is('APIConnectionError')) m = t('連不上 Anthropic，請確認網路連線。');
+  else if (is('APIError') && err.status >= 500) m = t('Anthropic 暫時忙碌，請稍後再試。');
   else m = err.message || String(err);
   return Object.assign(new Error(m), { cause: err });
 }
@@ -2885,20 +3986,20 @@ async function aiRecognize() {
   aiWarn('');
   const ctrl = AI.ctrl = new AbortController();
   $('aiCancel').hidden = false; aiUpdateGo();
-  aiStatus('上傳中…');
+  aiStatus(t('上傳中…'));
   const t0 = performance.now(), gen = AI.gen, via = AI.ai.mode;
-  const body = { images: AI.images.map(im => im.base64), projection: state.proj, units: $('aiUnits').value, note: $('aiNote').value.trim().slice(0, 300), effort: $('aiEffort').value };
+  const body = { images: AI.images.map(im => im.base64), projection: state.proj, units: $('aiUnits').value, note: $('aiNote').value.trim().slice(0, 300), effort: $('aiEffort').value, lang: getLang() };
   try {
     const r = await AI.ai.run(AI_TOOL, body, { own: keys => ownRecognize(keys.anthropic, body, ctrl.signal), onProgress: aiProgress, signal: ctrl.signal });
     if (gen !== AI.gen) return;   // 等待中已登出
-    const how = r.via === 'own' ? '用自己的金鑰' : `用課程額度，剩 ${r.remaining} 次`;
-    const done = `辨識完成（${Math.round((performance.now() - t0) / 1000)} 秒，${how}）`;
+    const sec = Math.round((performance.now() - t0) / 1000);
+    const done = r.via === 'own' ? t('辨識完成（{s} 秒，用自己的金鑰）', { s: sec }) : t('辨識完成（{s} 秒，用課程額度，剩 {n} 次）', { s: sec, n: r.remaining });
     aiStatus(done);
     await aiUseResult(r.result);
     if (gen === AI.gen) aiStatus(done);   // 建模時狀態會被改掉，完成後再顯示一次
   } catch (err) {
     if (gen !== AI.gen) return;
-    aiStatus(err.code === 'aborted' && via === 'course' ? '已取消。AI 如果已經開始判讀，這一次仍會算進次數。' : '');
+    aiStatus(err.code === 'aborted' && via === 'course' ? t('已取消。AI 如果已經開始判讀，這一次仍會算進次數。') : '');
     if (err.code !== 'aborted') aiWarn(err.message);
   } finally {
     AI.ctrl = null; $('aiCancel').hidden = true; aiUpdateGo();
@@ -2910,7 +4011,7 @@ async function aiUseResult(result) {
   AI.resultJson = result;
   if (!result || !result.is_part_sketch || !(result.parts && result.parts.length)) {
     $('aiResult').hidden = false;
-    $('aiResult').innerHTML = `<div class="warn">${esc((result && result.message) || '照片裡找不到工件的三視圖。')}</div>`;
+    $('aiResult').innerHTML = `<div class="warn">${esc((result && result.message) || t('照片裡找不到工件的三視圖。'))}</div>`;
     return;
   }
   AI.draft = result.parts[0];
@@ -2924,50 +4025,51 @@ async function aiBuild() {
   try {
     const { draft, failed } = applyChoices(AI.draft, AI.choices);
     ({ part, issues } = toPart(draft));
-    issues.push(...failed.map(q => `「${q}」的選項無法套用（AI 給的路徑或值格式不對），這一項維持原本的判讀`));
+    issues.push(...failed.map(q => t('「{q}」的選項無法套用（AI 給的路徑或值格式不對），這一項維持原本的判讀', { q })));
   } catch (err) {
     aiStatus('');
-    aiWarn('辨識結果的格式不對：' + err.message);
+    aiWarn(t('辨識結果的格式不對：{msg}', { msg: err.message }));
     return;
   }
   try {
-    aiStatus('建立 3D 模型…');
+    aiStatus(t('建立 3D 模型…'));
     await new Promise(r => setTimeout(r, 0));   // 讓狀態先畫出來
     built = await buildPart(part);
   } catch (err) {
     if (gen !== AI.gen) return;
     aiStatus('');
-    aiRenderResult(part, [...issues, '幾何建立失敗：' + (err instanceof Error ? err.message : '幾何核心內部錯誤') + '（右邊的圖面仍是上一個結果）']);
+    aiRenderResult(part, [...issues, t('幾何建立失敗：{msg}（右邊的圖面仍是上一個結果）', { msg: err instanceof Error ? err.message : t('幾何核心內部錯誤') })]);
     return;
   }
   if (gen !== AI.gen) return;   // 建模中已登出：不顯示上一位的結果
   aiStatus('');
   aiRenderResult(part, [...issues, ...built.issues]);
   $('tbTitle').dataset.auto = '1'; $('tbTitle').value = '';
-  setSoup(built.soup, part.name || '工件', false, 1, 'AI 辨識結果', true);
+  setSoup(built.soup, part.name || '工件', false, 1, N('AI 辨識結果'), true);   // 工件名稱會進標題欄 i18n-skip
   renderCompare();
 }
 
 function aiRenderResult(part, issues) {
+  AI.shown = [part, issues];   // 換語言時重畫
   const r = AI.resultJson || {}, d = AI.draft || {};
   const li = a => a.map(x => `<li>${x}</li>`).join('');
-  const steps = (part.steps || []).map(st => `${esc(st.label)}${st.note ? `<span class="muted">（${esc(st.note)}）</span>` : ''}`);
+  const steps = (part.steps || []).map(st => `${esc(st.label)}${st.note ? `<span class="muted">${esc(t('（{note}）', { note: st.note }))}</span>` : ''}`);
   const qs = (d.uncertain || []).map((u, i) => `<div class="q"><div>${esc(u.question)}</div>${u.options.map((o, j) =>
     `<label><input type="radio" name="aiq${i}" data-q="${i}" value="${j}"${AI.choices[i] === j ? ' checked' : ''}>${esc(o.label)}</label>`).join('')}</div>`).join('');
-  const review = reviewItems(d.review).map(x => `${x.view ? `<span class="tag">${esc(VIEW_TAGS[x.view] || x.view)}</span>` : ''}${esc(x.issue)}`);
+  const review = reviewItems(d.review).map(x => `${x.view ? `<span class="tag">${esc(VIEW_TAGS[x.view] ? t(VIEW_TAGS[x.view]) : x.view)}</span>` : ''}${esc(x.issue)}`);
   const views = viewsText(r.views_found);
   $('aiResult').hidden = false;
   $('aiResult').innerHTML = `
-    <h3>辨識結果</h3>
-    <div class="info" style="margin:0">料塊 ${part.stock.w}×${part.stock.d}×${part.stock.h} mm（寬×深×高）${views ? '　找到：' + esc(views) : ''}</div>
+    <h3>${esc(t('辨識結果'))}</h3>
+    <div class="info" style="margin:0">${esc(t('料塊 {w}×{d}×{h} mm（寬×深×高）', { w: part.stock.w, d: part.stock.d, h: part.stock.h }))}${views ? '　' + esc(t('找到：{views}', { views })) : ''}</div>
     <ol class="steps">${li(steps)}</ol>
-    ${qs ? `<h3>AI 不確定的地方</h3>${qs}` : ''}
-    ${review.length ? `<h3>你的手繪圖面可以改進的地方</h3><ul class="review">${li(review)}</ul>` : '<h3>手繪圖面檢查</h3><div class="info" style="margin:0">AI 沒有發現明顯的問題。</div>'}
-    ${(d.assumptions || []).length ? `<h3>AI 的假設</h3><ul>${li(d.assumptions.map(esc))}</ul>` : ''}
+    ${qs ? `<h3>${esc(t('AI 不確定的地方'))}</h3>${qs}` : ''}
+    ${review.length ? `<h3>${esc(t('你的手繪圖面可以改進的地方'))}</h3><ul class="review">${li(review)}</ul>` : `<h3>${esc(t('手繪圖面檢查'))}</h3><div class="info" style="margin:0">${esc(t('AI 沒有發現明顯的問題。'))}</div>`}
+    ${(d.assumptions || []).length ? `<h3>${esc(t('AI 的假設'))}</h3><ul>${li(d.assumptions.map(esc))}</ul>` : ''}
     ${r.message ? `<div class="info">${esc(r.message)}</div>` : ''}
     ${issues.length ? `<div class="warn">${issues.map(esc).join('<br>')}</div>` : ''}
-    <div class="row"><button class="chip" id="aiSaveJson">下載辨識結果（JSON）</button></div>
-    <div class="info">辨識結果是 AI 的判讀，請和自己的手繪對照確認；有疑問的地方可以在上面改選。</div>`;
+    <div class="row"><button class="chip" id="aiSaveJson">${esc(t('下載辨識結果（JSON）'))}</button></div>
+    <div class="info">${esc(t('辨識結果是 AI 的判讀，請和自己的手繪對照確認；有疑問的地方可以在上面改選。'))}</div>`;
 }
 
 // AI 草稿 → 工件；套用「不確定項」的選擇（路徑如 steps[0].features[0].face、stock.h）
@@ -3026,22 +4128,22 @@ function reviewItems(rv) {
 }
 // 找到的視圖：現在是一行文字；以前是 { view, where } 陣列
 const viewsText = vf => (typeof vf === 'string' ? txt(vf)
-  : arrOf(vf).map(v => (isObj(v) ? `${VIEW_TAGS[v.view] || txt(v.view)}：${txt(v.where)}` : txt(v))).filter(Boolean).join('；'));
+  : arrOf(vf).map(v => (isObj(v) ? t('{view}：{where}', { view: VIEW_TAGS[v.view] ? t(VIEW_TAGS[v.view]) : txt(v.view), where: txt(v.where) }) : txt(v))).filter(Boolean).join(t('句子分隔|；')));
 function toPart(draft) {
   const issues = [];
   if (!isObj(draft)) draft = {};
-  const pos = (x, what) => { const v = posOf(x); if (v == null) { issues.push(`${what}應大於 0（讀到 ${x}），暫用 100`); return null; } return v; };
+  const pos = (x, what) => { const v = posOf(x); if (v == null) { issues.push(t('{what}應大於 0（讀到 {x}），暫用 100', { what: t(what), x })); return null; } return v; };
   const s = isObj(draft.stock) ? draft.stock : {};
-  const stock = { w: pos(s.w, '料塊寬') || 100, h: pos(s.h, '料塊高') || 100, d: pos(s.d, '料塊深') || 100 };
-  for (const k of ['w', 'h', 'd']) if (stock[k] > 5000) issues.push(`料塊尺寸 ${stock[k]} mm 太大，請確認單位`);
-  const part = { name: txt(draft.name) || '工件', stock, steps: [] };
+  const stock = { w: pos(s.w, N('料塊寬')) || 100, h: pos(s.h, N('料塊高')) || 100, d: pos(s.d, N('料塊深')) || 100 };
+  for (const k of ['w', 'h', 'd']) if (stock[k] > 5000) issues.push(t('料塊尺寸 {v} mm 太大，請確認單位', { v: stock[k] }));
+  const part = { name: txt(draft.name) || '工件', stock, steps: [] };   // 名稱會進標題欄 i18n-skip
   part.steps = arrOf(draft.steps).map((st, j) => {
-    const where = `步驟 ${j + 1}`;
-    if (!isObj(st)) { if (st != null) issues.push(`${where}：格式不對，已略過`); return null; }   // null = 選項「沒有這一步」
+    const where = t('步驟 {n}', { n: j + 1 });
+    if (!isObj(st)) { if (st != null) issues.push(t('{where}：格式不對，已略過', { where })); return null; }   // null = 選項「沒有這一步」
     return {
       label: txt(st.label) || where, note: txt(st.note),
       features: arrOf(st.features).map((f, k) => {
-        if (!isObj(f)) { if (f != null) issues.push(`${where}：第 ${k + 1} 個特徵格式不對，已略過`); return null; }   // null = 選項「沒有這個特徵」
+        if (!isObj(f)) { if (f != null) issues.push(t('{where}：第 {n} 個特徵格式不對，已略過', { where, n: k + 1 })); return null; }   // null = 選項「沒有這個特徵」
         return toFeature(f, issues, where, stock);
       }).filter(Boolean),
     };
@@ -3061,53 +4163,53 @@ function rectOf(r, issues, where) {
   [u0, u1, v0, v1] = [u0, u1, v0, v1].map(numOf);
   if (u0 > u1) [u0, u1] = [u1, u0];
   if (v0 > v1) [v0, v1] = [v1, v0];
-  if (![u0, u1, v0, v1].every(Number.isFinite) || !(u1 > u0 && v1 > v0)) { issues.push(`${where}：矩形範圍是空的或讀不到，已略過這個矩形`); return null; }
+  if (![u0, u1, v0, v1].every(Number.isFinite) || !(u1 > u0 && v1 > v0)) { issues.push(t('{where}：矩形範圍是空的或讀不到，已略過這個矩形', { where })); return null; }
   return { u0, u1, v0, v1 };
 }
 function toFeature(f, issues, where, stock) {
-  const name = { hole: '孔', pocket: '矩形切除', boss: '凸柱', profile: '輪廓切除', fillet: '圓角', chamfer: '倒角' }[f.type] || f.type;
+  const name = t({ hole: N('特徵|孔'), pocket: N('矩形切除'), boss: N('凸柱'), profile: N('輪廓切除'), fillet: N('圓角'), chamfer: N('倒角') }[f.type] || String(f.type));
   // 深度：貫穿時不用；讀不到或 ≤ 0（例如用負號表示「往內」）時暫用 10 並說明
   const depthOf = (need = !f.through) => {
     const v = posOf(f.depth);
-    if (v == null && need) issues.push(`${where}：${name}深度應大於 0（讀到 ${f.depth}），暫用 10`);
+    if (v == null && need) issues.push(t('{where}：{name}深度應大於 0（讀到 {v}），暫用 10', { where, name, v: f.depth }));
     return v || 10;
   };
-  if (!FACES.includes(f.face) && !['fillet', 'chamfer'].includes(f.type)) { issues.push(`${where}：不認得的面「${f.face}」，已略過`); return null; }
+  if (!FACES.includes(f.face) && !['fillet', 'chamfer'].includes(f.type)) { issues.push(t('{where}：不認得的面「{face}」，已略過', { where, face: f.face })); return null; }
   switch (f.type) {
     case 'hole': {
       let d = posOf(f.d);
-      if (d == null) { issues.push(`${where}：孔徑應大於 0（讀到 ${f.d}），暫用 Ø10`); d = 10; }
+      if (d == null) { issues.push(t('{where}：孔徑應大於 0（讀到 {v}），暫用 Ø10', { where, v: f.d })); d = 10; }
       return { type: 'hole', face: f.face, at: atOf(f.centered, f.u, f.v), d, depth: depthOf(), through: !!f.through, mirror: mirrorOf(f.mirror) };
     }
     case 'pocket': {
       const rects = arrOf(f.rects).map(r => rectOf(r, issues, where)).filter(Boolean);
-      if (!rects.length) { issues.push(`${where}：矩形切除沒有有效的範圍，已略過`); return null; }
+      if (!rects.length) { issues.push(t('{where}：矩形切除沒有有效的範圍，已略過', { where })); return null; }
       return { type: 'pocket', face: f.face, rects, depth: depthOf(), through: !!f.through, mirror: mirrorOf(f.mirror) };
     }
     case 'boss': {
       const islands = arrOf(f.islands).map((is, k) => {
-        if (!isObj(is) || !['circle', 'rect'].includes(is.shape)) { issues.push(`${where}：凸柱的第 ${k + 1} 個形狀讀不到，已略過`); return null; }
+        if (!isObj(is) || !['circle', 'rect'].includes(is.shape)) { issues.push(t('{where}：凸柱的第 {n} 個形狀讀不到，已略過', { where, n: k + 1 })); return null; }
         if (is.shape === 'rect') { const rect = rectOf(is.rect, issues, where); return rect && { shape: 'rect', at: atOf(true), d: 0, rect }; }
         let d = posOf(is.d);
-        if (d == null) { issues.push(`${where}：凸柱直徑應大於 0（讀到 ${is.d}），暫用 Ø10`); d = 10; }
+        if (d == null) { issues.push(t('{where}：凸柱直徑應大於 0（讀到 {v}），暫用 Ø10', { where, v: is.d })); d = 10; }
         return { shape: 'circle', at: atOf(is.centered, is.u, is.v), d, rect: null };
       }).filter(Boolean);
-      if (!islands.length) { issues.push(`${where}：凸柱沒有指定形狀，已略過`); return null; }
+      if (!islands.length) { issues.push(t('{where}：凸柱沒有指定形狀，已略過', { where })); return null; }
       return { type: 'boss', face: f.face, depth: depthOf(true), mirror: mirrorOf(f.mirror), islands };
     }
     case 'profile': {
       const raw = arrOf(f.outline).map(segOf);
-      if (raw.some(sg => !sg)) { issues.push(`${where}：輪廓裡有格式不對的線段，已略過這個輪廓切除`); return null; }
+      if (raw.some(sg => !sg)) { issues.push(t('{where}：輪廓裡有格式不對的線段，已略過這個輪廓切除', { where })); return null; }
       const outline = raw.map(sg => ({ kind: sg.kind === 'arc' ? 'arc' : 'line', u: finOf(sg.u), v: finOf(sg.v), cu: finOf(sg.cu) ?? 0, cv: finOf(sg.cv) ?? 0, ccw: !!sg.ccw }));
-      if (!(outline.length >= 2 || (outline.length === 1 && outline[0].kind === 'arc'))) { issues.push(`${where}：輪廓切除沒有輪廓，已略過`); return null; }
+      if (!(outline.length >= 2 || (outline.length === 1 && outline[0].kind === 'arc'))) { issues.push(t('{where}：輪廓切除沒有輪廓，已略過', { where })); return null; }
       // 座標讀不到或離料塊太遠（幾何核心只接受約 ±3e10 以內），整個輪廓略過
       const lim = 10 * Math.max(stock.w, stock.h, stock.d);
-      if (outline.some(sg => [sg.u, sg.v, sg.cu, sg.cv].some(x => x == null || Math.abs(x) > lim))) { issues.push(`${where}：輪廓的座標讀不到或離料塊太遠，已略過`); return null; }
+      if (outline.some(sg => [sg.u, sg.v, sg.cu, sg.cv].some(x => x == null || Math.abs(x) > lim))) { issues.push(t('{where}：輪廓的座標讀不到或離料塊太遠，已略過', { where })); return null; }
       outline.forEach((sg, i) => {
         if (sg.kind !== 'arc') return;
         const p = outline[(i + outline.length - 1) % outline.length];
         const ra = Math.hypot(p.u - sg.cu, p.v - sg.cv), rb = Math.hypot(sg.u - sg.cu, sg.v - sg.cv);
-        if (Math.abs(ra - rb) > Math.max(0.5, 0.02 * Math.max(ra, rb))) issues.push(`${where}：輪廓第 ${i + 1} 段圓弧的起點和終點離圓心不一樣遠（R${r1(ra)} 和 R${r1(rb)}），請確認圓心`);
+        if (Math.abs(ra - rb) > Math.max(0.5, 0.02 * Math.max(ra, rb))) issues.push(t('{where}：輪廓第 {n} 段圓弧的起點和終點離圓心不一樣遠（R{a} 和 R{b}），請確認圓心', { where, n: i + 1, a: r1(ra), b: r1(rb) }));
       });
       return { type: 'profile', face: f.face, depth: depthOf(), through: !!f.through, mirror: mirrorOf(f.mirror), outline };
     }
@@ -3115,21 +4217,21 @@ function toFeature(f, issues, where, stock) {
     case 'chamfer': {
       // 鏡射：稜邊名稱左右／前後／上下對調（例：top-front + 鏡射 z → 也做 top-back）
       const set = new Set(arrOf(f.edges).filter(e => EDGES[e]));
-      if (!set.size) { issues.push(`${where}：${name}沒有指定稜邊，已略過`); return null; }
+      if (!set.size) { issues.push(t('{where}：{name}沒有指定稜邊，已略過', { where, name })); return null; }
       for (const a of mirrorOf(f.mirror)) for (const e of [...set]) set.add(e.split('-').map(t => EDGE_SWAP[a][t] || t).join('-'));
       let size = posOf(f.size);
-      if (size == null) { issues.push(`${where}：${name}${f.type === 'fillet' ? '半徑' : ''}應大於 0（讀到 ${f.size}），暫用 5`); size = 5; }
+      if (size == null) { issues.push(f.type === 'fillet' ? t('{where}：圓角半徑應大於 0（讀到 {v}），暫用 5', { where, v: f.size }) : t('{where}：倒角應大於 0（讀到 {v}），暫用 5', { where, v: f.size })); size = 5; }
       const edges = [...set].filter(e => {
         const lim = Math.min(...EDGES[e].map(fc => stock[FACE_EXT[fc]]));
         if (size <= lim) return true;
-        issues.push(`${where}：${name} ${size} 比稜邊「${e}」旁的料塊（${lim} mm）還大，已略過這條稜邊`);
+        issues.push(t('{where}：{name} {size} 比稜邊「{edge}」旁的料塊（{lim} mm）還大，已略過這條稜邊', { where, name, size, edge: e, lim }));
         return false;
       });
       if (!edges.length) return null;
       return { type: f.type, edges, size, mirror: [] };
     }
     default:
-      issues.push(`${where}：不認得的特徵「${f.type}」，已略過`);
+      issues.push(t('{where}：不認得的特徵「{type}」，已略過', { where, type: f.type }));
       return null;
   }
 }
@@ -3141,7 +4243,7 @@ let MF = null;
 async function loadManifold() {
   if (MF) return MF;
   let Module;
-  try { ({ default: Module } = await import(MANIFOLD_URL)); } catch { throw new Error('無法載入幾何核心（需要網路連線）'); }
+  try { ({ default: Module } = await import(MANIFOLD_URL)); } catch { throw new Error(t('無法載入幾何核心（需要網路連線）')); }
   const w = await Module(); w.setup(); MF = w;
   return MF;
 }
@@ -3179,7 +4281,7 @@ function faceFrame(s, face) {
     case 'left':   return { o: [-hw, 0, -hd], u: [0, 0, 1], v: [0, 1, 0], n: [-1, 0, 0], U: d, V: h, T: w };
     case 'top':    return { o: [-hw, h, hd], u: [1, 0, 0], v: [0, 0, -1], n: [0, 1, 0], U: w, V: d, T: h };
     case 'bottom': return { o: [-hw, 0, -hd], u: [1, 0, 0], v: [0, 0, 1], n: [0, -1, 0], U: w, V: d, T: h };
-    default: throw new Error('未知的面：' + face);
+    default: throw new Error(t('未知的面：{face}', { face }));
   }
 }
 const facePoint = (F, u, v, t = 0) => [0, 1, 2].map(k => F.o[k] + u * F.u[k] + v * F.v[k] - t * F.n[k]);
@@ -3244,17 +4346,17 @@ function outlinePoints(segs) {
 // 輪廓切除：面上的封閉輪廓沿面的法向往內擠出
 function profileTool(s, f) {
   const F = faceFrame(s, f.face), pts = outlinePoints(f.outline);
-  if (pts.length < 3) throw new Error('輪廓少於 3 個點');
+  if (pts.length < 3) throw new Error(t('輪廓少於 3 個點'));
   let area = 0;
   for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; area += p[0] * q[1] - q[0] * p[1]; }
-  if (Math.abs(area) < 1e-6) throw new Error('輪廓自己交叉或沒有面積');
+  if (Math.abs(area) < 1e-6) throw new Error(t('輪廓自己交叉或沒有面積'));
   if (area < 0) pts.reverse();
   const cs = new MF.CrossSection([pts], 'NonZero');
   const depth = f.through ? F.T + KE : f.depth;
   const ex = cs.extrude(depth + KE); cs.delete();
   // 區域座標 (u, v, z) → 世界：o + u·û + v·v̂ − (z − KE)·n̂
-  const R = [0, 1, 2].map(k => [F.u[k], F.v[k], -F.n[k]]), t = [0, 1, 2].map(k => F.o[k] + KE * F.n[k]);
-  const m = kplace(ex, R, t); ex.delete();
+  const R = [0, 1, 2].map(k => [F.u[k], F.v[k], -F.n[k]]), tv = [0, 1, 2].map(k => F.o[k] + KE * F.n[k]);
+  const m = kplace(ex, R, tv); ex.delete();
   return m;
 }
 function edgeTool(s, edge, size, kind) {
@@ -3299,12 +4401,12 @@ function featureTool(s, f) {
     case 'boss': tool = bossTool(s, f); break;
     case 'profile': tool = profileTool(s, f); break;
     case 'fillet': case 'chamfer': tool = kunion(f.edges.map(e => edgeTool(s, e, f.size, f.type))); break;
-    default: throw new Error('未知的特徵類型：' + f.type);
+    default: throw new Error(t('未知的特徵類型：{type}', { type: f.type }));
   }
   if (!tool) return null;
   const m = mirrored(s, tool, f.mirror);
   // 尺寸或位置不合理的工具（負值、NaN、無限大）會讓聯集後整個步驟、甚至整個工件失效：只略過這個特徵
-  if (m.status() !== 'NoError' || m.isEmpty()) { m.delete(); throw new Error('這個特徵的尺寸或位置不合理，已略過'); }
+  if (m.status() !== 'NoError' || m.isEmpty()) { m.delete(); throw new Error(t('這個特徵的尺寸或位置不合理，已略過')); }
   return m;
 }
 // 工件 → 三角網格（展開成每個三角形 9 個座標的 soup，接本工具的匯入流程）
@@ -3314,16 +4416,16 @@ async function buildPart(part) {
   let cur = kbox(-s.w / 2, s.w / 2, 0, s.h, -s.d / 2, s.d / 2);
   (part.steps || []).forEach((st, i) => {
     const tools = [];
-    for (const f of st.features) { try { const t = featureTool(s, f); if (t) tools.push(t); } catch (err) { issues.push(`步驟 ${i + 1}「${st.label}」：${err instanceof Error ? err.message : '幾何核心內部錯誤，這個特徵已略過'}`); } }
+    for (const f of st.features) { try { const tool = featureTool(s, f); if (tool) tools.push(tool); } catch (err) { issues.push(t('步驟 {n}「{label}」：{msg}', { n: i + 1, label: st.label, msg: err instanceof Error ? err.message : t('幾何核心內部錯誤，這個特徵已略過') })); } }
     if (!tools.length) return;
     const tool = kunion(tools), next = cur.subtract(tool);
     tool.delete();
-    if (cur.volume() - next.volume() < 1e-3) issues.push(`步驟 ${i + 1}「${st.label}」沒有切到材料`);
+    if (cur.volume() - next.volume() < 1e-3) issues.push(t('步驟 {n}「{label}」沒有切到材料', { n: i + 1, label: st.label }));
     cur.delete(); cur = next;
   });
-  if (cur.isEmpty()) { cur.delete(); throw new Error('加工後沒有剩下材料'); }
+  if (cur.isEmpty()) { cur.delete(); throw new Error(t('加工後沒有剩下材料')); }
   const pieces = cur.decompose();
-  if (pieces.length > 1) issues.push(`加工後分成 ${pieces.length} 塊，請檢查切削範圍`);
+  if (pieces.length > 1) issues.push(t('加工後分成 {n} 塊，請檢查切削範圍', { n: pieces.length }));
   pieces.forEach(p => p.delete());
   const g = cur.getMesh(); cur.delete();
   const np = g.numProp, vp = g.vertProperties, tv = g.triVerts, soup = new Float64Array(tv.length * 3);
@@ -3336,12 +4438,12 @@ function renderCompare() {
   const has = AI.images.length > 0;
   $('compareBtn').hidden = !has;
   if (!has) { $('compare').hidden = true; return; }
-  $('compareImgs').innerHTML = AI.images.map(im => `<img src="${im.dataUrl}" alt="手繪原圖">`).join('');
+  $('compareImgs').innerHTML = AI.images.map(im => `<img src="${im.dataUrl}" alt="${esc(t('手繪原圖'))}">`).join('');
 }
 
 function initAI() {
   AI.ai = AI_ACCESS.createAiAccess({
-    mount: $('aiAccess'), gatewayUrl: AI_FILE_MODE ? '' : AI_GATEWAY, tools: [AI_TOOL], providers: ['anthropic'],
+    mount: $('aiAccess'), gatewayUrl: AI_FILE_MODE ? '' : AI_GATEWAY, tools: [AI_TOOL], providers: ['anthropic'], lang: getLang(),
     guideUrl: AI_FILE_MODE ? 'https://superqqming.github.io/three-view-studio/apply-key.html' : './apply-key.html',   // 下載後直接開檔時旁邊沒有說明頁
     onChange: () => aiEfforts(),
   });
@@ -3363,16 +4465,16 @@ function initAI() {
     const q = e.target.dataset && e.target.dataset.q;
     if (q == null) return;
     AI.choices[+q] = +e.target.value;
-    aiBuild().catch(err => { aiStatus(''); aiWarn('重新建立失敗：' + err.message); });
+    aiBuild().catch(err => { aiStatus(''); aiWarn(t('重新建立失敗：{msg}', { msg: err.message })); });
   });
   $('aiResult').addEventListener('click', e => {
-    if (e.target.id === 'aiSaveJson' && AI.resultJson) download((AI.draft && AI.draft.name || '辨識結果') + '.json', JSON.stringify(AI.resultJson, null, 2), 'application/json');
+    if (e.target.id === 'aiSaveJson' && AI.resultJson) download((AI.draft && AI.draft.name || 'result') + '.json', JSON.stringify(AI.resultJson, null, 2), 'application/json');
   });
   // 載入先前下載的辨識結果（不用登入、不扣次數）
   $('aiLoadJson').addEventListener('change', async e => {
     const f = e.target.files[0]; e.target.value = '';
     if (!f) return;
-    try { await aiUseResult(JSON.parse(await f.text())); } catch (err) { aiWarn('無法讀取這個辨識結果：' + err.message); }
+    try { await aiUseResult(JSON.parse(await f.text())); } catch (err) { aiWarn(t('無法讀取這個辨識結果：{msg}', { msg: err.message })); }
   });
   $('compareBtn').addEventListener('click', () => { $('compare').hidden = !$('compare').hidden; });
   $('compareClose').addEventListener('click', () => { $('compare').hidden = true; });
@@ -3388,6 +4490,26 @@ function initAI() {
   $('popout').hidden = false;
 })();
 
+// 介面語言：頂端的選單；換語言時重畫看得到的文字（圖面上的字維持中文）
+function initLang() {
+  const sel = $('lang');
+  sel.replaceChildren(...LANGS.map(([v, name]) => new Option(name, v)));
+  sel.value = getLang();
+  applyStatic();
+  sel.addEventListener('change', () => {
+    setLang(sel.value);
+    try { localStorage.setItem(LANG_KEY, getLang()); } catch { /* 無法記住就算了 */ }
+    applyStatic();
+    updateInfo();
+    if (model) updatePreview(false);
+    draw();
+    aiEfforts();
+    if (AI.ai && AI.ai.setLang) AI.ai.setLang(getLang());
+    if (AI.shown && !$('aiResult').hidden) aiRenderResult(...AI.shown);
+  });
+}
+
+initLang();
 initUI();
 initAI();
 initPreview();

@@ -25,10 +25,19 @@
   code { background: var(--soft); padding: 1px 6px; border-radius: 4px; font-size: 14px; }
   a { color: var(--accent); }
   .note { color: var(--muted); font-size: 14px; }
+  .langs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; margin: 0 0 18px; }
+  .langs button { font: inherit; font-size: 14px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 6px; padding: 3px 10px; cursor: pointer; }
+  .langs button[aria-pressed="true"] { border-color: var(--ink); font-weight: 700; }
+  article[hidden] { display: none; }
 </style>
 </head>
 <body>
 <div class="wrap">
+  <!-- 四種語言：工具的連結帶 ?lang=en｜vi｜id（AI 雙入口元件會自動加）；沒帶就看上次選的、再看瀏覽器語言 -->
+  <nav class="langs" aria-label="Language / 語言">
+    <button type="button" data-l="zh-TW">繁體中文</button><button type="button" data-l="en">English</button><button type="button" data-l="vi">Tiếng Việt</button><button type="button" data-l="id">Bahasa Indonesia</button>
+  </nav>
+  <article data-l="zh-TW" lang="zh-Hant" data-title="申請自己的 AI 金鑰">
   <h1>申請自己的 AI 金鑰</h1>
   <p class="lead">課程期間可以用老師提供的額度；課程結束後，或額度用完還想繼續做，可以申請自己的 API 金鑰，在同一個工具裡選「使用自己的 API 金鑰」。費用由你自己的帳戶支付，大約 10 分鐘可以完成。</p>
 
@@ -85,6 +94,216 @@
     <li>建一把新的金鑰，換到你的記事本裡。</li>
     <li>看一下用量（Usage）頁面，有沒有不是你造成的花費。</li>
   </ol>
+  </article>
+  <!-- BEGIN 其他語言（翻譯時整段替換） -->
+  <article data-l="en" lang="en" data-title="Get Your Own AI Key" hidden>
+  <h1>Get Your Own AI Key</h1>
+    <p class="lead">During the course, you can use the quota your teacher provides. When the course is over, or if you've used up the quota and want to keep working, you can get your own API key and choose "Use your own API key" in the same tool. The cost is charged to your own account. It takes about 10 minutes.</p>
+
+    <div class="box"><b>The most important thing:</b> as soon as you sign up, set a <b>monthly spending limit</b> in your account. Even if your key leaks by accident, you can't lose more than that limit.</div>
+
+    <h2>1 · Which provider do you need?</h2>
+    <p>It depends on which AI your tool uses (the key field in the tool tells you):</p>
+    <table>
+      <tr><th style="width:42%">Tool and feature</th><th>Key needed</th></tr>
+      <tr><td>Lamp Pattern Studio: rewrite pattern descriptions</td><td>Anthropic (Claude)</td></tr>
+      <tr><td>Lamp Pattern Studio: generate pattern images</td><td>OpenAI</td></tr>
+      <tr><td>Assembly Unit Simulator and Three-View Studio: sketch recognition</td><td>Anthropic (Claude)</td></tr>
+    </table>
+    <p class="note">Both providers charge only for what you use. Check their official websites for current prices.</p>
+
+    <h2>2 · Anthropic (Claude)</h2>
+    <ol>
+      <li>Sign up on the <a href="https://platform.claude.com/" target="_blank" rel="noopener">Claude Developer Platform (Claude Console)</a>.</li>
+      <li>On the Billing page, add credit or set up a payment method. The minimum amount is set by Anthropic.</li>
+      <li>Under Limits, set a <b>monthly spending limit</b>, for example US$5.</li>
+      <li>Go to <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">API Keys</a> and create a new key. You can name it "Course tools".</li>
+      <li>The full key is shown only once and starts with <code>sk-ant-</code>. <b>Copy it right away</b> and save it in one of the places described in section 4 below.</li>
+    </ol>
+
+    <h2>3 · OpenAI</h2>
+    <ol>
+      <li>Sign up on the <a href="https://platform.openai.com/" target="_blank" rel="noopener">OpenAI Platform</a> (it is billed separately from a ChatGPT subscription).</li>
+      <li>On the Billing page, add credit. The minimum amount is set by OpenAI.</li>
+      <li>Under Limits, set a <b>monthly budget</b>.</li>
+      <li>The image-generation models may require organization verification (Verify Organization) first. If the console asks for it, follow the steps on screen.</li>
+      <li>Go to <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">API keys</a> and create a new key. It starts with <code>sk-</code>. <b>Copy it right away</b> and save it somewhere safe.</li>
+    </ol>
+    <p class="note">The consoles change often. If what you see doesn't match this page, follow the order "sign up → pay → set a limit → create a key" and look for the matching options on the official pages.</p>
+
+    <h2>4 · Where should I keep my key?</h2>
+    <table>
+      <tr><th style="width:30%">Situation</th><th>What to do</th></tr>
+      <tr><td>School computer lab</td><td>Keep the key in your own notes (on a USB drive, a cloud drive, or your phone) and <b>paste</b> it in each class. Do <b>not</b> check "Remember on this computer", and close the tool's tab before you leave. Lab computers are reset when they shut down, so no key is left behind.</td></tr>
+      <tr><td>Your own laptop</td><td>You can check "Remember on this computer". The key is then filled in automatically whenever you open the tool (and in other course tools on the same site). If you download the tool and open the file directly, this option isn't available, and the key is kept only until you close the tab.</td></tr>
+      <tr><td>Safer storage</td><td>Keep it somewhere that locks, such as a locked note in Notes on iPhone/Mac, or a password manager (e.g. Bitwarden).</td></tr>
+    </table>
+    <p>Your key is stored only in your browser, and the tool sends requests directly to the AI company. <b>Neither your teacher nor the course server can see your key.</b></p>
+
+    <h2>5 · Safety rules</h2>
+    <ul>
+      <li>Never paste your key into group chats, assignments, slides, or screenshots, and never lend it to anyone (you pay for what they use).</li>
+      <li>When you finish on a shared computer, click "Clear key" in the tool and close the tab.</li>
+      <li>Windows clipboard history (<code>Win</code>+<code>V</code>) keeps everything you've copied. When you're done, you can delete the key there.</li>
+    </ul>
+
+    <h2>6 · If your key leaks (or you think it has)</h2>
+    <ol>
+      <li>Go to the API Keys page in the console and <b>delete (revoke)</b> that key. It stops working immediately.</li>
+      <li>Create a new key and replace the old one in your notes.</li>
+      <li>Check the Usage page for any charges you didn't make.</li>
+    </ol>
+  </article>
+  <article data-l="vi" lang="vi" data-title="Đăng ký khóa AI của riêng bạn" hidden>
+  <h1>Đăng ký khóa AI của riêng bạn</h1>
+    <p class="lead">Trong thời gian học, bạn có thể dùng hạn mức giáo viên cấp. Sau khi khóa học kết thúc, hoặc khi đã dùng hết hạn mức mà vẫn muốn làm tiếp, bạn có thể đăng ký khóa API của riêng mình, rồi trong cùng công cụ chọn “Dùng khóa API của bạn”. Phí sẽ tính vào tài khoản của bạn; mất khoảng 10 phút là xong.</p>
+
+    <div class="box"><b>Điều quan trọng nhất:</b> đăng ký xong, nhất định phải đặt <b>giới hạn chi tiêu hằng tháng</b> trong tài khoản. Dù khóa có lỡ bị lộ ra ngoài, thiệt hại tối đa cũng chỉ bằng mức giới hạn này.</div>
+
+    <h2>1 · Đăng ký với hãng nào?</h2>
+    <p>Tùy công cụ bạn dùng cần AI của hãng nào (ô nhập khóa trên màn hình công cụ có ghi rõ):</p>
+    <table>
+      <tr><th style="width:42%">Công cụ và chức năng</th><th>Khóa cần có</th></tr>
+      <tr><td>Lamp Pattern Studio: viết lại mô tả họa tiết</td><td>Anthropic (Claude)</td></tr>
+      <tr><td>Lamp Pattern Studio: tạo ảnh họa tiết</td><td>OpenAI</td></tr>
+      <tr><td>Trình mô phỏng cụm lắp ghép, Trình tạo ba hình chiếu: nhận dạng bản phác</td><td>Anthropic (Claude)</td></tr>
+    </table>
+    <p class="note">Cả hai hãng đều tính phí theo mức sử dụng. Giá thực tế theo công bố trên trang web chính thức.</p>
+
+    <h2>2 · Anthropic (Claude)</h2>
+    <ol>
+      <li>Vào <a href="https://platform.claude.com/" target="_blank" rel="noopener">nền tảng dành cho nhà phát triển của Claude (Claude Console)</a> để đăng ký tài khoản.</li>
+      <li>Ở trang Billing (thanh toán), nạp tiền hoặc thêm phương thức thanh toán. Số tiền tối thiểu theo quy định chính thức.</li>
+      <li>Ở mục Limits (giới hạn sử dụng), đặt <b>giới hạn chi tiêu hằng tháng</b>, ví dụ US$5.</li>
+      <li>Vào <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">API Keys</a> để tạo một khóa mới; có thể đặt tên là “Công cụ môn học”.</li>
+      <li>Khóa chỉ hiện đầy đủ một lần duy nhất, bắt đầu bằng <code>sk-ant-</code>. <b>Sao chép ngay</b> và cất vào chỗ được nêu ở mục 4 bên dưới.</li>
+    </ol>
+
+    <h2>3 · OpenAI</h2>
+    <ol>
+      <li>Vào <a href="https://platform.openai.com/" target="_blank" rel="noopener">OpenAI Platform</a> để đăng ký tài khoản (tính phí riêng, tách biệt với gói đăng ký ChatGPT).</li>
+      <li>Ở trang Billing, nạp tiền. Số tiền tối thiểu theo quy định chính thức.</li>
+      <li>Ở mục Limits, đặt <b>giới hạn ngân sách hằng tháng</b>.</li>
+      <li>Mô hình tạo ảnh có thể yêu cầu xác minh tổ chức trước (Verify Organization); khi màn hình hiện hướng dẫn thì làm theo.</li>
+      <li>Vào <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">API keys</a> để tạo khóa mới, bắt đầu bằng <code>sk-</code>; <b>sao chép ngay</b> và cất giữ cẩn thận.</li>
+    </ol>
+    <p class="note">Trang quản lý của các hãng thường xuyên thay đổi giao diện. Nếu màn hình khác với hướng dẫn ở đây, hãy làm theo thứ tự “Đăng ký → Thanh toán → Đặt giới hạn → Tạo khóa” và tìm mục tương ứng trên trang chính thức.</p>
+
+    <h2>4 · Cất khóa ở đâu?</h2>
+    <table>
+      <tr><th style="width:30%">Tình huống</th><th>Cách nên làm</th></tr>
+      <tr><td>Phòng máy của trường</td><td>Lưu khóa trong ghi chú của riêng bạn (USB, ổ đĩa đám mây hoặc điện thoại), mỗi buổi học thì <b>dán</b> vào. <b>Không</b> chọn “Ghi nhớ trên máy này”; trước khi tan học, hãy đóng tab của công cụ. Máy trong phòng máy được khôi phục lại khi tắt nên sẽ không còn lưu khóa.</td></tr>
+      <tr><td>Laptop của bạn</td><td>Có thể chọn “Ghi nhớ trên máy này”; lần sau mở công cụ, khóa sẽ tự điền vào (các công cụ khác của lớp trên cùng trang web cũng vậy). Nếu tải công cụ về thành tệp rồi mở trực tiếp thì không có tùy chọn này; khóa chỉ được giữ đến khi bạn đóng tab.</td></tr>
+      <tr><td>Cách lưu an toàn hơn</td><td>Lưu ở nơi có khóa bảo vệ, ví dụ ghi chú có khóa trên iPhone/Mac, hoặc trình quản lý mật khẩu (ví dụ Bitwarden).</td></tr>
+    </table>
+    <p>Khóa chỉ được lưu trong trình duyệt của bạn; công cụ gửi yêu cầu thẳng đến công ty AI. <b>Giáo viên và máy chủ của lớp đều không thấy được khóa của bạn.</b></p>
+
+    <h2>5 · Quy tắc an toàn</h2>
+    <ul>
+      <li>Không dán khóa vào nhóm chat, bài tập, slide thuyết trình hay ảnh chụp màn hình, cũng không cho người khác mượn (phí sẽ tính vào tài khoản của bạn).</li>
+      <li>Dùng máy chung xong, nhớ bấm “Xóa khóa” trong công cụ và đóng tab.</li>
+      <li>Lịch sử bộ nhớ tạm (clipboard) của Windows (<code>Win</code>+<code>V</code>) sẽ giữ lại nội dung đã sao chép; dùng xong, bạn có thể xóa ở đó.</li>
+    </ul>
+
+    <h2>6 · Khi khóa bị lộ hoặc nghi bị lộ</h2>
+    <ol>
+      <li>Vào trang API Keys trong trang quản lý, <b>xóa (thu hồi)</b> khóa đó. Khóa sẽ mất hiệu lực ngay sau khi thu hồi.</li>
+      <li>Tạo khóa mới và thay vào ghi chú của bạn.</li>
+      <li>Xem trang Usage (mức sử dụng) để kiểm tra có khoản chi nào không phải do bạn tạo ra không.</li>
+    </ol>
+  </article>
+  <article data-l="id" lang="id" data-title="Mendapatkan Kunci AI Sendiri" hidden>
+  <h1>Mendapatkan Kunci AI Sendiri</h1>
+    <p class="lead">Selama perkuliahan, Anda bisa memakai kuota yang disediakan dosen. Setelah kuliah selesai, atau jika kuota sudah habis dan Anda ingin melanjutkan, Anda bisa membuat kunci API sendiri lalu memilih "Gunakan kunci API sendiri" di alat yang sama. Biayanya ditagih ke akun Anda sendiri. Prosesnya sekitar 10 menit.</p>
+
+    <div class="box"><b>Yang paling penting:</b> setelah mendaftar, Anda wajib mengatur <b>batas pengeluaran bulanan</b> di akun. Kalaupun kunci Anda bocor, kerugiannya paling banyak sebesar batas itu.</div>
+
+    <h2>1 · Daftar di penyedia mana?</h2>
+    <p>Lihat AI dari penyedia mana yang dibutuhkan alat yang Anda pakai (tertulis pada kolom kunci di tampilan alat):</p>
+    <table>
+      <tr><th style="width:42%">Alat dan fitur</th><th>Kunci yang dibutuhkan</th></tr>
+      <tr><td>Lamp Pattern Studio: menulis ulang deskripsi pola</td><td>Anthropic (Claude)</td></tr>
+      <tr><td>Lamp Pattern Studio: membuat gambar pola</td><td>OpenAI</td></tr>
+      <tr><td>Simulator Unit Rakitan, Studio Tiga Pandangan: pengenalan sketsa</td><td>Anthropic (Claude)</td></tr>
+    </table>
+    <p class="note">Keduanya memakai sistem bayar sesuai pemakaian. Harga yang berlaku mengikuti pengumuman di situs resmi masing-masing.</p>
+
+    <h2>2 · Anthropic (Claude)</h2>
+    <ol>
+      <li>Daftar akun di <a href="https://platform.claude.com/" target="_blank" rel="noopener">Claude Developer Platform (Claude Console)</a>.</li>
+      <li>Di halaman tagihan (Billing), isi saldo atau atur metode pembayaran. Jumlah minimumnya mengikuti ketentuan resmi.</li>
+      <li>Di halaman batas penggunaan (Limits), atur <b>batas pengeluaran bulanan</b>, misalnya US$5.</li>
+      <li>Buka <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">API Keys</a> dan buat kunci baru. Namanya bisa ditulis "alat kuliah".</li>
+      <li>Kunci hanya ditampilkan lengkap satu kali dan diawali <code>sk-ant-</code>. <b>Segera salin</b>, lalu simpan di tempat yang dijelaskan di bagian 4 di bawah.</li>
+    </ol>
+
+    <h2>3 · OpenAI</h2>
+    <ol>
+      <li>Daftar akun di <a href="https://platform.openai.com/" target="_blank" rel="noopener">OpenAI Platform</a> (tagihannya terpisah dari langganan ChatGPT).</li>
+      <li>Di halaman Billing, isi saldo. Jumlah minimumnya mengikuti ketentuan resmi.</li>
+      <li>Di Limits, atur <b>batas anggaran bulanan</b>.</li>
+      <li>Model pembuat gambar mungkin mengharuskan verifikasi organisasi (Verify Organization) terlebih dahulu. Jika ada petunjuk di layar, ikuti saja.</li>
+      <li>Buka <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">API keys</a> dan buat kunci baru (diawali <code>sk-</code>). <b>Segera salin</b> dan simpan baik-baik.</li>
+    </ol>
+    <p class="note">Tampilan konsol setiap penyedia sering berubah. Jika tampilannya berbeda dari yang tertulis di sini, ikuti urutan "daftar → bayar → atur batas → buat kunci" dan cari opsi yang sesuai di halaman resminya.</p>
+
+    <h2>4 · Di mana menyimpan kunci?</h2>
+    <table>
+      <tr><th style="width:30%">Situasi</th><th>Saran</th></tr>
+      <tr><td>Lab komputer kampus</td><td>Simpan kunci di catatan pribadi Anda (USB, cloud drive, atau ponsel), lalu <b>tempel</b> setiap kali kuliah. <b>Jangan</b> centang "Ingat di komputer ini", dan tutup tab alat sebelum kuliah selesai. Komputer lab dipulihkan otomatis saat dimatikan, jadi kunci tidak akan tertinggal.</td></tr>
+      <tr><td>Laptop sendiri</td><td>Boleh centang "Ingat di komputer ini"; berikutnya kunci otomatis terisi saat alat dibuka (juga di alat kuliah lain pada situs yang sama). Jika alat diunduh sebagai berkas lalu dibuka langsung, opsi ini tidak ada dan kunci hanya tersimpan sampai tab ditutup.</td></tr>
+      <tr><td>Cara yang lebih aman</td><td>Simpan di tempat yang bisa dikunci, misalnya catatan terkunci di iPhone/Mac, atau aplikasi pengelola kata sandi (misalnya Bitwarden).</td></tr>
+    </table>
+    <p>Kunci hanya tersimpan di browser Anda, dan alat mengirim permintaan langsung ke perusahaan AI. <b>Dosen maupun server kelas tidak bisa melihat kunci Anda.</b></p>
+
+    <h2>5 · Aturan keamanan</h2>
+    <ul>
+      <li>Jangan menempelkan kunci di grup chat, tugas, presentasi, atau tangkapan layar, dan jangan meminjamkannya kepada orang lain (biayanya ditagih ke Anda).</li>
+      <li>Setelah memakai komputer umum, klik "Hapus kunci" di alat lalu tutup tabnya.</li>
+      <li>Riwayat clipboard Windows (<code>Win</code>+<code>V</code>) menyimpan semua yang pernah Anda salin; setelah selesai, Anda bisa menghapusnya di sana.</li>
+    </ul>
+
+    <h2>6 · Jika kunci bocor atau diduga bocor</h2>
+    <ol>
+      <li>Buka halaman API Keys di konsol, lalu <b>hapus (cabut)</b> kunci tersebut. Kunci langsung tidak berlaku setelah dicabut.</li>
+      <li>Buat kunci baru dan ganti kunci lama di catatan Anda.</li>
+      <li>Periksa halaman penggunaan (Usage) untuk melihat apakah ada biaya yang bukan dari pemakaian Anda.</li>
+    </ol>
+  </article>
+  <!-- END 其他語言 -->
 </div>
+<script>
+(() => {
+  const LANGS = ['zh-TW', 'en', 'vi', 'id'];
+  const pick = () => {
+    const q = new URLSearchParams(location.search).get('lang');
+    if (LANGS.includes(q)) return q;
+    try { const s = localStorage.getItem('apply-key:lang'); if (LANGS.includes(s)) return s; } catch { /* 無法讀取就算了 */ }
+    for (const raw of [...(navigator.languages || []), navigator.language || '']) {
+      const l = String(raw).toLowerCase();
+      if (l.startsWith('zh')) return 'zh-TW';
+      if (l.startsWith('vi')) return 'vi';
+      if (l.startsWith('id') || l.startsWith('in')) return 'id';
+      if (l.startsWith('en')) return 'en';
+    }
+    return 'zh-TW';
+  };
+  const show = l => {
+    const arts = [...document.querySelectorAll('article[data-l]')];
+    const art = arts.find(a => a.dataset.l === l) || arts[0];
+    arts.forEach(a => { a.hidden = a !== art; });
+    document.documentElement.lang = art.getAttribute('lang');
+    document.title = art.dataset.title;
+    document.querySelectorAll('.langs button').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.l === art.dataset.l)); b.hidden = !arts.some(a => a.dataset.l === b.dataset.l); });
+  };
+  document.querySelector('.langs').addEventListener('click', e => {
+    const l = e.target.dataset && e.target.dataset.l;
+    if (!l) return;
+    try { localStorage.setItem('apply-key:lang', l); } catch { /* 無法記住就算了 */ }
+    show(l);
+  });
+  show(pick());
+})();
+</script>
 </body>
 </html>

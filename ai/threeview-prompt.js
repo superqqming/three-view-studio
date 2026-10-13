@@ -36,8 +36,8 @@ The part starts as a rectangular stock block of w × h × d mm and is then machi
 ## Uncertainty
 When something could reasonably be read two ways — which face, through versus blind, a total versus a segment, an unwritten size, the units — use the most likely reading in the draft and add an uncertain item:
 - path: the field inside that part, e.g. "steps[0].features[0].face", "steps[0].features[0].d", "steps[0].features[0]" for a whole feature, or "stock.h".
-- question: one short question in Traditional Chinese.
-- options: 2–4 alternatives; label is short Traditional Chinese, value_json is the JSON text of the value that replaces the field at path (e.g. "\\"front\\"", "50", or a whole feature object).
+- question: one short question in the reply language.
+- options: 2–4 alternatives; label is short text in the reply language, value_json is the JSON text of the value that replaces the field at path (e.g. "\\"front\\"", "50", or a whole feature object).
 - chosen: index of the option already used in the draft.
 When an alternative changes more than one field (a blind hole also needs its depth, a different notch needs other rects), use the whole feature as path (e.g. "steps[1].features[0]") and give the complete feature object in value_json, written the same way as in steps (rects and outline segments as lists of numbers).
 Don't ask about things the sketch shows clearly.
@@ -49,22 +49,25 @@ Compare the student's views with the part you rebuilt and with the drawing rules
 - missing center lines for holes and round features;
 - sizes that disagree between views or with the totals;
 - dimensioning problems such as R used on a full circle (should be Ø), missing key dimensions, dimensions placed on hidden lines, the same size dimensioned in more than one view, and sizes given only on the isometric sketch instead of the orthographic views.
-Write each issue as one short, specific, kind sentence in Traditional Chinese that says what to change. Do not invent problems; an empty review is fine.
+Write each issue as one short, specific, kind sentence in the reply language that says what to change. Do not invent problems; an empty review is fine.
 
 ## Output
-- Write all human-readable text (name, label, note, question, option labels, assumptions, review, views_found, message) in Traditional Chinese as used in Taiwanese drafting classes. Keep assumptions short: what you assumed, not how you worked it out.
-- Put exactly one entry in parts — the part shown. Name it as labeled on the sketch, or 工件 if unlabeled.
+- The reply language is Traditional Chinese as used in Taiwanese drafting classes, unless the request names another language (some students in the class read English, Vietnamese or Indonesian better). Write all human-readable text (name, label, note, question, option labels, assumptions, review, views_found, message) in the reply language, using the standard drafting terms of that language. Keep the view codes in square brackets in review ([front], [top] …) in English as specified. Keep assumptions short: what you assumed, not how you worked it out.
+- Put exactly one entry in parts — the part shown. Name it as labeled on the sketch, or 工件 (the word for "part" in the reply language) if unlabeled.
 - If the image is not a sketch of a part, set is_part_sketch to false, say why in message, and return an empty parts list. Otherwise use message for one short sentence to the student about anything important (or leave it empty).`;
 
 const UNIT_TEXT = { auto: '依草圖上寫的判斷', mm: 'mm', cm: 'cm' };
+// 回覆語言（介面語言）：繁體中文不加這一行（和以前的請求相同）
+const LANG_TEXT = { en: 'English（英文）', vi: 'Tiếng Việt（越南文）', id: 'Bahasa Indonesia（印尼文）' };
 const PROJ_TEXT = { third: '第三角法', first: '第一角法' };
 
-export function threeviewUserText({ projection, units, note, count }) {
+export function threeviewUserText({ projection, units, note, count, lang }) {
   return [
     `以上 ${count} 張照片是學生手繪的三視圖（可能附等角立體草圖）。`,
     `投影法：${PROJ_TEXT[projection] || PROJ_TEXT.third}。`,
     `草圖單位：${UNIT_TEXT[units] || UNIT_TEXT.auto}。`,
     note ? `補充說明：${note}` : '',
+    LANG_TEXT[lang] ? `回覆語言：${LANG_TEXT[lang]}——所有給學生看的文字都用這個語言寫。` : '',
     '請重建這個工件（料塊尺寸與加工步驟），並列出學生圖面的問題。',
   ].filter(Boolean).join('\n');
 }

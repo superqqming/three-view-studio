@@ -154,7 +154,7 @@ function oracleAll(name, M, views = Object.keys(VIEWS)) {
 }
 
 // ---------- 0. 共用 AI 程式與原始檔一致 ----------
-console.log('\n[0] 共用 AI 程式（雙入口元件、三視圖指令與格式、申請說明頁）');
+console.log('\n[0] 共用 AI 程式（雙入口元件、三視圖指令與格式、申請說明頁）與介面翻譯');
 {
   const { execFileSync } = await import('node:child_process');
   const { fileURLToPath } = await import('node:url');
@@ -162,6 +162,12 @@ console.log('\n[0] 共用 AI 程式（雙入口元件、三視圖指令與格式
   try { out = execFileSync('node', [fileURLToPath(new URL('./sync-ai.mjs', import.meta.url)), '--check'], { encoding: 'utf8' }); }
   catch (err) { good = false; out = String(err.stderr || err.message); }
   ok(good, out.trim());
+  // 介面翻譯：en／vi／id 都不缺字、變數一致，也沒有還沒包 t() 的中文
+  let iout = '', igood = true;
+  try { iout = execFileSync('node', [fileURLToPath(new URL('./i18n-check.mjs', import.meta.url)), '--strict', '--left'], { encoding: 'utf8' }); }
+  catch (err) { igood = false; iout = String(err.stdout || '') + String(err.stderr || err.message); }
+  igood = igood && /沒有還沒包 t\(\) 的中文/.test(iout);
+  ok(igood, '介面翻譯：' + iout.trim().split('\n').filter(l => /^(介面原文|en：|vi：|id：)|沒有還沒包|還沒包 t|變數不一致：/.test(l)).join('；'));
 }
 
 // ---------- 1. 範例快照 ----------
