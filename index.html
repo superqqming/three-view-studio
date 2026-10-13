@@ -729,9 +729,11 @@ function insideSolid(M, p) {
   return hits % 2 === 1;
 }
 
-// 孔或凸柱：在圓柱面外側一圈取樣，多數點在實體內 = 孔。盲孔：軸線某一端再往外一點仍在實體內
+// 孔或凸柱：同一條軸上可能同時有孔與凸柱（例：圓盤＋凸台＋中心孔），每個半徑分開判斷——
+// 在那個半徑的圓柱面外側一點點取樣，多數點在實體內 = 孔（holeRadii），否則是凸柱／圓柱（bossRadii）。
+// 盲孔：孔的軸線某一端再往外一點仍在實體內。outer：這個圓柱就是工件的外形（圓盤、軸），直徑等於另外兩個方向的總尺寸
 function classifyHole(M, g) {
-  g.isHole = false; g.depth = 0;
+  g.isHole = false; g.depth = 0; g.holeRadii = []; g.bossRadii = []; g.holeR = 0; g.outer = false; g.outerR = 0;
   const L = g.tMax - g.tMin;
   if (L < M.diag * 1e-3) return;
   const n = g.n, a = Math.abs(n[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
@@ -739,20 +741,44 @@ function classifyHole(M, g) {
   const l1 = Math.hypot(...e1); e1.forEach((x, k) => { e1[k] = x / l1; });
   const e2 = [n[1] * e1[2] - n[2] * e1[1], n[2] * e1[0] - n[0] * e1[2], n[0] * e1[1] - n[1] * e1[0]];
   const at = (t, rr, th) => [0, 1, 2].map(k => g.c0[k] + n[k] * t + rr * (Math.cos(th) * e1[k] + Math.sin(th) * e2[k]));
-  const rr = g.rMax * 1.06 + M.diag * 1e-3;
-  let inside = 0, total = 0;
-  for (const f of [0.25, 0.5, 0.75]) for (let i = 0; i < 8; i++) {
-    total++; if (insideSolid(M, at(g.tMin + L * f, rr, (i + 0.5) * Math.PI / 4))) inside++;
+  const eps = M.diag * 5e-3, same = (p, q) => Math.abs(p - q) < 0.01 * Math.max(p, q);
+  for (const r of g.radii) {
+    const ts = [...new Set(g.circ.filter(c => same(c.r, r)).map(c => c.t))].sort((p, q) => p - q);
+    // 取樣半徑：往外一點，但不能跨過同軸的另一個圓柱面（薄壁管）
+    const gap = Math.min(Infinity, ...g.radii.filter(q => !same(q, r)).map(q => Math.abs(q - r)));
+    const rr = r + Math.min(0.06 * r + M.diag * 1e-3, 0.4 * gap);
+    const ring = (t, rad) => { let k = 0; for (let i = 0; i < 8; i++) if (insideSolid(M, at(t, rad, (i + 0.5) * Math.PI / 4))) k++; return k / 8; };
+    // 每一段（同半徑相鄰兩圈之間）各取樣，任何一段多數點在實體內就是孔（孔可能穿過中間有空隙的兩塊板）
+    let spans = ts.slice(1).map((t, i) => [ts[i], t]).filter(([p, q]) => q - p > eps);
+    let hole;
+    if (spans.length) {
+      spans = spans.sort((p, q) => (q[1] - q[0]) - (p[1] - p[0])).slice(0, 3);
+      hole = spans.some(([p, q]) => [0.25, 0.5, 0.75].reduce((sum, f) => sum + ring(p + (q - p) * f, rr), 0) / 3 > 0.5);
+    } else {
+      // 只有一圈（端面的邊、錐底的孔口）：在圈的兩側各看一次，外側是實體、內側是空的才是孔（軸端面的邊兩側都是實體）
+      const ri = Math.max(r - (rr - r), r * 0.5);
+      hole = [-eps, eps].some(dt => ring(ts[0] + dt, rr) > 0.5 && ring(ts[0] + dt, ri) < 0.5);
+    }
+    (hole ? g.holeRadii : g.bossRadii).push(r);
   }
-  g.isHole = inside / total > 0.5;
+  // 外形圓柱：軸與座標軸平行、在工件中央，直徑等於另外兩個方向的總尺寸
+  const k = [0, 1, 2].find(i => Math.abs(n[i]) > 0.999);
+  if (k != null) {
+    const tol = M.diag * 2e-3, [p, q] = [0, 1, 2].filter(i => i !== k);
+    g.outerR = g.bossRadii.find(r => [p, q].every(i => Math.abs(2 * r - M.size[i]) < tol && Math.abs(g.c0[i] - M.size[i] / 2) < tol)) || 0;
+    g.outer = g.outerR > 0;   // 同軸的孔、凸台位置都由外徑決定，不另標圓心位置
+  }
+  g.isHole = g.holeRadii.length > 0;
   if (!g.isHole) return;
-  const eps = M.diag * 5e-3;
-  const endA = insideSolid(M, at(g.tMin - eps, 0, 0)), endB = insideSolid(M, at(g.tMax + eps, 0, 0));
-  if (g.radii.length === 1) { if (endA !== endB) g.depth = L; return; }   // 一端通到外面、一端是孔底
+  g.holeR = Math.max(...g.holeRadii);
+  const hc = g.circ.filter(c => g.holeRadii.some(r => same(c.r, r)));
+  const hMin = Math.min(...hc.map(c => c.t)), hMax = Math.max(...hc.map(c => c.t)), HL = hMax - hMin;
+  const endA = insideSolid(M, at(hMin - eps, 0, 0)), endB = insideSolid(M, at(hMax + eps, 0, 0));
+  if (g.holeRadii.length === 1) { if (endA !== endB) g.depth = HL; return; }   // 一端通到外面、一端是孔底
   // 階梯孔（柱坑）：最大徑那一段若從孔口開始、沒有貫穿，它的長度就是柱坑深度（標在最大徑的 Ø 後面）
-  const big = g.circ.filter(c => Math.abs(c.r - g.rMax) < 0.01 * g.rMax).map(c => c.t);
+  const big = hc.filter(c => same(c.r, g.holeR)).map(c => c.t);
   const ta = Math.min(...big), tb = Math.max(...big);
-  if (tb - ta > eps && tb - ta < L - eps && ((!endA && ta - g.tMin < eps) || (!endB && g.tMax - tb < eps))) g.depth = tb - ta;
+  if (tb - ta > eps && tb - ta < HL - eps && ((!endA && ta - hMin < eps) || (!endB && hMax - tb < eps))) g.depth = tb - ta;
 }
 
 // ====================================================================
@@ -1028,7 +1054,9 @@ function processView(name) {
     vis: chainSegments(merged.vis, tol), hid: chainSegments(merged.hid, tol),
     visSharp: raw.visSharp, hidSharp: raw.hidSharp,
     centers: { axes: [], crosses: [] },
-    holes: [],   // 在這個視圖看起來是圓的孔：{x, y, r, radii, depth}
+    holes: [],   // 在這個視圖看起來是圓的孔：{x, y, r, radii, depth, hidden, outer}
+    bosses: [],  // 在這個視圖看起來是圓的凸柱／圓柱（不含外形圓柱）：{x, y, r}（標圓心位置用）
+    cyls: [],    // 在這個視圖看起來是矩形的凸柱／圓柱（不含外形圓柱）：{sax, c, r, lo, hi, key}（標 Ø 用）
   };
   // 中心線
   const proj = p => [B.u[0] * p[0] + B.u[1] * p[1] + B.u[2] * p[2], B.v[0] * p[0] + B.v[1] * p[1] + B.v[2] * p[2]];
@@ -1040,13 +1068,29 @@ function processView(name) {
       if (dup) dup.r = Math.max(dup.r, g.rMax); else view.centers.crosses.push({ x: c[0], y: c[1], r: g.rMax });
       if (g.isHole && !view.holes.some(q => Math.hypot(q.x - c[0], q.y - c[1]) < tol * 5)) {
         // 孔口不朝向這個視圖（圓只有虛線）：尺寸只能標在隱藏線上，planDims 會加註
-        const onC = sg => [[sg[0], sg[1]], [sg[2], sg[3]]].every(([x, y]) => Math.abs(Math.hypot(x - c[0], y - c[1]) - g.rMax) < tol * 5);
-        view.holes.push({ x: c[0], y: c[1], r: g.rMax, radii: g.radii.slice().sort((p, q) => q - p), depth: g.depth, hidden: !raw.vis.some(onC) });
+        const onC = sg => [[sg[0], sg[1]], [sg[2], sg[3]]].every(([x, y]) => Math.abs(Math.hypot(x - c[0], y - c[1]) - g.holeR) < tol * 5);
+        view.holes.push({ x: c[0], y: c[1], r: g.holeR, radii: g.holeRadii.slice().sort((p, q) => q - p), depth: g.depth, hidden: !raw.vis.some(onC), outer: g.outer });
       }
+      if (!g.outer && g.bossRadii.length && !view.bosses.some(q => Math.hypot(q.x - c[0], q.y - c[1]) < tol * 5)) view.bosses.push({ x: c[0], y: c[1], r: Math.max(...g.bossRadii) });
     } else if (a < 0.02 && g.tMax - g.tMin > tol * 5) {
       const p1 = proj(g.c0.map((c, k) => c + g.n[k] * g.tMin));
       const p2 = proj(g.c0.map((c, k) => c + g.n[k] * g.tMax));
       view.centers.axes.push([...p1, ...p2]);
+      // 凸柱／圓柱在這個視圖是矩形：直徑標在這裡（CNS：圓柱的直徑標在非圓視圖，數字前加 Ø）
+      for (const r of g.bossRadii) {
+        if (r === g.outerR) continue;   // 外形圓柱的直徑由總尺寸標（Ø）
+        const ts = g.circ.filter(q => Math.abs(q.r - r) < 0.01 * r).map(q => q.t);
+        const tLo = Math.min(...ts), tHi = Math.max(...ts);
+        if (tHi - tLo < tol * 5) continue;
+        const q1 = proj(g.c0.map((c, k) => c + g.n[k] * tLo)), q2 = proj(g.c0.map((c, k) => c + g.n[k] * tHi));
+        const vert = Math.abs(q2[1] - q1[1]) > Math.abs(q2[0] - q1[0]);   // 軸在畫面上是直的 → 直徑量水平方向
+        const sax = vert ? 'x' : 'y', cc = vert ? q1[0] : q1[1];
+        const lo = vert ? Math.min(q1[1], q2[1]) : Math.min(q1[0], q2[0]), hi = vert ? Math.max(q1[1], q2[1]) : Math.max(q1[0], q2[0]);
+        // 至少一條輪廓線看得到（被擋住的圓柱不標）
+        const onEdge = sg => [cc - r, cc + r].some(e => (vert ? [sg[0], sg[2]] : [sg[1], sg[3]]).every(x => Math.abs(x - e) < tol * 5)
+          && (vert ? [sg[1], sg[3]] : [sg[0], sg[2]]).every(w => w > lo - tol * 5 && w < hi + tol * 5));
+        if (raw.vis.some(onEdge)) view.cyls.push({ sax, c: cc, r, lo, hi, key: `${model.axes.indexOf(g)}:${r.toFixed(3)}` });
+      }
     }
   }
   return view;
@@ -1110,10 +1154,15 @@ function planDims(views, proj, excludeHidden) {
       }
       return true;
     };
+    // 水平／垂直的短線段先依位置合併再看長度：側看的圓（凸台頂面、孔口）是一串很短的共線小段，各自都短於門檻
+    const shortRuns = { x: new Map(), y: new Map() };
+    const addShort = (sax, c, lo, hi) => { const k = Math.round(c / tolC); const m = shortRuns[sax]; if (!m.has(k)) m.set(k, []); m.get(k).push([c, lo, hi]); };
     if (state.showDetail) vs.forEach((sg, i) => {
       const dx = sg[2] - sg[0], dy = sg[3] - sg[1];
       if (Math.abs(dx) <= tolA && Math.abs(dy) >= minFeat) add('x', (sg[0] + sg[2]) / 2, Math.min(sg[1], sg[3]), Math.max(sg[1], sg[3]), false);
       else if (Math.abs(dy) <= tolA && Math.abs(dx) >= minFeat) add('y', (sg[1] + sg[3]) / 2, Math.min(sg[0], sg[2]), Math.max(sg[0], sg[2]), false);
+      else if (Math.abs(dx) <= tolA && Math.abs(dy) > tolA) addShort('x', (sg[0] + sg[2]) / 2, Math.min(sg[1], sg[3]), Math.max(sg[1], sg[3]));
+      else if (Math.abs(dy) <= tolA && Math.abs(dx) > tolA) addShort('y', (sg[1] + sg[3]) / 2, Math.min(sg[0], sg[2]), Math.max(sg[0], sg[2]));
       else if (Math.hypot(dx, dy) >= (sg[6] && model.exact ? minFeat : minSlant)) {
         // 斜線：AI 建的精確實體上，面的邊視圖（斜面、倒角、V 槽壁）短到 1% 對角線也標；其他斜線與匯入的網格維持 5%
         // （三面倒角交會的斜接線、粗分段網格圓弧的弦不標）
@@ -1121,12 +1170,23 @@ function planDims(views, proj, excludeHidden) {
         for (const j of [0, 2]) if (sg[4 + j / 2] !== false && isCorner(i, j)) { const x = sg[j], y = sg[j + 1]; add('x', x, y, y, false); add('y', y, x, x, false); }
       }
     });
+    for (const sax of ['x', 'y']) for (const list of shortRuns[sax].values()) {
+      // 相接的小段串成一段（容差內），總長夠長才當特徵
+      list.sort((p, q) => p[1] - q[1]);
+      let run = null;
+      const flush = () => { if (run && run[2] - run[1] >= minFeat) add(sax, run[0], run[1], run[2], false); };
+      for (const sgm of list) { if (run && sgm[1] <= run[2] + tolC) run[2] = Math.max(run[2], sgm[2]); else { flush(); run = sgm.slice(); } }
+      flush();
+    }
     if (state.showHoles) for (const h of v.holes) {
       const hn = `${v.name === 'front' ? '前' : v.name === 'top' ? '俯' : '側'}視圖的 Ø${Math.round(h.r * 20) / 10} 孔從看不到的那一面加工，只有虛線，孔徑與孔位標在隱藏線上（建議加剖視圖）`;
       if (h.hidden && !notes.includes(hn)) notes.push(hn);
+      if (h.outer) continue;   // 在外形圓柱的軸上（例：圓盤中心孔）：位置由外徑決定，不另標
       add('x', h.x, h.y - h.r, h.y + h.r, true);
       add('y', h.y, h.x - h.r, h.x + h.r, true);
     }
+    // 凸柱／圓柱的圓心位置（圓視圖；外形圓柱不標）
+    if (state.showDetail) for (const b of v.bosses) { add('x', b.x, b.y - b.r, b.y + b.r, true); add('y', b.y, b.x - b.r, b.x + b.r, true); }
   }
   // 延伸線（從特徵往某一邊拉到視圖外框）會穿過幾條可見線
   const crossings = (v, sax, c, from, to) => {
@@ -1142,6 +1202,12 @@ function planDims(views, proj, excludeHidden) {
     }
     return n;
   };
+  // 外形是圓柱（圓盤、軸）：直徑等於兩個方向的總尺寸 → 其中一個總尺寸改標 Ø、另一個不重複標
+  const outerAxes = { dia: new Set(), drop: new Set() };
+  for (const g of model.axes) if (g.outer) {
+    const k = [0, 1, 2].find(i => Math.abs(g.n[i]) > 0.999), [p, q] = [0, 1, 2].filter(i => i !== k);
+    outerAxes.dia.add('XYZ'[p]); outerAxes.drop.add('XYZ'[q]);
+  }
   // 2. 每個模型座標挑一個（視圖, 邊）
   const dims = [];
   for (const axis of ['X', 'Y', 'Z']) {
@@ -1171,11 +1237,34 @@ function planDims(views, proj, excludeHidden) {
       dims.push({ id: `f:${axis}:${g[0].m.toFixed(2)}`, axis, role: f.role, side: best.side, sax: f.sax, c: f.c, datum,
         from: best.from, fromCenter: !!(fromExt && fromExt.center), value: Math.abs(f.c - datum) });
     }
-    if (state.showDims) {
+    if (state.showDims && !outerAxes.drop.has(axis)) {
       const [role, side] = overallSlot[axis];
       const v = views[role], sax = side === 'bottom' || side === 'top' ? 'x' : 'y';
       const datum = datumScreen(v, sax), b0 = sax === 'x' ? v.bx0 : v.by0, b1 = b0 + (sax === 'x' ? v.bw : v.bh);
-      dims.push({ id: `ov:${axis}`, axis, role, side, sax, c: datum === b0 ? b1 : b0, datum, overall: true, value: mx });
+      dims.push({ id: `ov:${axis}`, axis, role, side, sax, c: datum === b0 ? b1 : b0, datum, overall: true, value: mx, prefix: outerAxes.dia.has(axis) ? 'Ø' : '' });
+    }
+  }
+  // 2a. 凸柱／圓柱的直徑：標在看起來是矩形的視圖，挑延伸線穿過最少線條、離輪廓最近的一邊（每個圓柱只標一次）
+  if (state.showDetail) {
+    const done = new Set(), cand = new Map();
+    for (const role of ['front', 'top', 'side']) {
+      const v = views[role];
+      for (const cy of v.cyls) for (const side of cy.sax === 'x' ? ['top', 'bottom'] : ['left', 'right']) {
+        const low = side === 'bottom' || side === 'left';
+        const from = low ? cy.lo : cy.hi;
+        const edge = cy.sax === 'x' ? (low ? v.by0 : v.by0 + v.bh) : (low ? v.bx0 : v.bx0 + v.bw);
+        const span = cy.sax === 'x' ? v.bh : v.bw;
+        const score = (crossings(v, cy.sax, cy.c - cy.r, from, edge) + crossings(v, cy.sax, cy.c + cy.r, from, edge)) * 3 + Math.abs(edge - from) / (span || 1)
+          + (role === 'front' ? 0 : 0.2);
+        const b = cand.get(cy.key);
+        if (!b || score < b.score) cand.set(cy.key, { score, role, side, cy, from });
+      }
+    }
+    for (const [key, b] of cand) {
+      if (done.has(key)) continue;
+      done.add(key);
+      const { cy } = b;
+      dims.push({ id: `dia:${key}`, dia: true, role: b.role, side: b.side, sax: cy.sax, a: cy.c - cy.r, b: cy.c + cy.r, from: b.from, value: 2 * cy.r, prefix: 'Ø' });
     }
   }
   // 2b. 只在隱藏線上出現、沒被任何可見特徵或孔／圓柱交代的位置（凹穴、槽的深度）：不標在虛線上，但要提示
@@ -1211,7 +1300,7 @@ function planDims(views, proj, excludeHidden) {
     (slots[`${d.role}:${d.side}`] ||= []).push(d);
   }
   for (const [key, list] of Object.entries(slots)) {
-    list.sort((p, q) => (p.overall ? 1 : 0) - (q.overall ? 1 : 0) || p.value - q.value);
+    list.sort((p, q) => (p.dia ? 0 : p.overall ? 2 : 1) - (q.dia ? 0 : q.overall ? 2 : 1) || p.value - q.value);   // 直徑在最內、總尺寸在最外
     list.forEach((d, i) => { d.row = i; });
     const [role, side] = key.split(':');
     margins[role][side] = STD.dimOffset + (list.length - 1) * STD.rowGap + (side === 'top' || side === 'left' ? 5 : 3);
@@ -1342,21 +1431,29 @@ function drawDimSlot(prims, view, pl, s, side, list, viewPts, mode) {
   const edgePt = c => horiz ? [map(c, 0)[0], base] : [base, map(0, c)[1]];
   const visible = list.filter(d => mode === 'screen' || !state.hiddenDims.has(d.id));
   if (!visible.length) return;
+  // 直徑：兩條延伸線都從圓柱的輪廓拉出來（不用基準線）
+  for (const d of visible.filter(d => d.dia)) {
+    const pa = horiz ? map(d.a, d.from) : map(d.from, d.a), pb = horiz ? map(d.b, d.from) : map(d.from, d.b);
+    const opt = { id: d.id, ghost: state.hiddenDims.has(d.id), prefix: d.prefix };
+    if (horiz) dimH(prims, pa, pb, rowPos(d.row), d.value, opt); else dimV(prims, pa, pb, rowPos(d.row), d.value, opt);
+  }
+  const base_ = visible.filter(d => !d.dia), all_ = list.filter(d => !d.dia);
+  if (!base_.length) return;
   // 基準延伸線只畫一次，拉到最外一列（未隱藏的）
-  const datum = list[0].datum, outer = Math.max(...visible.filter(d => !state.hiddenDims.has(d.id)).map(d => d.row), -1);
+  const datum = all_[0].datum, outer = Math.max(...base_.filter(d => !state.hiddenDims.has(d.id)).map(d => d.row), -1);
   const dp = extreme(datum, edgePt(datum));
   if (outer >= 0) {
     const end = rowPos(outer) + out * STD.extOver;
     prims.push({ k: 'pl', layer: 'DIM', pts: horiz ? [[dp[0], dp[1] + out * STD.extGap], [dp[0], end]] : [[dp[0] + out * STD.extGap, dp[1]], [end, dp[1]]] });
   }
-  for (const d of visible) {
+  for (const d of base_) {
     let fp;
     if (d.overall) fp = extreme(d.c, edgePt(d.c));
     else {
       fp = horiz ? map(d.c, d.from) : map(d.from, d.c);
       if (d.fromCenter) { if (horiz) fp[1] += out * STD.centerOver; else fp[0] += out * STD.centerOver; }
     }
-    const opt = { id: d.id, ghost: state.hiddenDims.has(d.id), noExt1: true };
+    const opt = { id: d.id, ghost: state.hiddenDims.has(d.id), noExt1: true, prefix: d.prefix };
     if (horiz) dimH(prims, dp, fp, rowPos(d.row), d.value, opt); else dimV(prims, dp, fp, rowPos(d.row), d.value, opt);
   }
 }
@@ -1476,7 +1573,7 @@ function arrow(prims, tip, ux, uy, opt = {}) {
 function dimH(prims, p1, p2, yd, value, opt = {}) {
   const dir = Math.sign(yd - (p1[1] + p2[1]) / 2) || 1, tag = { dim: opt.id, ghost: opt.ghost };
   for (const p of opt.noExt1 ? [p2] : [p1, p2]) prims.push({ k: 'pl', layer: 'DIM', pts: [[p[0], p[1] + dir * STD.extGap], [p[0], yd + dir * STD.extOver]], ...tag });
-  const x1 = Math.min(p1[0], p2[0]), x2 = Math.max(p1[0], p2[0]), str = fmtNum(value);
+  const x1 = Math.min(p1[0], p2[0]), x2 = Math.max(p1[0], p2[0]), str = (opt.prefix || '') + fmtNum(value);
   const tw = textWidth(str, STD.textH);
   if (x2 - x1 > Math.max(2 * STD.arrowL + 2, tw + 2)) {
     prims.push({ k: 'pl', layer: 'DIM', pts: [[x1, yd], [x2, yd]], ...tag, hit: true });
@@ -1494,7 +1591,7 @@ function dimH(prims, p1, p2, yd, value, opt = {}) {
 function dimV(prims, p1, p2, xd, value, opt = {}) {
   const dir = Math.sign(xd - (p1[0] + p2[0]) / 2) || 1, tag = { dim: opt.id, ghost: opt.ghost };
   for (const p of opt.noExt1 ? [p2] : [p1, p2]) prims.push({ k: 'pl', layer: 'DIM', pts: [[p[0] + dir * STD.extGap, p[1]], [xd + dir * STD.extOver, p[1]]], ...tag });
-  const y1 = Math.min(p1[1], p2[1]), y2 = Math.max(p1[1], p2[1]), str = fmtNum(value);
+  const y1 = Math.min(p1[1], p2[1]), y2 = Math.max(p1[1], p2[1]), str = (opt.prefix || '') + fmtNum(value);
   const tw = textWidth(str, STD.textH);
   if (y2 - y1 > Math.max(2 * STD.arrowL + 2, tw + 2)) {
     prims.push({ k: 'pl', layer: 'DIM', pts: [[xd, y1], [xd, y2]], ...tag, hit: true });

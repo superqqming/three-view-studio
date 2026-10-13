@@ -258,13 +258,14 @@ function dimsOf(M, proj = 'third') {
   const views = { front: G.processView('front'), top: G.processView('top'), side: G.processView(side) };
   const plan = G.planDims(views, proj, false);
   const out = {};
-  for (const [key, list] of Object.entries(plan.slots)) out[key] = list.map(d => (d.overall ? '總' : '') + Math.round(d.value * 100) / 100).join(',');
+  for (const [key, list] of Object.entries(plan.slots)) out[key] = list.map(d => (d.overall ? '總' : '') + (d.prefix || '') + Math.round(d.value * 100) / 100).join(',');
   const holes = Object.values(views).flatMap(v => v.holes.map(h => `${v.name}:Ø${Math.round(2 * h.r * 100) / 100}${h.depth ? '深' + Math.round(h.depth * 100) / 100 : ''}`));
   return { slots: out, holes, notes: plan.notes };
 }
 const DIM_SNAP = {
   bracket: { slots: { 'front:bottom': '8,16,44,總60', 'front:left': '6,12,33,總45', 'side:bottom': '總36' }, holes: ['front:Ø8', 'front:Ø7'] },
-  shaft: { slots: { 'front:bottom': '20,50,58,總60', 'front:left': '總30', 'side:bottom': '總30' }, holes: [] },
+  // 階梯軸：外徑 Ø30 標在總尺寸（深度方向不再重複標 30），各段直徑 Ø12、Ø20 標在非圓視圖（2026-10-14）
+  shaft: { slots: { 'front:bottom': '20,50,58,總60', 'front:left': '總Ø30', 'front:right': 'Ø12,Ø20' }, holes: [] },
   channel: { slots: { 'front:bottom': '總40', 'front:left': '總30', 'side:right': '14', 'side:bottom': '16,40,總56' }, holes: [] },
 };
 for (const [k, exp] of Object.entries(DIM_SNAP)) {
@@ -394,6 +395,22 @@ console.log('\n[6] AI 辨識結果建模（manifold）');
       { kind: 'arc', u: 0, v: 20, cu: 20, cv: 20, ccw: false }, L([-2, 20]), L([-2, -2]) ] }]]));
     const d3 = Object.values(dimsOf(M3).slots).join('|');
     ok(!/\b0\.\d/.test(d3), `長圓形（直線切圓弧）：沒有標到切點的怪尺寸（${d3}）`);
+  }
+  { // 燈座（使用者 2026-10-14 回報）：圓盤＋兩段凸台＋中心孔，同一條軸上有孔也有凸柱——每個直徑都要標
+    const disk = [[60, 120, 60, 60, 1], [60, 122], [122, 122], [122, 60], [120, 60]];   // 右後角，鏡射成四角
+    const F = (o) => ({ type: 'hole', face: 'top', centered: true, u: 0, v: 0, d: 0, depth: 0, through: false, rects: [], islands: [], edges: [], size: 0, mirror: [], outline: [], ...o });
+    const isl = d => [{ shape: 'circle', centered: true, u: 0, v: 0, d, rect: [] }];
+    const { part, issues } = G.toPart({ name: '燈座', stock: { w: 120, h: 36, d: 120 }, steps: [
+      { label: 'a', note: '', features: [F({ type: 'boss', depth: 16, islands: isl(30) })] },
+      { label: 'b', note: '', features: [F({ type: 'boss', depth: 10, islands: isl(22) })] },
+      { label: 'c', note: '', features: [F({ type: 'profile', centered: false, through: true, mirror: ['x', 'z'], outline: disk })] },
+      { label: 'd', note: '', features: [F({ d: 12, through: true })] },
+    ] });
+    const M = prepare((await G.buildPart(part)).soup, 1, { thr: 9, exact: true });
+    const d = dimsOf(M);
+    ok(!issues.length && d.slots['front:bottom'] === '總Ø120' && d.slots['front:left'] === '20,26,總36' && d.slots['front:top'] === 'Ø22,Ø30' && !d.slots['side:bottom']
+      && JSON.stringify(d.holes) === '["top:Ø12"]', `燈座：外徑、凸台直徑、中心孔、各段高度都有標 ${JSON.stringify(d.slots)} 孔 ${JSON.stringify(d.holes)}`);
+    oracleAll('燈座', M, ['front', 'top', 'iso']);
   }
   // 每個面（含鏡射）：矩形輪廓的輪廓切除 = 矩形切除（體積與重心）
   {
