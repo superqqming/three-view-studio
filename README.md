@@ -36,15 +36,17 @@
 | 入口 | 誰付錢 | 怎麼運作 |
 |---|---|---|
 | 使用課程額度 | 老師 | 學號＋姓名登入（只送雜湊）→ 課程閘道 `course-ai-gateway`（功能代碼 `threeview-recognize`，課程 AD290B-1151）；次數、思考深度、課程結束日由閘道管理頁設定。老師在「學號」欄填教師密碼 |
-| 使用自己的 API 金鑰 | 使用者自己 | 金鑰只存在瀏覽器，直接以串流呼叫 Anthropic；模型、指令、輸出格式和閘道完全相同（`claude-opus-5-5`、`max_tokens` 32000、`assembly-unit-simulator/js/ai/threeview-prompt.js`、`threeview-schema.js`）。直接開檔案（`file://`）時只能用這個入口 |
+| 使用自己的 API 金鑰 | 使用者自己 | 金鑰只存在瀏覽器，直接以串流呼叫 Anthropic；模型、指令、輸出格式和閘道完全相同（`claude-opus-5-5`、`max_tokens` 32000、本 repo 的 `ai/threeview-prompt.js`、`ai/threeview-schema.js`）。直接開檔案（`file://`）時只能用這個入口 |
 
 - 加工特徵：孔、矩形切除、凸柱、圓角、倒角，以及「輪廓切除」（面上的直線＋圓弧封閉輪廓，用於斜面、圓弧端、溝槽），可鏡射。
 - AI 不確定的地方會列成選項，改選後立即重建；辨識結果可下載成 JSON，之後用「載入辨識結果」重現（不用登入、不扣次數）。
 - 「對照原圖」把照片浮在圖紙旁邊對照；按「登出」會清掉照片與結果（共用電腦）。
 - 「如何申請自己的 API 金鑰」說明頁：本 repo 的 `apply-key.html`（同步自 `Shared_Services/ai-gateway/client/`）。
 - 共用程式是**嵌進** `index.html` 的（單一檔案，下載後雙擊也能用）：雙入口元件（`gateway-client.js`、`own-key.js`、`ai-access.js`）與三視圖指令／輸出格式由 `tests/sync-ai.mjs` 從原始檔產生，改原始檔後執行 `node tests/sync-ai.mjs`；回歸測試會檢查有沒有落後，也檢查閘道的副本一致。
+- **指令與輸出格式的原始檔在 `ai/`**（2026-10-13 從組合單元模擬器搬來）：`tests/sync-ai.mjs` 嵌進 `index.html`，閘道的 `scripts/sync-assembly.mjs` 複製到閘道（要重新部署閘道才會生效）。
+- ⚠️ **輸出格式不能太複雜**：Anthropic 會把格式編譯成文法，太複雜就整個退回（「The compiled grammar is too large」，學生看到「請求被 AI 服務拒絕」）。物件與陣列最花空間，所以矩形、輪廓段是數字陣列，「找到的視圖」「圖面檢查」是一行一項的文字（`index.html` 讀取時也接受 2026-10-13 以前下載的舊寫法）。目前的格式再多約 6 個數字欄位就會超過。改 `ai/threeview-schema.js` 之後先跑 `cd tests && node probe-schema.mjs --gateway ../ai/threeview-schema.js`（經閘道的 `/v1/admin/check-schema`，用閘道的金鑰，每個格式只花約 2 千個輸入 token）。
 - 2026-10-13 起改接課程閘道；之前的版本（AI 走 `assembly-unit-ai`）標記為 git tag `pre-gateway-2026-10-13`。
-- 本機測試（不花錢）：`cd tests && node dual-stack.mjs`（假 Anthropic＋本機課程閘道＋本工具網頁），照印出的網址開；測試帳號寫在 `dual-stack.mjs` 開頭。`?gateway=`、`?own-base=` 只接受本機網址。
+- 本機測試（不花錢）：`cd tests && node dual-stack.mjs`（假 Anthropic `tests/mock-anthropic.mjs` 回傳 `tests/ai-cube-sample.json`＋本機課程閘道＋本工具網頁），照印出的網址開；測試帳號寫在 `dual-stack.mjs` 開頭。假 AI 不會檢查格式能不能編譯，格式要另外用 `probe-schema.mjs` 檢查。`?gateway=`、`?own-base=` 只接受本機網址。
 
 ### 匯入時的自動修補
 

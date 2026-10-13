@@ -19,7 +19,7 @@ const root = path.resolve(here, '..');
 const HUB = path.resolve(root, '../..');
 const gatewayDir = path.join(HUB, 'Shared_Services/ai-gateway/worker');
 const state = path.join(here, '.gateway-state');
-const { startMock } = await import(pathToFileURL(path.join(HUB, 'Teaching_Tools/assembly-unit-simulator/worker/test/mock-anthropic.mjs')).href);
+const { startMock } = await import('./mock-anthropic.mjs');   // 回傳 ai-cube-sample.json（現在的精簡格式）
 const { loginKey } = await import(pathToFileURL(path.join(HUB, 'Shared_Services/ai-gateway/client/gateway-client.js')).href);
 const SECRETS = { ANTHROPIC_API_KEY: 'test-key', OPENAI_API_KEY: 'test-openai-key', TOKEN_SECRET: 'tvs-token-secret', ROSTER_PEPPER: 'tvs-pepper', ADMIN_KEY: 'tvs-admin-key' };
 

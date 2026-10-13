@@ -26,7 +26,7 @@ ${dims}
 const esc = s => String(s);
 ${aiGeom}
 export function setMF(m) { MF = m; }
-export { applyChoices, toPart, buildPart, outlinePoints, planDims,  BASES, buildTopology, repairTJunctions, transformModel, classifyModel, computeView, processView, objectToSoup, geomToSoup, parseOBJ, unitFromComment, demoGeometry };
+export { applyChoices, toPart, buildPart, outlinePoints, reviewItems, planDims,  BASES, buildTopology, repairTJunctions, transformModel, classifyModel, computeView, processView, objectToSoup, geomToSoup, parseOBJ, unitFromComment, demoGeometry };
 `;
 fs.mkdirSync(new URL('./.gen/', import.meta.url), { recursive: true });
 fs.writeFileSync(new URL('./.gen/geom.mjs', import.meta.url), out);

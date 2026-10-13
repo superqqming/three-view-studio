@@ -305,13 +305,48 @@ console.log('\n[6] AI 辨識結果建模（manifold）');
     const built = await G.buildPart(part);
     return { part, issues: [...issues, ...built.issues], M: prepare(built.soup, 1, { thr: 9, exact: true }), r };   // 與網頁相同：AI 實體用 9°
   };
-  const cubeFx = new URL('../../assembly-unit-simulator/tests/fixtures/ai-threeview-cube.json', import.meta.url);
+  // 現在的精簡格式（ai/threeview-schema.js）：範例要符合格式本身
+  const { THREEVIEW_SCHEMA } = await import('../ai/threeview-schema.js');
+  const schemaErrors = (sch, v, at = '$') => {
+    const e = [];
+    if (sch.type === 'object') {
+      if (!v || typeof v !== 'object' || Array.isArray(v)) return [`${at} 應是物件`];
+      for (const k of sch.required || []) if (!(k in v)) e.push(`${at}.${k} 缺少`);
+      for (const k of Object.keys(v)) if (!sch.properties[k]) e.push(`${at}.${k} 多出來`); else e.push(...schemaErrors(sch.properties[k], v[k], `${at}.${k}`));
+    } else if (sch.type === 'array') {
+      if (!Array.isArray(v)) return [`${at} 應是陣列`];
+      if (sch.minItems && v.length < sch.minItems) e.push(`${at} 至少 ${sch.minItems} 項`);
+      v.forEach((x, i) => e.push(...schemaErrors(sch.items, x, `${at}[${i}]`)));
+    } else if (sch.type === 'number' ? typeof v !== 'number' : sch.type === 'integer' ? !Number.isInteger(v) : typeof v !== sch.type) e.push(`${at} 應是 ${sch.type}`);
+    else if (sch.enum && !sch.enum.includes(v)) e.push(`${at} 不在選項裡：${v}`);
+    return e;
+  };
+  const cubeNew = new URL('./ai-cube-sample.json', import.meta.url);
+  const se = schemaErrors(THREEVIEW_SCHEMA, JSON.parse(fs.readFileSync(cubeNew, 'utf8')));
+  ok(!se.length, `精簡格式的範例符合 ai/threeview-schema.js${se.length ? '：' + se.slice(0, 3).join('；') : ''}`);
+  {
+    const c = await load(cubeNew);
+    const d = dimsOf(c.M);
+    ok(!c.issues.length && c.M.stats.open === 0 && c.M.size.join('×') === '100×100×100' && d.holes.length === 1 && d.holes[0].includes('Ø50'),
+      `草圖範例（精簡格式：矩形是數字陣列）：${c.M.size.join('×')}，開放邊 ${c.M.stats.open}，孔 ${JSON.stringify(d.holes)}`);
+    const c2 = await load(cubeNew, [1]);
+    ok(c2.issues.length === 0 && /深50/.test(dimsOf(c2.M).holes.join()), `精簡格式：改選不確定項（整個特徵替換）後重建：${JSON.stringify(dimsOf(c2.M).holes)}`);
+    const rv = G.reviewItems(c.r.parts[0].review);
+    ok(rv.length === 5 && rv[0].view === 'layout' && rv[4].view === 'right' && !rv.some(x => x.issue.startsWith('[')), `圖面檢查（一行一個）：${rv.map(x => x.view).join('、')}`);
+  }
+  {
+    const rv = G.reviewItems('- [Top] 缺中心線\n\n【dims】 標 Ø\n沒有標籤的一行\n［front］前視圖');
+    const old = G.reviewItems([{ view: 'iso', issue: '等角圖' }]);
+    ok(rv.map(x => x.view + ':' + x.issue).join('|') === 'top:缺中心線|dims:標 Ø|:沒有標籤的一行|front:前視圖' && old[0].view === 'iso' && G.reviewItems(undefined).length === 0,
+      '圖面檢查的寫法：項目符號、全形括號、沒有標籤、舊的物件陣列都讀得到');
+  }
+  const cubeFx = new URL('../../assembly-unit-simulator/tests/fixtures/ai-threeview-cube.json', import.meta.url);   // 舊格式（2026-10-13 以前下載的結果）
   if (fs.existsSync(cubeFx)) {
     const c = await load(cubeFx);
     const d = dimsOf(c.M);
     const vol = c.M.size.join('×');
     ok(!c.issues.length && c.M.stats.open === 0 && vol === '100×100×100' && d.holes.length === 1 && d.holes[0].includes('Ø50'),
-      `草圖範例（8 角缺口＋Ø50 孔）：${vol}，開放邊 ${c.M.stats.open}，孔 ${JSON.stringify(d.holes)}，尺寸 ${JSON.stringify(d.slots)}`);
+      `舊格式的草圖範例（8 角缺口＋Ø50 孔）：${vol}，開放邊 ${c.M.stats.open}，孔 ${JSON.stringify(d.holes)}，尺寸 ${JSON.stringify(d.slots)}`);
     oracleAll('草圖範例重建', c.M, ['front', 'top', 'iso']);
     // 改選「只鑽一段」：孔不再貫穿
     const c2 = await load(cubeFx, [1]);
@@ -323,6 +358,20 @@ console.log('\n[6] AI 辨識結果建模（manifold）');
   ok(!p.issues.length && p.M.stats.open === 0 && all.includes('40') && all.includes('30'),
     `輪廓切除（斜面＋圓弧長槽）：開放邊 ${p.M.stats.open}，尺寸 ${JSON.stringify(dp.slots)}`);
   oracleAll('輪廓切除重建', p.M, ['front', 'top', 'right', 'iso']);
+  { // 同一個輪廓範例改寫成精簡格式（矩形、輪廓段都是數字陣列）：建出來要一模一樣
+    const compact = f => ({ ...f,
+      rects: (f.rects || []).map(r => [r.u0, r.u1, r.v0, r.v1]),
+      islands: (f.islands || []).map(is => ({ ...is, rect: is.shape === 'rect' ? [is.rect.u0, is.rect.u1, is.rect.v0, is.rect.v1] : [] })),
+      outline: (f.outline || []).map(sg => (sg.kind === 'arc' ? [sg.u, sg.v, sg.cu, sg.cv, sg.ccw ? 1 : 0] : [sg.u, sg.v]))
+    });
+    const d0 = p.r.parts[0];
+    const { part } = G.toPart({ ...d0, steps: d0.steps.map(st => ({ ...st, features: st.features.map(compact) })) });
+    const { part: part0 } = G.toPart(d0);
+    const nArc = part.steps.flatMap(st => st.features).flatMap(f => f.outline || []).filter(sg => sg.kind === 'arc').length;
+    ok(JSON.stringify(part) === JSON.stringify(part0) && nArc > 0, `輪廓範例的精簡寫法讀成同一個工件（含 ${nArc} 段圓弧）`);
+    const bad = G.toPart({ ...d0, steps: [{ label: 's', note: '', features: [{ ...compact(d0.steps.flatMap(st => st.features).find(f => f.type === 'profile')), outline: [[0, 0], [10, 0, 5]] }] }] });
+    ok(bad.part.steps[0].features.length === 0 && bad.issues.some(x => /格式不對的線段/.test(x)), '輪廓段的數字個數不對（不是 2 或 5 個）：略過並說明');
+  }
   // 審查抓到的情境
   {
     const mk = (stock, steps) => ({ name: 't', stock, steps: steps.map(fs => ({ label: 's', note: '', features: fs })) });

@@ -2577,11 +2577,11 @@ function createAiAccess({ mount, gatewayUrl, tools = [], providers = [], guideUr
 }
 return { createAiAccess };
 })();
-// ---- Teaching_Tools/assembly-unit-simulator/js/ai/threeview-prompt.js
+// ---- Teaching_Tools/3 side view generator/ai/threeview-prompt.js
 const TV_AI = (() => {
-// 三視圖產生器（superqqming/three-view-studio）用的 AI 辨識指令。
+// 三視圖產生器的 AI 辨識指令。這裡是原始檔（同步方式見 threeview-schema.js 開頭）。
 // 學生拍照上傳手繪三視圖 → 重建成料塊＋加工步驟 → 工具產生正式的三視圖，並列出學生圖面的問題。
-// 座標與面座標的約定必須和 js/model/frames.js 一致；輸出格式見 threeview-schema.js。
+// 座標與面座標的約定必須和 index.html 的建模程式一致；輸出格式見 threeview-schema.js。
 
 const THREEVIEW_SYSTEM_PROMPT = `You read hand-drawn three-view (orthographic) sketches of a single machined part from a technical drawing class (圖學) in Taiwan. You rebuild the part as a solid so a drawing tool can produce the correct, standards-compliant three views (CNS), and you review the student's sketch so the student can see what to fix. The student checks your reading afterwards, so aim for a faithful first draft and ask clear questions wherever the sketch can honestly be read more than one way.
 
@@ -2596,16 +2596,16 @@ The part starts as a rectangular stock block of w × h × d mm and is then machi
   So (u, v) on the front face is exactly the position in the front view measured from its lower-left corner; on the top face it is the position in the top view; on the right face it is the position in the right-side view.
 - Feature types (sizes in mm):
   - hole: round hole drilled into face, at (u, v) or at the face center (centered = true); diameter d; depth, or through = true.
-  - pocket: material removed from face inward to depth (or through) over the union of rects (u0..u1 × v0..v1 on that face). Use it for rectangular notches, corner cut-outs, slots, steps.
-  - boss: the whole face is cut down by depth, leaving only the islands standing (circular islands of diameter d, or rectangular islands).
-  - profile: material removed from face inward to depth (or through) inside a closed outline of line and arc segments drawn on that face. Use it for slanted faces (cut away a triangle or trapezoid — e.g. a slope seen as a diagonal line in the front view is a triangle cut through the whole depth from the front face), rounded ends (an outline with an arc), V-grooves, dovetails and any non-rectangular notch. outline lists the segments in order; each segment ends at (u, v) and starts where the previous one ended (the first starts where the last ends). For kind "arc", (cu, cv) is the arc center and ccw tells the direction as seen looking straight at the face: ccw = true means the angle around (cu, cv), with u to the right and v up in that face's view, increases from the start point to the end point. Both ends of an arc must be the same distance from (cu, cv). Check every arc: its midpoint must lie on the curve drawn in the sketch. For kind "line" set cu = 0, cv = 0, ccw = false. Keep every corner of the cut exactly at its dimensioned position, including corners that lie on a face edge. Where the cut runs off the part, close the outline with extra points about 2 mm outside the face rather than along the face edge, so no thin sliver of material is left; never move a real corner to do this. Examples: a slope on the right face of a part 40 high, from (0, 10) to (40, 40), is (0, 10) → (40, 40) → (40, 42) → (−2, 42) → (−2, 10). A rounded right end R20 on the top face of a part 100 wide and 40 deep, centered at (80, 20), is (80, −2) → (102, −2) → (102, 42) → (80, 42) → (80, 40) → arc to (80, 0) around (80, 20) with ccw = false (it bulges right through (100, 20)) → back to (80, −2). A full circle is a hole (with depth for a round recess), not a profile.
+  - pocket: material removed from face inward to depth (or through) over the union of rects. Each rect is [u0, u1, v0, v1], the area u0..u1 × v0..v1 on that face. Use it for rectangular notches, corner cut-outs, slots, steps.
+  - boss: the whole face is cut down by depth, leaving only the islands standing: circular islands of diameter d at (u, v) or at the face center (centered = true), with rect []; or rectangular islands with rect = [u0, u1, v0, v1].
+  - profile: material removed from face inward to depth (or through) inside a closed outline of line and arc segments drawn on that face. Use it for slanted faces (cut away a triangle or trapezoid — e.g. a slope seen as a diagonal line in the front view is a triangle cut through the whole depth from the front face), rounded ends (an outline with an arc), V-grooves, dovetails and any non-rectangular notch. outline lists the segments in order, each as a list of numbers: a straight line is [u, v]; an arc is [u, v, cu, cv, ccw]. (u, v) is where the segment ends; it starts where the previous one ended (the first starts where the last ends). For an arc, (cu, cv) is the arc center and ccw tells the direction as seen looking straight at the face: ccw = 1 means the angle around (cu, cv), with u to the right and v up in that face's view, increases from the start point to the end point; ccw = 0 means it decreases. Both ends of an arc must be the same distance from (cu, cv). Check every arc: its midpoint must lie on the curve drawn in the sketch. Keep every corner of the cut exactly at its dimensioned position, including corners that lie on a face edge. Where the cut runs off the part, close the outline with extra points about 2 mm outside the face rather than along the face edge, so no thin sliver of material is left; never move a real corner to do this. Examples: a slope on the right face of a part 40 high, from (0, 10) to (40, 40), is the path (0, 10) → (40, 40) → (40, 42) → (−2, 42) → (−2, 10) → back to (0, 10), so outline = [[40, 40], [40, 42], [-2, 42], [-2, 10], [0, 10]]. A rounded right end R20 on the top face of a part 100 wide and 40 deep, centered at (80, 20), is the path (80, −2) → (102, −2) → (102, 42) → (80, 42) → (80, 40) → arc to (80, 0) around (80, 20), clockwise (it bulges right through (100, 20)) → back to (80, −2), so outline = [[102, -2], [102, 42], [80, 42], [80, 40], [80, 0, 80, 20, 0], [80, -2]]. A full circle is a hole (with depth for a round recess), not a profile.
   - fillet / chamfer: round (radius = size) or bevel (leg = size) original stock edges only. A chamfer is always 45° with equal legs (C-size); for an unequal or angled bevel use a profile on the face where the bevel shows as a slanted line. Edge names: front-left, front-right, back-left, back-right (vertical edges), top-front, top-back, top-left, top-right, bottom-front, bottom-back, bottom-left, bottom-right.
   - mirror: also make mirrored copies through the stock's center planes — "x" (left↔right), "z" (front↔back), "y" (top↔bottom, about h/2). They combine: ["x","y","z"] on one corner pocket cuts all eight corners.
 - Depths are always measured from the original stock face named in face, never from a surface left by an earlier step: a Ø10 hole 15 deep drilled into a step floor that is 20 below the top is a top-face hole with depth 35.
 - Every field is required. Fields a feature type does not use take neutral values: 0, false, [], face "top", island shape "circle", outline [].
 
 ## Reading the sketch
-- Find each view by its content, not only by its position: the front view usually carries the most detail and sits below the top view in third-angle projection (above it in first-angle); arrows, labels (前視圖, 俯視圖, 右側視圖) and an isometric sketch on the same page help. Students sometimes place a view in the wrong spot — read it for what it shows and mention the placement in review. Record where you found each view in views_found.
+- Find each view by its content, not only by its position: the front view usually carries the most detail and sits below the top view in third-angle projection (above it in first-angle); arrows, labels (前視圖, 俯視圖, 右側視圖) and an isometric sketch on the same page help. Students sometimes place a view in the wrong spot — read it for what it shows and mention the placement in review. Write in views_found, as one short line, where you found each view, e.g. 「前視圖：左下（粉紅色）；俯視圖：左上；右側視圖：右上；等角圖：右下」.
 - If an isometric sketch is on the page, use it to understand the 3D shape and which features are on which face; the orthographic views and written dimensions decide the sizes.
 - Solid lines are visible edges; dashed lines are hidden edges (holes, pockets on the far side); chain lines are center lines. Colored fills usually mark faces of the same orientation.
 - Dimensions: list every dimension text you can read in transcribed, exactly as written. Use the written numbers, not measurements of the drawing, and convert them to mm. A radius on a full circle means a hole of diameter 2R; a number on a line from a circle's center to its edge is a radius even when R is not written (25 there means Ø50). When a size is not written, infer it from symmetry, other views, or the proportions of the drawing (nearest 5 mm) and add an uncertain item for it.
@@ -2620,20 +2620,20 @@ When something could reasonably be read two ways — which face, through versus 
 - question: one short question in Traditional Chinese.
 - options: 2–4 alternatives; label is short Traditional Chinese, value_json is the JSON text of the value that replaces the field at path (e.g. "\\"front\\"", "50", or a whole feature object).
 - chosen: index of the option already used in the draft.
-When an alternative changes more than one field (a blind hole also needs its depth, a different notch needs other rects), use the whole feature as path (e.g. "steps[1].features[0]") and give the complete feature object in value_json.
+When an alternative changes more than one field (a blind hole also needs its depth, a different notch needs other rects), use the whole feature as path (e.g. "steps[1].features[0]") and give the complete feature object in value_json, written the same way as in steps (rects and outline segments as lists of numbers).
 Don't ask about things the sketch shows clearly.
 
 ## Review of the student's sketch
-Compare the student's views with the part you rebuilt and with the drawing rules the class uses (CNS, the projection method in the request). List concrete problems a teacher would mark, one per item, each tied to a view (or "layout" for view placement, "dims" for dimensioning, "general"):
+Compare the student's views with the part you rebuilt and with the drawing rules the class uses (CNS, the projection method in the request). Write review as one text with one problem a teacher would mark per line. Start each line with the view it concerns in square brackets — [front], [top], [right], [left], [iso], or [layout] for view placement, [dims] for dimensioning, [general] — for example "[top] 俯視圖缺少圓孔的中心線". Look for:
 - views in the wrong place for the projection method, or views that do not line up (widths, heights, depths);
 - missing or extra visible lines, hidden edges drawn solid or visible edges drawn dashed, missing hidden lines;
 - missing center lines for holes and round features;
 - sizes that disagree between views or with the totals;
 - dimensioning problems such as R used on a full circle (should be Ø), missing key dimensions, dimensions placed on hidden lines, the same size dimensioned in more than one view, and sizes given only on the isometric sketch instead of the orthographic views.
-Write each issue as one short, specific, kind sentence in Traditional Chinese that says what to change (e.g. 「俯視圖缺少圓孔的中心線」). Do not invent problems; an empty list is fine.
+Write each issue as one short, specific, kind sentence in Traditional Chinese that says what to change. Do not invent problems; an empty review is fine.
 
 ## Output
-- Write all human-readable text (name, label, note, question, option labels, assumptions, review, message) in Traditional Chinese as used in Taiwanese drafting classes. Keep assumptions short: what you assumed, not how you worked it out.
+- Write all human-readable text (name, label, note, question, option labels, assumptions, review, views_found, message) in Traditional Chinese as used in Taiwanese drafting classes. Keep assumptions short: what you assumed, not how you worked it out.
 - Put exactly one entry in parts — the part shown. Name it as labeled on the sketch, or 工件 if unlabeled.
 - If the image is not a sketch of a part, set is_part_sketch to false, say why in message, and return an empty parts list. Otherwise use message for one short sentence to the student about anything important (or leave it empty).`;
 
@@ -2649,8 +2649,8 @@ function threeviewUserText({ projection, units, note, count }) {
     '請重建這個工件（料塊尺寸與加工步驟），並列出學生圖面的問題。',
   ].filter(Boolean).join('\n');
 }
-// ---- Teaching_Tools/assembly-unit-simulator/js/ai/threeview-schema.js（輸出格式，JSON）
-const THREEVIEW_SCHEMA = {"type":"object","properties":{"is_part_sketch":{"type":"boolean"},"message":{"type":"string"},"units_on_sketch":{"type":"string","enum":["mm","cm","m","none"]},"transcribed":{"type":"array","items":{"type":"string"}},"views_found":{"type":"array","items":{"type":"object","properties":{"view":{"type":"string","enum":["front","top","right","left","bottom","back","iso"]},"where":{"type":"string"}},"required":["view","where"],"additionalProperties":false}},"parts":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"stock":{"type":"object","properties":{"w":{"type":"number"},"h":{"type":"number"},"d":{"type":"number"}},"required":["w","h","d"],"additionalProperties":false},"steps":{"type":"array","items":{"type":"object","properties":{"label":{"type":"string"},"note":{"type":"string"},"features":{"type":"array","items":{"type":"object","properties":{"type":{"type":"string","enum":["hole","pocket","boss","fillet","chamfer","profile"]},"face":{"type":"string","enum":["front","back","right","left","top","bottom"]},"centered":{"type":"boolean"},"u":{"type":"number"},"v":{"type":"number"},"d":{"type":"number"},"depth":{"type":"number"},"through":{"type":"boolean"},"rects":{"type":"array","items":{"type":"object","properties":{"u0":{"type":"number"},"u1":{"type":"number"},"v0":{"type":"number"},"v1":{"type":"number"}},"required":["u0","u1","v0","v1"],"additionalProperties":false}},"islands":{"type":"array","items":{"type":"object","properties":{"shape":{"type":"string","enum":["circle","rect"]},"centered":{"type":"boolean"},"u":{"type":"number"},"v":{"type":"number"},"d":{"type":"number"},"rect":{"type":"object","properties":{"u0":{"type":"number"},"u1":{"type":"number"},"v0":{"type":"number"},"v1":{"type":"number"}},"required":["u0","u1","v0","v1"],"additionalProperties":false}},"required":["shape","centered","u","v","d","rect"],"additionalProperties":false}},"edges":{"type":"array","items":{"type":"string","enum":["front-left","front-right","back-left","back-right","top-front","top-back","top-left","top-right","bottom-front","bottom-back","bottom-left","bottom-right"]}},"size":{"type":"number"},"mirror":{"type":"array","items":{"type":"string","enum":["x","y","z"]}},"outline":{"type":"array","items":{"type":"object","properties":{"kind":{"type":"string","enum":["line","arc"]},"u":{"type":"number"},"v":{"type":"number"},"cu":{"type":"number"},"cv":{"type":"number"},"ccw":{"type":"boolean"}},"required":["kind","u","v","cu","cv","ccw"],"additionalProperties":false}}},"required":["type","face","centered","u","v","d","depth","through","rects","islands","edges","size","mirror","outline"],"additionalProperties":false},"minItems":1}},"required":["label","note","features"],"additionalProperties":false}},"uncertain":{"type":"array","items":{"type":"object","properties":{"path":{"type":"string"},"question":{"type":"string"},"options":{"type":"array","items":{"type":"object","properties":{"label":{"type":"string"},"value_json":{"type":"string"}},"required":["label","value_json"],"additionalProperties":false},"minItems":1},"chosen":{"type":"integer"}},"required":["path","question","options","chosen"],"additionalProperties":false}},"assumptions":{"type":"array","items":{"type":"string"}},"review":{"type":"array","items":{"type":"object","properties":{"view":{"type":"string","enum":["front","top","right","left","iso","layout","dims","general"]},"issue":{"type":"string"}},"required":["view","issue"],"additionalProperties":false}}},"required":["name","stock","steps","uncertain","assumptions","review"],"additionalProperties":false}}},"required":["is_part_sketch","message","units_on_sketch","transcribed","views_found","parts"],"additionalProperties":false};
+// ---- Teaching_Tools/3 side view generator/ai/threeview-schema.js（輸出格式，JSON）
+const THREEVIEW_SCHEMA = {"type":"object","properties":{"is_part_sketch":{"type":"boolean"},"message":{"type":"string"},"units_on_sketch":{"type":"string","enum":["mm","cm","m","none"]},"transcribed":{"type":"array","items":{"type":"string"}},"views_found":{"type":"string"},"parts":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"stock":{"type":"object","properties":{"w":{"type":"number"},"h":{"type":"number"},"d":{"type":"number"}},"required":["w","h","d"],"additionalProperties":false},"steps":{"type":"array","items":{"type":"object","properties":{"label":{"type":"string"},"note":{"type":"string"},"features":{"type":"array","items":{"type":"object","properties":{"type":{"type":"string","enum":["hole","pocket","boss","fillet","chamfer","profile"]},"face":{"type":"string","enum":["front","back","right","left","top","bottom"]},"centered":{"type":"boolean"},"u":{"type":"number"},"v":{"type":"number"},"d":{"type":"number"},"depth":{"type":"number"},"through":{"type":"boolean"},"rects":{"type":"array","items":{"type":"array","items":{"type":"number"}}},"islands":{"type":"array","items":{"type":"object","properties":{"shape":{"type":"string","enum":["circle","rect"]},"centered":{"type":"boolean"},"u":{"type":"number"},"v":{"type":"number"},"d":{"type":"number"},"rect":{"type":"array","items":{"type":"number"}}},"required":["shape","centered","u","v","d","rect"],"additionalProperties":false}},"edges":{"type":"array","items":{"type":"string","enum":["front-left","front-right","back-left","back-right","top-front","top-back","top-left","top-right","bottom-front","bottom-back","bottom-left","bottom-right"]}},"size":{"type":"number"},"mirror":{"type":"array","items":{"type":"string","enum":["x","y","z"]}},"outline":{"type":"array","items":{"type":"array","items":{"type":"number"}}}},"required":["type","face","centered","u","v","d","depth","through","rects","islands","edges","size","mirror","outline"],"additionalProperties":false},"minItems":1}},"required":["label","note","features"],"additionalProperties":false}},"uncertain":{"type":"array","items":{"type":"object","properties":{"path":{"type":"string"},"question":{"type":"string"},"options":{"type":"array","items":{"type":"object","properties":{"label":{"type":"string"},"value_json":{"type":"string"}},"required":["label","value_json"],"additionalProperties":false},"minItems":1},"chosen":{"type":"integer"}},"required":["path","question","options","chosen"],"additionalProperties":false}},"assumptions":{"type":"array","items":{"type":"string"}},"review":{"type":"string"}},"required":["name","stock","steps","uncertain","assumptions","review"],"additionalProperties":false}}},"required":["is_part_sketch","message","units_on_sketch","transcribed","views_found","parts"],"additionalProperties":false};
 return { THREEVIEW_SYSTEM_PROMPT, threeviewUserText, THREEVIEW_SCHEMA };
 })();
 /* ==== END 共用 AI 程式 ==== */
@@ -2857,11 +2857,12 @@ function aiRenderResult(part, issues) {
   const steps = (part.steps || []).map(st => `${esc(st.label)}${st.note ? `<span class="muted">（${esc(st.note)}）</span>` : ''}`);
   const qs = (d.uncertain || []).map((u, i) => `<div class="q"><div>${esc(u.question)}</div>${u.options.map((o, j) =>
     `<label><input type="radio" name="aiq${i}" data-q="${i}" value="${j}"${AI.choices[i] === j ? ' checked' : ''}>${esc(o.label)}</label>`).join('')}</div>`).join('');
-  const review = (d.review || []).map(x => `<span class="tag">${esc(VIEW_TAGS[x.view] || x.view)}</span>${esc(x.issue)}`);
+  const review = reviewItems(d.review).map(x => `${x.view ? `<span class="tag">${esc(VIEW_TAGS[x.view] || x.view)}</span>` : ''}${esc(x.issue)}`);
+  const views = viewsText(r.views_found);
   $('aiResult').hidden = false;
   $('aiResult').innerHTML = `
     <h3>辨識結果</h3>
-    <div class="info" style="margin:0">料塊 ${part.stock.w}×${part.stock.d}×${part.stock.h} mm（寬×深×高）${(r.views_found || []).length ? '　找到：' + r.views_found.map(v => `${esc(VIEW_TAGS[v.view] || v.view)}（${esc(v.where)}）`).join('、') : ''}</div>
+    <div class="info" style="margin:0">料塊 ${part.stock.w}×${part.stock.d}×${part.stock.h} mm（寬×深×高）${views ? '　找到：' + esc(views) : ''}</div>
     <ol class="steps">${li(steps)}</ol>
     ${qs ? `<h3>AI 不確定的地方</h3>${qs}` : ''}
     ${review.length ? `<h3>你的手繪圖面可以改進的地方</h3><ul class="review">${li(review)}</ul>` : '<h3>手繪圖面檢查</h3><div class="info" style="margin:0">AI 沒有發現明顯的問題。</div>'}
@@ -2917,6 +2918,18 @@ const numOf = x => (typeof x === 'string' ? parseFloat(x) : Number(x));
 const posOf = x => { const v = numOf(x); return Number.isFinite(v) && v > 0 ? v : null; };
 const finOf = x => { const v = numOf(x); return Number.isFinite(v) ? v : null; };
 const r1 = v => Math.round(v * 10) / 10;
+// 圖面檢查：現在的格式是一段文字（一行一個問題，開頭是 [視圖代碼]）；2026-10-13 以前下載的結果是 { view, issue } 陣列
+// （格式改成字串是因為 Anthropic 編譯不了太複雜的格式，見 ai/threeview-schema.js）
+function reviewItems(rv) {
+  return (typeof rv === 'string' ? rv.split('\n') : arrOf(rv)).map(x => {
+    if (isObj(x)) return { view: txt(x.view), issue: txt(x.issue) };
+    const m = /^\s*(?:[-•*]\s*)?[[［【]\s*([A-Za-z]+)\s*[\]］】]\s*(.*)$/.exec(txt(x));
+    return m ? { view: m[1].toLowerCase(), issue: m[2].trim() } : { view: '', issue: txt(x).replace(/^[-•*]\s*/, '') };
+  }).filter(x => x.issue);
+}
+// 找到的視圖：現在是一行文字；以前是 { view, where } 陣列
+const viewsText = vf => (typeof vf === 'string' ? txt(vf)
+  : arrOf(vf).map(v => (isObj(v) ? `${VIEW_TAGS[v.view] || txt(v.view)}：${txt(v.where)}` : txt(v))).filter(Boolean).join('；'));
 function toPart(draft) {
   const issues = [];
   if (!isObj(draft)) draft = {};
@@ -2938,11 +2951,16 @@ function toPart(draft) {
   }).filter(Boolean);
   return { part, issues };
 }
+// 輪廓的一段：現在的格式是數字陣列（直線 [u, v]、圓弧 [u, v, cu, cv, ccw]，ccw 1 = 逆時針）；以前下載的結果是物件
+const segOf = sg => (Array.isArray(sg)
+  ? (sg.length === 2 ? { kind: 'line', u: sg[0], v: sg[1] } : sg.length === 5 ? { kind: 'arc', u: sg[0], v: sg[1], cu: sg[2], cv: sg[3], ccw: numOf(sg[4]) > 0 } : null)
+  : isObj(sg) ? sg : null);
 const atOf = (centered, u, v) => (centered ? { mode: 'center', u: 0, v: 0 } : { mode: 'uv', u: finOf(u) ?? 0, v: finOf(v) ?? 0 });
 const mirrorOf = m => ['x', 'y', 'z'].filter(a => arrOf(m).includes(a));
 // 空的或讀不到的矩形回傳 null（由呼叫端略過），不讓 NaN 進到幾何核心
+// 現在的格式是 [u0, u1, v0, v1]；以前下載的結果是 { u0, u1, v0, v1 }
 function rectOf(r, issues, where) {
-  let { u0, u1, v0, v1 } = isObj(r) ? r : {};
+  let { u0, u1, v0, v1 } = Array.isArray(r) ? { u0: r[0], u1: r[1], v0: r[2], v1: r[3] } : isObj(r) ? r : {};
   [u0, u1, v0, v1] = [u0, u1, v0, v1].map(numOf);
   if (u0 > u1) [u0, u1] = [u1, u0];
   if (v0 > v1) [v0, v1] = [v1, v0];
@@ -2981,8 +2999,8 @@ function toFeature(f, issues, where, stock) {
       return { type: 'boss', face: f.face, depth: depthOf(true), mirror: mirrorOf(f.mirror), islands };
     }
     case 'profile': {
-      const raw = arrOf(f.outline);
-      if (raw.some(sg => !isObj(sg))) { issues.push(`${where}：輪廓裡有格式不對的線段，已略過這個輪廓切除`); return null; }
+      const raw = arrOf(f.outline).map(segOf);
+      if (raw.some(sg => !sg)) { issues.push(`${where}：輪廓裡有格式不對的線段，已略過這個輪廓切除`); return null; }
       const outline = raw.map(sg => ({ kind: sg.kind === 'arc' ? 'arc' : 'line', u: finOf(sg.u), v: finOf(sg.v), cu: finOf(sg.cu) ?? 0, cv: finOf(sg.cv) ?? 0, ccw: !!sg.ccw }));
       if (!(outline.length >= 2 || (outline.length === 1 && outline[0].kind === 'arc'))) { issues.push(`${where}：輪廓切除沒有輪廓，已略過`); return null; }
       // 座標讀不到或離料塊太遠（幾何核心只接受約 ±3e10 以內），整個輪廓略過

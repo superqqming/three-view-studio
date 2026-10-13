@@ -1,6 +1,6 @@
 // 把共用的 AI 程式嵌進 index.html（工具是單一檔案，下載後雙擊開啟也要能用，所以不另外 import）：
 //   - Shared_Services/ai-gateway/client/ 的 gateway-client.js、own-key.js、ai-access.js（AI 雙入口）
-//   - assembly-unit-simulator/js/ai/ 的 threeview-prompt.js、threeview-schema.js
+//   - 本工具 ai/ 的 threeview-prompt.js、threeview-schema.js（原始檔；2026-10-13 從組合單元模擬器搬來）
 //     （「自己的金鑰」那條路用的指令與輸出格式；閘道的 threeview-recognize 也是同步自這兩個檔）
 //   - Shared_Services/ai-gateway/client/apply-key.html → 本工具的 apply-key.html（「如何申請自己的 API 金鑰」說明頁）
 //
@@ -15,7 +15,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const HUB = path.resolve(here, '../../..');
 const CLIENT = path.join(HUB, 'Shared_Services/ai-gateway/client');
-const AUS = path.join(HUB, 'Teaching_Tools/assembly-unit-simulator/js/ai');
+const AUS = path.join(here, '../ai');
 const GATEWAY = path.join(HUB, 'Shared_Services/ai-gateway');
 const HTML = path.join(here, '../index.html');
 const GUIDE_SRC = path.join(CLIENT, 'apply-key.html'), GUIDE = path.join(here, '../apply-key.html');

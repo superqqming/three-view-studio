@@ -1,0 +1,104 @@
+{
+  "is_part_sketch": true,
+  "message": "右側視圖畫在俯視圖右邊，照第三角法應放在前視圖的右邊。",
+  "units_on_sketch": "mm",
+  "transcribed": [
+    "100",
+    "100",
+    "100",
+    "20",
+    "20",
+    "25",
+    "(mm)"
+  ],
+  "views_found": "俯視圖：左上（綠色）；前視圖：左下（粉紅色）；右側視圖：右上（白色）；等角圖：右下",
+  "parts": [
+    {
+      "name": "工件",
+      "stock": {
+        "w": 100,
+        "h": 100,
+        "d": 100
+      },
+      "steps": [
+        {
+          "label": "切除八個角落",
+          "note": "每個角落切除 20×20×20",
+          "features": [
+            {
+              "type": "pocket",
+              "face": "top",
+              "centered": false,
+              "u": 0,
+              "v": 0,
+              "d": 0,
+              "depth": 20,
+              "through": false,
+              "rects": [
+                [
+                  0,
+                  20,
+                  0,
+                  20
+                ]
+              ],
+              "islands": [],
+              "edges": [],
+              "size": 0,
+              "mirror": [
+                "x",
+                "y",
+                "z"
+              ],
+              "outline": []
+            }
+          ]
+        },
+        {
+          "label": "鑽孔",
+          "note": "前後貫穿 Ø50",
+          "features": [
+            {
+              "type": "hole",
+              "face": "front",
+              "centered": true,
+              "u": 0,
+              "v": 0,
+              "d": 50,
+              "depth": 0,
+              "through": true,
+              "rects": [],
+              "islands": [],
+              "edges": [],
+              "size": 0,
+              "mirror": [],
+              "outline": []
+            }
+          ]
+        }
+      ],
+      "uncertain": [
+        {
+          "path": "steps[1].features[0]",
+          "question": "圓孔是前後貫穿，還是只鑽一段深度？",
+          "options": [
+            {
+              "label": "前後貫穿",
+              "value_json": "{\"type\":\"hole\",\"face\":\"front\",\"centered\":true,\"u\":0,\"v\":0,\"d\":50,\"depth\":0,\"through\":true,\"rects\":[],\"islands\":[],\"edges\":[],\"size\":0,\"mirror\":[],\"outline\":[]}"
+            },
+            {
+              "label": "從前面鑽 50 深",
+              "value_json": "{\"type\":\"hole\",\"face\":\"front\",\"centered\":true,\"u\":0,\"v\":0,\"d\":50,\"depth\":50,\"through\":false,\"rects\":[],\"islands\":[],\"edges\":[],\"size\":0,\"mirror\":[],\"outline\":[]}"
+            }
+          ],
+          "chosen": 0
+        }
+      ],
+      "assumptions": [
+        "八個角落的缺口都是 20×20×20（圖上只標了一個角）",
+        "圓孔中心在前面的正中央"
+      ],
+      "review": "[layout] 第三角法的右側視圖應放在前視圖的右邊，不是俯視圖的右邊。\n[dims] 完整的圓孔應標直徑 Ø50，不要在半徑線上標 25。\n[front] 前視圖的圓孔要畫十字中心線。\n[top] 俯視圖兩條隱藏線中間要補上圓孔的中心線。\n[right] 右側視圖兩條隱藏線中間要補上圓孔的中心線。"
+    }
+  ]
+}
