@@ -2396,16 +2396,18 @@ function drawFrame(prims, fr, scaleLabel) {
   const x0 = fr.x + fr.w - TB_W, y0 = fr.y + fr.h - TB_H;
   rect(x0, y0, TB_W, TB_H, 'FRAME');
   const tb = readTB();
-  // 左欄：投影法、比例、單位
+  // 左欄：投影法；下面一列三格：比例、單位、圖紙（紙張大小，例：A4）
   line(x0 + 56, y0, x0 + 56, y0 + TB_H);
   line(x0, y0 + 18, x0 + 56, y0 + 18);
-  line(x0 + 28, y0 + 18, x0 + 28, y0 + TB_H);
+  const cw = 56 / 3;
+  line(x0 + cw, y0 + 18, x0 + cw, y0 + TB_H);
+  line(x0 + 2 * cw, y0 + 18, x0 + 2 * cw, y0 + TB_H);
   projSymbol(prims, x0 + 6, y0 + 8, state.proj === 'first');
   text(x0 + 28, y0 + 16.2, state.proj === 'third' ? '第三角法' : '第一角法', 2.5, 'middle');   // 標題欄：中文 i18n-skip
-  text(x0 + 2, y0 + 21.5, '比例', 2);   // i18n-skip
-  text(x0 + 14, y0 + 26, scaleLabel, 3.5, 'middle', true);
-  text(x0 + 30, y0 + 21.5, '單位', 2);   // i18n-skip
-  text(x0 + 42, y0 + 26, 'mm', 3.5, 'middle', true);
+  [['比例', scaleLabel], ['單位', 'mm'], ['圖紙', String(state.sheet).replace(/[LP]$/, '')]].forEach(([k, v], i) => {   // i18n-skip
+    text(x0 + i * cw + 1.5, y0 + 21.5, k, 2);
+    text(x0 + (i + 0.5) * cw, y0 + 26, v, 3.5, 'middle', true);
+  });
   // 中欄：圖名、單位
   line(x0 + 56, y0 + 17, x0 + 126, y0 + 17);
   text(x0 + 58, y0 + 4, '圖名', 2);   // i18n-skip
