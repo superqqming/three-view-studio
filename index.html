@@ -2074,7 +2074,8 @@ function computeLayout(W, H, D, s, area, o, m) {
   let gw, gh, F, Tv, S, iso;
   if (o.proj === 'third') {
     const left = Math.max(f.left, t.left), gapX = Math.max(g, f.right + sd.left + 4), right = sd.right;
-    const top = t.top, gapY = Math.max(g, t.bottom + f.top + 4, sd.top + 4), bottom = Math.max(f.bottom, sd.bottom) + lb;
+    // 視圖名稱寫在每個視圖的尺寸下方：俯視圖的名稱在俯視與前視之間，要和前視上方的尺寸（例：凸台的 Ø）分開
+    const top = t.top, gapY = Math.max(g, t.bottom + lb + f.top + 4, sd.top + 4), bottom = Math.max(f.bottom, sd.bottom) + lb;
     gw = Math.max(left + fw + gapX + dd + right, left + fw + t.right); gh = top + dd + gapY + fh + bottom;
     const x0 = area.x + (area.w - gw) / 2, y0 = area.y + (area.h - gh) / 2;
     F = { left: x0 + left, bottom: y0 + top + dd + gapY + fh };
@@ -2084,13 +2085,14 @@ function computeLayout(W, H, D, s, area, o, m) {
     iso = { x: ix, y: area.y, w: area.x + area.w - ix, h: F.bottom - fh - Math.max(f.top, sd.top) - 4 - area.y };
   } else {
     const left = Math.max(f.left, t.left), gapX = Math.max(g, f.right + sd.left + 4), right = sd.right;
-    const top = Math.max(f.top, sd.top), gapY = Math.max(g, f.bottom + t.top + 4, sd.bottom + 4), bottom = t.bottom + lb;
+    // 第一角法：前視、左側視的名稱在上下兩排之間，要和俯視上方的尺寸分開
+    const top = Math.max(f.top, sd.top), gapY = Math.max(g, f.bottom + lb + t.top + 4, sd.bottom + lb + 4), bottom = t.bottom + lb;
     gw = Math.max(left + fw + gapX + dd + right, left + fw + t.right); gh = top + fh + gapY + dd + bottom;
     const x0 = area.x + (area.w - gw) / 2, y0 = area.y + (area.h - gh) / 2;
     F = { left: x0 + left, bottom: y0 + top + fh };
     S = { left: F.left + fw + gapX, bottom: F.bottom };
     Tv = { left: F.left, bottom: F.bottom + gapY + dd };
-    const ix = Math.max(S.left, F.left + fw + t.right + 4), iy = F.bottom + Math.max(sd.bottom, f.bottom) + 4;
+    const ix = Math.max(S.left, F.left + fw + t.right + 4), iy = F.bottom + Math.max(sd.bottom, f.bottom) + lb + 4;
     iso = { x: ix, y: iy, w: area.x + area.w - ix, h: area.y + area.h - iy };
   }
   return { gw, gh, F, T: Tv, S, iso, m: { front: f, top: t, side: sd } };
