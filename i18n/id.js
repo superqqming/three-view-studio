@@ -186,6 +186,7 @@ export const ID = {
   "細部尺寸": "Ukuran detail",
   "孔徑與孔位": "Diameter & posisi lubang",
   "視圖名稱": "Nama pandangan",
+  "圖框與標題欄": "Bingkai & kepala gambar",
   "細部尺寸採並聯（基準）尺寸；圓柱與凸台標直徑（Ø），孔以引線標 Ø。X 由左、Y 由下、Z 由前面量起。點圖面上的尺寸可隱藏，再點一下復原。": "Ukuran detail memakai pemberian ukuran sejajar (dari bidang acuan); silinder dan tonjolan diberi ukuran diameter (Ø), lubang diberi Ø dengan garis penunjuk. X diukur dari kiri, Y dari bawah, Z dari depan. Klik ukuran pada gambar untuk menyembunyikannya, klik lagi untuk menampilkannya kembali.",
   "顯示全部尺寸": "Tampilkan semua ukuran",
   "4 · 標題欄": "4 · Kepala gambar",

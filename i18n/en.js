@@ -186,6 +186,7 @@ export const EN = {
   "細部尺寸": "Detail dimensions",
   "孔徑與孔位": "Hole sizes & positions",
   "視圖名稱": "View names",
+  "圖框與標題欄": "Border & title block",
   "細部尺寸採並聯（基準）尺寸；圓柱與凸台標直徑（Ø），孔以引線標 Ø。X 由左、Y 由下、Z 由前面量起。點圖面上的尺寸可隱藏，再點一下復原。": "Detail dimensions use parallel (baseline) dimensioning. Cylinders and bosses are dimensioned by diameter (Ø); holes get Ø on a leader. X is measured from the left, Y from the bottom, Z from the front. Click a dimension on the drawing to hide it; click again to bring it back.",
   "顯示全部尺寸": "Show all dimensions",
   "4 · 標題欄": "4 · Title block",

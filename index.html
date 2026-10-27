@@ -241,6 +241,7 @@
         <label><input type="checkbox" id="optDetail" checked><span data-i18n>細部尺寸</span></label>
         <label><input type="checkbox" id="optHoles" checked><span data-i18n>孔徑與孔位</span></label>
         <label><input type="checkbox" id="optLabels"><span data-i18n>視圖名稱</span></label>
+        <label><input type="checkbox" id="optFrame" checked><span data-i18n>圖框與標題欄</span></label>
       </div>
       <div class="info" data-i18n>細部尺寸採並聯（基準）尺寸；圓柱與凸台標直徑（Ø），孔以引線標 Ø。X 由左、Y 由下、Z 由前面量起。點圖面上的尺寸可隱藏，再點一下復原。</div>
       <div class="row" style="margin-top:6px">
@@ -515,6 +516,7 @@ const EN = {
   "細部尺寸": "Detail dimensions",
   "孔徑與孔位": "Hole sizes & positions",
   "視圖名稱": "View names",
+  "圖框與標題欄": "Border & title block",
   "細部尺寸採並聯（基準）尺寸；圓柱與凸台標直徑（Ø），孔以引線標 Ø。X 由左、Y 由下、Z 由前面量起。點圖面上的尺寸可隱藏，再點一下復原。": "Detail dimensions use parallel (baseline) dimensioning. Cylinders and bosses are dimensioned by diameter (Ø); holes get Ø on a leader. X is measured from the left, Y from the bottom, Z from the front. Click a dimension on the drawing to hide it; click again to bring it back.",
   "顯示全部尺寸": "Show all dimensions",
   "4 · 標題欄": "4 · Title block",
@@ -742,6 +744,7 @@ const VI = {
   "細部尺寸": "Kích thước từng phần",
   "孔徑與孔位": "Ø và vị trí lỗ",
   "視圖名稱": "Tên hình chiếu",
+  "圖框與標題欄": "Khung bản vẽ & khung tên",
   "細部尺寸採並聯（基準）尺寸；圓柱與凸台標直徑（Ø），孔以引線標 Ø。X 由左、Y 由下、Z 由前面量起。點圖面上的尺寸可隱藏，再點一下復原。": "Kích thước từng phần được ghi song song (theo chuẩn); trụ tròn và trụ lồi ghi đường kính (Ø), lỗ ghi Ø bằng đường dẫn. X đo từ trái, Y đo từ dưới, Z đo từ mặt trước. Bấm vào một kích thước trên bản vẽ để ẩn, bấm lần nữa để hiện lại.",
   "顯示全部尺寸": "Hiện tất cả kích thước",
   "4 · 標題欄": "4 · Khung tên",
@@ -969,6 +972,7 @@ const ID = {
   "細部尺寸": "Ukuran detail",
   "孔徑與孔位": "Diameter & posisi lubang",
   "視圖名稱": "Nama pandangan",
+  "圖框與標題欄": "Bingkai & kepala gambar",
   "細部尺寸採並聯（基準）尺寸；圓柱與凸台標直徑（Ø），孔以引線標 Ø。X 由左、Y 由下、Z 由前面量起。點圖面上的尺寸可隱藏，再點一下復原。": "Ukuran detail memakai pemberian ukuran sejajar (dari bidang acuan); silinder dan tonjolan diberi ukuran diameter (Ø), lubang diberi Ø dengan garis penunjuk. X diukur dari kiri, Y dari bawah, Z dari depan. Klik ukuran pada gambar untuk menyembunyikannya, klik lagi untuk menampilkannya kembali.",
   "顯示全部尺寸": "Tampilkan semua ukuran",
   "4 · 標題欄": "4 · Kepala gambar",
@@ -1128,7 +1132,7 @@ const VIEW_NAMES = { front: '前視圖', top: '俯視圖', right: '右側視圖'
 const state = {
   name: '', zUp: false, rot: new THREE.Matrix4(), unit: 1, thr: 30,
   proj: 'third', sheet: 'A4L', scale: 'auto',
-  showHidden: true, showCenter: true, showDims: true, showDetail: true, showHoles: true, showIso: true, showLabels: false,
+  showHidden: true, showCenter: true, showDims: true, showDetail: true, showHoles: true, showIso: true, showLabels: false, showFrame: true,
   hiddenDims: new Set(),   // 使用者點選隱藏的尺寸 id
   zoom: 0,
 };
@@ -2111,7 +2115,8 @@ function buildDrawing(mode) {
     const vF = getView('front'), vT = getView('top'), vS = getView(sideName);
     const views = { front: vF, top: vT, side: vS };
     const W = vF.bw, H = vF.bh, D = vT.bh;
-    const area = { x: frame.x + 4, y: frame.y + 4, w: frame.w - 8, h: frame.h - TB_H - 8 };
+    // 不要圖框與標題欄：只留圖紙四周 10 mm 的邊，標題欄的位置也拿來放視圖
+    const area = state.showFrame ? { x: frame.x + 4, y: frame.y + 4, w: frame.w - 8, h: frame.h - TB_H - 8 } : { ...frame };
     const o = { proj: state.proj, labels: state.showLabels };
     const plan = planDims(views, state.proj, mode === 'export');
     notes = plan.notes;
@@ -2157,7 +2162,7 @@ function buildDrawing(mode) {
     }
     if (state.showIso) drawIso(prims, L.iso, s);
   }
-  drawFrame(prims, frame, scaleLabel);
+  if (state.showFrame) drawFrame(prims, frame, scaleLabel);
   return { prims, sheet, notes };
 }
 
@@ -2581,7 +2586,7 @@ function renderSheet() {
   if (!model) {
     const svg = wrap.querySelector('svg');
     const { sheet } = lastDrawing;
-    svg.insertAdjacentHTML('beforeend', `<text x="${sheet.w / 2}" y="${(sheet.h - TB_H) / 2}" font-size="6" fill="#9aa3b2" text-anchor="middle" font-family="sans-serif">${esc(t('匯入 3D 模型或點選左側範例'))}</text>`);
+    svg.insertAdjacentHTML('beforeend', `<text x="${sheet.w / 2}" y="${(sheet.h - (state.showFrame ? TB_H : 0)) / 2}" font-size="6" fill="#9aa3b2" text-anchor="middle" font-family="sans-serif">${esc(t('匯入 3D 模型或點選左側範例'))}</text>`);
   }
   applyZoom();
 }
@@ -2915,7 +2920,7 @@ function initUI() {
   }));
   $('sheet').addEventListener('change', e => { state.sheet = e.target.value; state.zoom = 0; scheduleDraw(); });
   $('scale').addEventListener('change', e => { state.scale = e.target.value; scheduleDraw(); });
-  const opts = { optHidden: 'showHidden', optCenter: 'showCenter', optDims: 'showDims', optDetail: 'showDetail', optHoles: 'showHoles', optIso: 'showIso', optLabels: 'showLabels' };
+  const opts = { optHidden: 'showHidden', optCenter: 'showCenter', optDims: 'showDims', optDetail: 'showDetail', optHoles: 'showHoles', optIso: 'showIso', optLabels: 'showLabels', optFrame: 'showFrame' };
   // 點選尺寸：隱藏／復原
   $('sheetWrap').addEventListener('click', e => {
     const hit = e.target.closest('[data-dim]');

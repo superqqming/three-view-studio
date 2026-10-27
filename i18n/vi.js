@@ -186,6 +186,7 @@ export const VI = {
   "細部尺寸": "Kích thước từng phần",
   "孔徑與孔位": "Ø và vị trí lỗ",
   "視圖名稱": "Tên hình chiếu",
+  "圖框與標題欄": "Khung bản vẽ & khung tên",
   "細部尺寸採並聯（基準）尺寸；圓柱與凸台標直徑（Ø），孔以引線標 Ø。X 由左、Y 由下、Z 由前面量起。點圖面上的尺寸可隱藏，再點一下復原。": "Kích thước từng phần được ghi song song (theo chuẩn); trụ tròn và trụ lồi ghi đường kính (Ø), lỗ ghi Ø bằng đường dẫn. X đo từ trái, Y đo từ dưới, Z đo từ mặt trước. Bấm vào một kích thước trên bản vẽ để ẩn, bấm lần nữa để hiện lại.",
   "顯示全部尺寸": "Hiện tất cả kích thước",
   "4 · 標題欄": "4 · Khung tên",
